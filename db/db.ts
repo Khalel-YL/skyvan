@@ -3,12 +3,32 @@ import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is missing");
+export const hasDatabaseUrl = databaseUrl.length > 0;
+
+const sql = hasDatabaseUrl ? neon(databaseUrl) : null;
+
+export const db = sql ? drizzle(sql) : null;
+
+export function getDbOrThrow() {
+  if (!db) {
+    throw new Error("DATABASE_URL is missing");
+  }
+
+  return db;
 }
 
-const sql = neon(databaseUrl);
+export function getDatabaseHealth() {
+  if (!hasDatabaseUrl) {
+    return {
+      status: "degraded" as const,
+      note: "DATABASE_URL tanımlı değil. Admin güvenli statik modda çalışıyor.",
+    };
+  }
 
-export const db = drizzle(sql);
+  return {
+    status: "online" as const,
+    note: "Veritabanı bağlantısı yapılandırılmış görünüyor.",
+  };
+}

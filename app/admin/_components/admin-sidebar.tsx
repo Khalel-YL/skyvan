@@ -1,164 +1,135 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Activity,
-  BookOpen,
-  Boxes,
-  BrainCircuit,
-  FileText,
-  FolderKanban,
-  LayoutDashboard,
-  Package,
-  ScrollText,
-  Truck,
-  Users,
-  Wrench,
-} from "lucide-react";
 
-const adminNavigation = [
-  {
-    title: "Genel",
-    items: [
-      {
-        title: "Dashboard",
-        href: "/admin",
-        icon: LayoutDashboard,
-      },
-    ],
-  },
-  {
-    title: "İçerik",
-    items: [
-      {
-        title: "Sayfalar",
-        href: "/admin/pages",
-        icon: FileText,
-      },
-      {
-        title: "Blog",
-        href: "/admin/blog",
-        icon: BookOpen,
-      },
-      {
-        title: "Medya",
-        href: "/admin/media",
-        icon: FolderKanban,
-      },
-    ],
-  },
-  {
-    title: "Ticari Operasyon",
-    items: [
-      {
-        title: "Lead'ler",
-        href: "/admin/leads",
-        icon: Users,
-      },
-      {
-        title: "Teklifler",
-        href: "/admin/offers",
-        icon: ScrollText,
-      },
-      {
-        title: "Siparişler",
-        href: "/admin/orders",
-        icon: Activity,
-      },
-    ],
-  },
-  {
-    title: "Teknik Omurga",
-    items: [
-      {
-        title: "Modeller",
-        href: "/admin/models",
-        icon: Truck,
-      },
-      {
-        title: "Paketler",
-        href: "/admin/packages",
-        icon: Boxes,
-      },
-      {
-        title: "Ürünler",
-        href: "/admin/products",
-        icon: Package,
-      },
-      {
-        title: "Kurallar",
-        href: "/admin/rules",
-        icon: BrainCircuit,
-      },
-      {
-        title: "Datasheets",
-        href: "/admin/datasheets",
-        icon: Wrench,
-      },
-      {
-        title: "AI Core",
-        href: "/admin/ai-core",
-        icon: BrainCircuit,
-      },
-    ],
-  },
-] as const;
+import { adminNavItems } from "@/app/lib/admin/admin-nav";
 
 export function AdminSidebar() {
-  const pathname = usePathname();
-
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-black/30 xl:block">
+    <aside className="hidden w-80 shrink-0 border-r border-white/10 bg-neutral-950 xl:block">
       <div className="sticky top-0 flex h-screen flex-col">
         <div className="border-b border-white/10 px-6 py-6">
-          <Link href="/admin" className="block">
-            <div className="text-xs uppercase tracking-[0.28em] text-white/45">
-              Skyvan
-            </div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
-              Admin Core
-            </div>
-            <div className="mt-2 text-sm text-white/55">
-              Veri, kural ve operasyon omurgası
-            </div>
-          </Link>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+            Skyvan
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            Admin Core
+          </h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            Veri, kural ve operasyon omurgası
+          </p>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 py-5">
-          <div className="space-y-6">
-            {adminNavigation.map((group) => (
-              <div key={group.title}>
-                <div className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-white/35">
-                  {group.title}
-                </div>
+        <nav className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-4 py-6">
+          <div>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-600">
+              Genel
+            </p>
 
-                <div className="space-y-1">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive =
-                      pathname === item.href ||
-                      (item.href !== "/admin" && pathname.startsWith(item.href));
+            <div className="mt-3 space-y-2">
+              {adminNavItems
+                .filter((item) =>
+                  ["/admin", "/admin/models", "/admin/packages", "/admin/products", "/admin/rules"].includes(item.href),
+                )
+                .map((item) => {
+                  const Icon = item.icon;
 
+                  if (!item.enabled) {
                     return (
-                      <Link
+                      <div
                         key={item.href}
-                        href={item.href}
-                        className={[
-                          "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
-                          isActive
-                            ? "bg-white text-black"
-                            : "text-white/70 hover:bg-white/5 hover:text-white",
-                        ].join(" ")}
+                        className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 opacity-55"
                       >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl bg-white/5 p-2">
+                            <Icon className="h-4 w-4 text-neutral-400" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-neutral-200">
+                                {item.title}
+                              </p>
+                              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                                Yakında
+                              </span>
+                            </div>
+
+                            <p className="mt-1 text-xs leading-5 text-neutral-500">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     );
-                  })}
-                </div>
-              </div>
-            ))}
+                  }
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="block rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 transition hover:border-white/15 hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-white/5 p-2">
+                          <Icon className="h-4 w-4 text-neutral-200" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white">
+                            {item.title}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-neutral-400">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+            </div>
+          </div>
+
+          <div>
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-600">
+              Sonraki Fazlar
+            </p>
+
+            <div className="mt-3 space-y-2">
+              {adminNavItems
+                .filter((item) =>
+                  ["/admin/ai", "/admin/workshop", "/admin/categories"].includes(item.href),
+                )
+                .map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div
+                      key={item.href}
+                      className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 opacity-55"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-white/5 p-2">
+                          <Icon className="h-4 w-4 text-neutral-400" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-neutral-200">
+                              {item.title}
+                            </p>
+                            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                              Kilitli
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-xs leading-5 text-neutral-500">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         </nav>
       </div>

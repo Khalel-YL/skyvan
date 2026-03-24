@@ -15,17 +15,19 @@ export function AdminShell({
   databaseNote,
 }: AdminShellProps) {
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),transparent_28%),radial-gradient(circle_at_bottom,rgba(255,255,255,0.04),transparent_24%)]" />
-      <div className="relative flex min-h-screen">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
         <AdminSidebar />
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <AdminTopbar
             databaseStatus={databaseStatus}
             databaseNote={databaseNote}
           />
-          <main className="px-5 py-6 md:px-8 md:py-8">{children}</main>
+
+          <main className="flex-1 p-4 md:p-6">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
         </div>
       </div>
     </div>

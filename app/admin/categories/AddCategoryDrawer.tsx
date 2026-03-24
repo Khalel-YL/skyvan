@@ -4,53 +4,51 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
+  FolderTree,
+  GitBranch,
   Info,
-  Ruler,
-  Sparkles,
-  Truck,
-  Weight,
+  Layers3,
+  Palette,
   X,
 } from "lucide-react";
 
-import { saveModel } from "./actions";
+import { saveCategory } from "./actions";
 
-type ModelStatus = "draft" | "active" | "archived";
+type CategoryStatus = "draft" | "active" | "archived";
 
-type ModelListItem = {
+type CategoryListItem = {
   id: string;
+  name: string;
   slug: string;
-  baseWeightKg: string | number;
-  maxPayloadKg: string | number;
-  wheelbaseMm: number;
-  roofLengthMm: number | null;
-  roofWidthMm: number | null;
-  status: ModelStatus;
+  icon: string | null;
+  status: CategoryStatus;
+  sortOrder: number;
 };
 
-type AddModelDrawerProps = {
-  initialData?: ModelListItem | null;
+type AddCategoryDrawerProps = {
+  initialData?: CategoryListItem | null;
   disabled?: boolean;
 };
 
-const quickReferenceFamilies = [
-  "Fiat Ducato / Boxer / Jumper",
-  "Ford Transit",
-  "Mercedes-Benz Sprinter",
-  "Volkswagen Crafter / MAN TGE",
-  "Renault Master / Movano / Interstar",
-  "Iveco Daily",
+const categoryIdeas = [
+  "Electrical",
+  "Water",
+  "Furniture",
+  "Kitchen",
+  "Bathroom",
+  "Windows",
+  "Seating",
+  "Sleeping",
 ];
 
-function toFormValues(initialData?: ModelListItem | null) {
+function toFormValues(initialData?: CategoryListItem | null) {
   return {
     id: initialData?.id ?? "",
+    name: initialData?.name ?? "",
     slug: initialData?.slug ?? "",
-    baseWeightKg: String(initialData?.baseWeightKg ?? ""),
-    maxPayloadKg: String(initialData?.maxPayloadKg ?? ""),
-    wheelbaseMm: String(initialData?.wheelbaseMm ?? ""),
-    roofLengthMm: String(initialData?.roofLengthMm ?? ""),
-    roofWidthMm: String(initialData?.roofWidthMm ?? ""),
-    status: (initialData?.status ?? "draft") as ModelStatus,
+    icon: initialData?.icon ?? "",
+    status: (initialData?.status ?? "draft") as CategoryStatus,
+    sortOrder: String(initialData?.sortOrder ?? 0),
   };
 }
 
@@ -79,10 +77,10 @@ function FieldShell({
 const inputClassName =
   "w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-white/20 focus:bg-neutral-900";
 
-export default function AddModelDrawer({
+export default function AddCategoryDrawer({
   initialData,
   disabled = false,
-}: AddModelDrawerProps) {
+}: AddCategoryDrawerProps) {
   const isEdit = Boolean(initialData);
   const defaults = useMemo(() => toFormValues(initialData), [initialData]);
   const [loading, setLoading] = useState(false);
@@ -103,37 +101,36 @@ export default function AddModelDrawer({
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03]">
-      <div className="grid min-h-[720px] xl:grid-cols-[0.95fr_1.2fr]">
+      <div className="grid min-h-[680px] xl:grid-cols-[0.9fr_1.15fr]">
         <div className="border-b border-white/10 bg-black xl:border-b-0 xl:border-r">
           <div className="h-full px-8 py-10 xl:px-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-amber-300">
-              <Truck className="h-4 w-4" />
+            <div className="inline-flex items-center gap-3 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-cyan-300">
+              <FolderTree className="h-4 w-4" />
               <span className="text-xs font-semibold uppercase tracking-[0.22em]">
-                Models Core
+                Categories Core
               </span>
             </div>
 
             <h2 className="mt-8 text-4xl font-semibold tracking-tight text-white">
-              {isEdit ? "Model Düzenleme" : "Yeni Araç Modeli"}
+              {isEdit ? "Kategori Düzenleme" : "Yeni Kategori"}
             </h2>
 
             <p className="mt-4 max-w-md text-sm leading-7 text-neutral-400">
-              Şasi, taşıma kapasitesi ve görünür yüzey ölçülerini kontrollü
-              biçimde yönetiyoruz. Hata riskini azaltmak için çekirdek veri
-              omurgasını sade tutuyoruz.
+              Kategori katmanı, products ve packages modüllerinin omurgasıdır.
+              Bu yüzden isim, sıra ve durum standardı burada kritik.
             </p>
 
             <div className="mt-8 space-y-4">
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-300" />
+                  <Layers3 className="h-4 w-4 text-cyan-300" />
                   <p className="text-sm font-semibold text-white">
-                    Referans platform aileleri
+                    Önerilen kategori aileleri
                   </p>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {quickReferenceFamilies.map((item) => (
+                  {categoryIdeas.map((item) => (
                     <span
                       key={item}
                       className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-300"
@@ -146,15 +143,30 @@ export default function AddModelDrawer({
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <div className="flex items-start gap-3">
+                  <GitBranch className="mt-0.5 h-4 w-4 text-neutral-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Parent-ready mimari
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-neutral-400">
+                      Hiyerarşik kategori mantığı bir sonraki schema batch’te
+                      kalıcı alana taşınacak. Bu batch’te önce omurgayı bozmadan
+                      stabilize ediyoruz.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-start gap-3">
                   <Info className="mt-0.5 h-4 w-4 text-neutral-400" />
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      Teknik genişleme hazırlığı
+                      Soft delete yaklaşımı
                     </p>
                     <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Sonraki aşamada gövde tipi, drivetrain, yakıt tipi, iç
-                      yükseklik, kapı açıklıkları ve dönüşüm/homologasyon alanları
-                      eklenecek.
+                      Bağlı veri varsa sistem hard delete yerine kaydı arşive
+                      çekerek admin akışını kırmaz.
                     </p>
                   </div>
                 </div>
@@ -166,7 +178,7 @@ export default function AddModelDrawer({
                     Düzenlenen kayıt
                   </p>
                   <p className="mt-3 text-lg font-semibold text-white">
-                    {defaults.slug}
+                    {defaults.name}
                   </p>
                 </div>
               ) : null}
@@ -182,16 +194,16 @@ export default function AddModelDrawer({
                   {isEdit ? "Edit Mode" : "Create Mode"}
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold text-white">
-                  {isEdit ? "Araç Şasisini Güncelle" : "Yeni Araç Şasisi Ekle"}
+                  {isEdit ? "Kategori Bilgisini Güncelle" : "Yeni Kategori Ekle"}
                 </h3>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
-                  Form alanları bilinçli olarak dar tutuldu. Önce güvenli veri
-                  girişi, sonra modül genişlemesi.
+                  Kategori yapısını temiz ve uzun ömürlü kuruyoruz. Parent-child
+                  veri alanını bilerek bir sonraki migration batch’ine bırakıyoruz.
                 </p>
               </div>
 
               <Link
-                href="/admin/models"
+                href="/admin/categories"
                 className="rounded-2xl border border-white/10 bg-white/5 p-2 text-neutral-300 transition hover:bg-white/10 hover:text-white"
               >
                 <X className="h-4 w-4" />
@@ -199,7 +211,7 @@ export default function AddModelDrawer({
             </div>
 
             <form
-              action={saveModel}
+              action={saveCategory}
               onSubmit={() => setLoading(true)}
               className="mt-8 space-y-8"
             >
@@ -209,7 +221,7 @@ export default function AddModelDrawer({
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-neutral-400" />
+                  <FolderTree className="h-4 w-4 text-neutral-400" />
                   <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
                     Temel Kimlik
                   </h4>
@@ -217,72 +229,62 @@ export default function AddModelDrawer({
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FieldShell
-                    label="Model Kodu"
-                    hint="Örnek: ford-transit-l4h3"
+                    label="Kategori Adı"
+                    hint="Admin ve seçim ekranlarında görünen başlık"
                   >
                     <input
-                      name="slug"
-                      defaultValue={defaults.slug}
-                      placeholder="ford-transit-l4h3"
+                      name="name"
+                      defaultValue={defaults.name}
+                      placeholder="Electrical"
                       required
                       className={inputClassName}
                     />
                   </FieldShell>
 
                   <FieldShell
-                    label="Durum"
-                    hint="Kayıt yaşam döngüsü"
+                    label="Slug"
+                    hint="Boş bırakırsan ad üzerinden türetilir"
                   >
-                    <div className="relative">
-                      <select
-                        name="status"
-                        defaultValue={defaults.status}
-                        className={`${inputClassName} skyvan-select`}
-                      >
-                        <option value="active">Aktif</option>
-                        <option value="draft">Taslak</option>
-                        <option value="archived">Arşiv</option>
-                      </select>
-
-                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    </div>
+                    <input
+                      name="slug"
+                      defaultValue={defaults.slug}
+                      placeholder="electrical"
+                      className={inputClassName}
+                    />
                   </FieldShell>
                 </div>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Weight className="h-4 w-4 text-neutral-400" />
+                  <Palette className="h-4 w-4 text-neutral-400" />
                   <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Ağırlık Dinamikleri
+                    Görsel ve Sıralama
                   </h4>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <FieldShell
-                    label="Boş Ağırlık (kg)"
-                    hint="500 - 10000 arası"
+                    label="Icon Etiketi"
+                    hint="Örnek: bolt, droplet, bed"
                   >
                     <input
-                      name="baseWeightKg"
-                      type="number"
-                      min="500"
-                      max="10000"
-                      defaultValue={defaults.baseWeightKg}
+                      name="icon"
+                      defaultValue={defaults.icon}
+                      placeholder="bolt"
                       className={inputClassName}
                     />
                   </FieldShell>
 
                   <FieldShell
-                    label="Maksimum Yük (kg)"
-                    hint="100 - 10000 arası"
+                    label="Sıra Numarası"
+                    hint="Configurator ve admin sıralaması için"
                   >
                     <input
-                      name="maxPayloadKg"
+                      name="sortOrder"
                       type="number"
-                      min="100"
-                      max="10000"
-                      defaultValue={defaults.maxPayloadKg}
+                      min="0"
+                      defaultValue={defaults.sortOrder}
                       className={inputClassName}
                     />
                   </FieldShell>
@@ -291,55 +293,30 @@ export default function AddModelDrawer({
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-neutral-400" />
+                  <Layers3 className="h-4 w-4 text-neutral-400" />
                   <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Fiziksel Boyutlar
+                    Durum
                   </h4>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FieldShell
-                    label="Dingil Mesafesi (mm)"
-                    hint="1800 - 6000"
-                  >
-                    <input
-                      name="wheelbaseMm"
-                      type="number"
-                      min="1800"
-                      max="6000"
-                      defaultValue={defaults.wheelbaseMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
+                <FieldShell
+                  label="Kayıt Durumu"
+                  hint="Aktif, taslak veya arşiv"
+                >
+                  <div className="relative max-w-sm">
+                    <select
+                      name="status"
+                      defaultValue={defaults.status}
+                      className={`${inputClassName} skyvan-select`}
+                    >
+                      <option value="active">Aktif</option>
+                      <option value="draft">Taslak</option>
+                      <option value="archived">Arşiv</option>
+                    </select>
 
-                  <FieldShell
-                    label="Tavan Uzunluğu (mm)"
-                    hint="1000 - 10000"
-                  >
-                    <input
-                      name="roofLengthMm"
-                      type="number"
-                      min="1000"
-                      max="10000"
-                      defaultValue={defaults.roofLengthMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Tavan Genişliği (mm)"
-                    hint="500 - 4000"
-                  >
-                    <input
-                      name="roofWidthMm"
-                      type="number"
-                      min="500"
-                      max="4000"
-                      defaultValue={defaults.roofWidthMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-                </div>
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  </div>
+                </FieldShell>
               </section>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -351,12 +328,12 @@ export default function AddModelDrawer({
                   {loading
                     ? "Kaydediliyor..."
                     : isEdit
-                      ? "Şasiyi Güncelle"
-                      : "Şasiyi Kaydet"}
+                      ? "Kategoriyi Güncelle"
+                      : "Kategoriyi Kaydet"}
                 </button>
 
                 <Link
-                  href="/admin/models"
+                  href="/admin/categories"
                   className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10"
                 >
                   İptal
