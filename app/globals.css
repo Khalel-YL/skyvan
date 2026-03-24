@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-skyvan-bg: #0A0A0A;
+  --color-skyvan-surface: #141414;
+  --color-skyvan-border: rgba(255, 255, 255, 0.11);
+  --color-skyvan-text: #F5F5F5;
+  --color-skyvan-muted: rgba(255, 255, 255, 0.66);
+  --color-skyvan-accent: #E5E5E5;
+  --color-skyvan-warning: #fbbf24;
+}
+
+body {
+  background-color: var(--color-skyvan-bg);
+  color: var(--color-skyvan-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar for SkyVan Admin */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #3f3f46; }
