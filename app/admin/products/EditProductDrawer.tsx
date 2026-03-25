@@ -3,8 +3,13 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 
-import { createProduct } from "./actions";
-import type { CategoryOption, ProductActionState } from "./types";
+import { updateProduct } from "./actions";
+import { productToFormValues } from "./mappers";
+import type {
+  CategoryOption,
+  ProductActionState,
+  ProductListItem,
+} from "./types";
 
 const initialState: ProductActionState = {
   ok: false,
@@ -20,53 +25,53 @@ function SubmitButton() {
       disabled={pending}
       className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
     >
-      {pending ? "Kaydediliyor..." : "Ürün Ekle"}
+      {pending ? "Kaydediliyor..." : "Kaydet"}
     </button>
   );
 }
 
-type Props = {
+export function EditProductDrawer({
+  product,
+  categories,
+}: {
+  product: ProductListItem;
   categories: CategoryOption[];
-};
-
-export function AddProductDrawer({ categories }: Props) {
-  const [state, formAction] = useActionState(createProduct, initialState);
+}) {
+  const [state, formAction] = useActionState(updateProduct, initialState);
+  const form = productToFormValues(product);
+  const dialogId = `edit-product-dialog-${product.id}`;
 
   useEffect(() => {
     if (state.ok) {
-      const dialog = document.getElementById(
-        "add-product-dialog"
-      ) as HTMLDialogElement | null;
+      const dialog = document.getElementById(dialogId) as HTMLDialogElement | null;
       dialog?.close();
     }
-  }, [state.ok]);
+  }, [state.ok, dialogId]);
 
   return (
     <>
       <button
         type="button"
         onClick={() =>
-          (
-            document.getElementById(
-              "add-product-dialog"
-            ) as HTMLDialogElement | null
-          )?.showModal()
+          (document.getElementById(dialogId) as HTMLDialogElement | null)?.showModal()
         }
-        className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+        className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-900"
       >
-        Ürün Ekle
+        Düzenle
       </button>
 
       <dialog
-        id="add-product-dialog"
+        id={dialogId}
         className="w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-950 p-0 text-zinc-100 backdrop:bg-black/70"
       >
         <form action={formAction} className="rounded-2xl bg-zinc-950 p-6">
+          <input type="hidden" name="id" value={product.id} />
+
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Ürün Ekle</h2>
+              <h2 className="text-lg font-semibold text-white">Ürünü Düzenle</h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Ürün ana kaydını oluştur.
+                Ürün ana kaydını güncelle.
               </p>
             </div>
 
@@ -74,18 +79,18 @@ export function AddProductDrawer({ categories }: Props) {
               type="button"
               className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-zinc-800"
               onClick={() =>
-                (
-                  document.getElementById(
-                    "add-product-dialog"
-                  ) as HTMLDialogElement | null
-                )?.close()
+                (document.getElementById(dialogId) as HTMLDialogElement | null)?.close()
               }
             >
               Kapat
             </button>
           </div>
 
-          <ProductFormFields categories={categories} errors={state.errors} />
+          <ProductFormFields
+            categories={categories}
+            errors={state.errors}
+            defaults={form}
+          />
 
           <div className="mt-5 flex items-center justify-between gap-4">
             <p className={`text-sm ${state.ok ? "text-green-400" : "text-red-400"}`}>
@@ -108,16 +113,31 @@ function FieldError({
 }) {
   const fieldErrors = errors?.[name];
   if (!fieldErrors?.length) return null;
-
   return <p className="mt-1 text-xs text-red-400">{fieldErrors[0]}</p>;
 }
 
 function ProductFormFields({
   categories,
   errors,
+  defaults,
 }: {
   categories: CategoryOption[];
   errors?: Record<string, string[]>;
+  defaults: {
+    name: string;
+    slug: string;
+    sku: string;
+    categoryId: string;
+    shortDescription: string;
+    description: string;
+    imageUrl: string;
+    datasheetUrl: string;
+    basePrice: string;
+    weightKg: string;
+    powerDrawWatts: string;
+    powerSupplyWatts: string;
+    status: "draft" | "active" | "archived";
+  };
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -127,7 +147,8 @@ function ProductFormFields({
         </label>
         <input
           name="name"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.name}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="name" />
       </div>
@@ -138,7 +159,8 @@ function ProductFormFields({
         </label>
         <input
           name="slug"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.slug}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="slug" />
       </div>
@@ -149,7 +171,8 @@ function ProductFormFields({
         </label>
         <input
           name="sku"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.sku}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="sku" />
       </div>
@@ -160,11 +183,16 @@ function ProductFormFields({
         </label>
         <select
           name="categoryId"
+          defaultValue={defaults.categoryId}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
-          <option value="">Kategori seç</option>
           {categories
-            .filter((item) => item.status === "active" || item.status == null)
+            .filter(
+              (item) =>
+                item.status === "active" ||
+                item.id === defaults.categoryId ||
+                item.status == null
+            )
             .map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -183,7 +211,8 @@ function ProductFormFields({
           type="number"
           step="0.01"
           min="0"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.basePrice}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="basePrice" />
       </div>
@@ -197,7 +226,8 @@ function ProductFormFields({
           type="number"
           step="0.001"
           min="0"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.weightKg}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="weightKg" />
       </div>
@@ -211,7 +241,8 @@ function ProductFormFields({
           type="number"
           step="1"
           min="0"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.powerDrawWatts}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="powerDrawWatts" />
       </div>
@@ -225,7 +256,8 @@ function ProductFormFields({
           type="number"
           step="1"
           min="0"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.powerSupplyWatts}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="powerSupplyWatts" />
       </div>
@@ -237,7 +269,8 @@ function ProductFormFields({
         <textarea
           name="shortDescription"
           rows={2}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.shortDescription}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="shortDescription" />
       </div>
@@ -249,7 +282,8 @@ function ProductFormFields({
         <textarea
           name="description"
           rows={4}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.description}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="description" />
       </div>
@@ -260,7 +294,8 @@ function ProductFormFields({
         </label>
         <input
           name="imageUrl"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.imageUrl}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="imageUrl" />
       </div>
@@ -271,7 +306,8 @@ function ProductFormFields({
         </label>
         <input
           name="datasheetUrl"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+          defaultValue={defaults.datasheetUrl}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="datasheetUrl" />
       </div>
@@ -282,7 +318,7 @@ function ProductFormFields({
         </label>
         <select
           name="status"
-          defaultValue="draft"
+          defaultValue={defaults.status}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="draft">Taslak</option>

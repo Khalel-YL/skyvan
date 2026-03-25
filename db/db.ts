@@ -32,3 +32,10 @@ export function getDatabaseHealth() {
     note: "Veritabanı bağlantısı yapılandırılmış görünüyor.",
   };
 }
+
+export function getDatabaseDebugInfo() {
+  return {
+    hasDatabaseUrl,
+    databaseUrlPreview: databaseUrl.slice(0, 80),
+  };
+}

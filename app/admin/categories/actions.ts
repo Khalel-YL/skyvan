@@ -34,6 +34,11 @@ function parseInteger(value: string, fallback = 0) {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+function revalidateCategories() {
+  revalidatePath("/admin");
+  revalidatePath("/admin/categories");
+}
+
 const seedCategories = [
   { name: "Electrical", slug: "electrical", icon: "bolt", sortOrder: 10 },
   { name: "Water", slug: "water", icon: "droplet", sortOrder: 20 },
@@ -53,7 +58,7 @@ export async function saveCategory(formData: FormData) {
   const id = getTrimmed(formData, "id");
   const name = getTrimmed(formData, "name");
   const slug = normalizeSlug(getTrimmed(formData, "slug") || name);
-  const icon = getTrimmed(formData, "icon");
+  const icon = getTrimmed(formData, "icon") || "folder";
   const status = normalizeStatus(getTrimmed(formData, "status"));
   const sortOrder = parseInteger(getTrimmed(formData, "sortOrder"), 0);
 
@@ -99,11 +104,12 @@ export async function saveCategory(formData: FormData) {
       icon,
       status,
       sortOrder,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/categories");
+  revalidateCategories();
   redirect("/admin/categories?saved=1");
 }
 
@@ -118,8 +124,7 @@ export async function deleteCategory(id: string) {
 
   try {
     await db.delete(categories).where(eq(categories.id, id));
-    revalidatePath("/admin");
-    revalidatePath("/admin/categories");
+    revalidateCategories();
     redirect("/admin/categories?deleted=1");
   } catch (error) {
     console.error("Category hard delete failed, archive fallback applied:", error);
@@ -132,8 +137,7 @@ export async function deleteCategory(id: string) {
       })
       .where(eq(categories.id, id));
 
-    revalidatePath("/admin");
-    revalidatePath("/admin/categories");
+    revalidateCategories();
     redirect("/admin/categories?archived=1");
   }
 }
@@ -143,7 +147,12 @@ export async function createCategorySeeds() {
     throw new Error("DATABASE_URL tanımlı değil.");
   }
 
-  const existing = await db.select().from(categories);
+  const existing = await db
+    .select({
+      slug: categories.slug,
+    })
+    .from(categories);
+
   const existingSlugs = new Set(existing.map((item) => item.slug));
 
   const missing = seedCategories.filter((item) => !existingSlugs.has(item.slug));
@@ -151,6 +160,8 @@ export async function createCategorySeeds() {
   if (missing.length === 0) {
     redirect("/admin/categories?seeded=0");
   }
+
+  const now = new Date();
 
   await db.insert(categories).values(
     missing.map((item) => ({
@@ -160,10 +171,11 @@ export async function createCategorySeeds() {
       icon: item.icon,
       status: "active" as const,
       sortOrder: item.sortOrder,
+      createdAt: now,
+      updatedAt: now,
     })),
   );
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/categories");
+  revalidateCategories();
   redirect(`/admin/categories?seeded=${missing.length}`);
 }

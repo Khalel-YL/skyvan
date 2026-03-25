@@ -45,10 +45,24 @@ async function getCategoriesSafely(): Promise<CategoryListItem[]> {
   }
 
   try {
-    const rows = await db.select().from(categories);
+    const rows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        icon: categories.icon,
+        status: categories.status,
+        sortOrder: categories.sortOrder,
+      })
+      .from(categories);
 
-    return (rows as CategoryListItem[]).sort((a, b) => {
-      const order = { active: 0, draft: 1, archived: 2 } as const;
+    return rows.sort((a, b) => {
+      const order: Record<CategoryStatus, number> = {
+        active: 0,
+        draft: 1,
+        archived: 2,
+      };
+
       const statusDiff = order[a.status] - order[b.status];
 
       if (statusDiff !== 0) {
@@ -143,7 +157,7 @@ export default async function CategoriesPage({
 
             <p className="mt-3 text-sm leading-6 text-neutral-400">
               Categories katmanı artık products omurgasına geçmeye hazır hale
-              geliyor. Bu batch’te seed, archive fallback ve parent-ready yapı
+              geliyor. Bu batch&apos;te seed, archive fallback ve parent-ready yapı
               dili ekleniyor.
             </p>
           </div>
@@ -250,27 +264,21 @@ export default async function CategoriesPage({
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
                 Seed
               </p>
-              <p className="mt-3 text-sm font-medium text-white">
-                Hazır
-              </p>
+              <p className="mt-3 text-sm font-medium text-white">Hazır</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
                 Archive fallback
               </p>
-              <p className="mt-3 text-sm font-medium text-white">
-                Aktif
-              </p>
+              <p className="mt-3 text-sm font-medium text-white">Aktif</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
                 Parent-ready
               </p>
-              <p className="mt-3 text-sm font-medium text-white">
-                Schema next
-              </p>
+              <p className="mt-3 text-sm font-medium text-white">Schema next</p>
             </div>
           </div>
         </div>

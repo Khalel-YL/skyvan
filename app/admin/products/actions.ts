@@ -1,120 +1,373 @@
 "use server";
 
-import { db } from "@/db/db";
-import { products, localizedContent, categories, productSpecs } from "@/db/schema";
+import { and, asc, desc, eq, ilike, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
-import { eq } from "drizzle-orm";
 
-// ─────────────────────────────────────────────────────────────
-// 1. EKLEME MOTORU (CREATE)
-// ─────────────────────────────────────────────────────────────
-export async function createPermanentProduct(formData: FormData) {
-  const title = formData.get("title") as string;
-  const sku = formData.get("sku") as string;
-  const price = formData.get("price") as string || "0";
-  const weight = formData.get("weight") as string || "0";
-  const imageUrl = formData.get("imageUrl") as string || "";
-  const datasheetUrl = formData.get("datasheetUrl") as string || "";
-  const specsData = formData.get("specsData") as string;
+import { getDbOrThrow } from "@/db/db";
+import { categories, products } from "@/db/schema";
 
-  try {
-    let defaultCategory = await db.query.categories.findFirst({ where: eq(categories.slug, "genel") });
-    if (!defaultCategory) {
-      const [newCategory] = await db.insert(categories).values({ slug: "genel", sortOrder: 1 }).returning();
-      defaultCategory = newCategory;
-    }
+import {
+  createProductSchema,
+  productFiltersSchema,
+  updateProductSchema,
+} from "./schema";
+import {
+  emptyToNull,
+  normalizeSku,
+  normalizeSlug,
+  stringNumberToDbNumeric,
+} from "./mappers";
+import type {
+  CategoryOption,
+  ProductActionState,
+  ProductFilters,
+  ProductListItem,
+} from "./types";
 
-    const productId = uuidv4();
-
-    await db.insert(products).values({
-      id: productId, categoryId: defaultCategory.id, sku, basePrice: price, weightKg: weight, imageUrl, datasheetUrl, status: "active",
-    });
-
-    await db.insert(localizedContent).values({
-      id: uuidv4(), entityId: productId, entityType: "product", locale: "tr", title, contentJson: { showPrice: true },
-    });
-
-    if (specsData) {
-      const parsedSpecs = JSON.parse(specsData);
-      const validSpecs = parsedSpecs.filter((s: any) => s.key && s.value);
-      if (validSpecs.length > 0) {
-        const specInserts = validSpecs.map((s: any) => ({
-          id: uuidv4(), productId: productId, specKey: s.key.toUpperCase(), specValue: s.value, unit: s.unit || "",
-        }));
-        await db.insert(productSpecs).values(specInserts);
-      }
-    }
-
-    revalidatePath("/workshop"); revalidatePath("/admin/products");
-  } catch (error) { throw new Error("Kayıt Hatası"); }
-  redirect("/admin/products");
+function db() {
+  return getDbOrThrow();
 }
 
-// ─────────────────────────────────────────────────────────────
-// 2. GÜNCELLEME MOTORU (UPDATE) - YENİ!
-// ─────────────────────────────────────────────────────────────
-export async function updatePermanentProduct(formData: FormData) {
-  const id = formData.get("id") as string; // Güncellenecek ürünün ID'si
-  const title = formData.get("title") as string;
-  const sku = formData.get("sku") as string;
-  const price = formData.get("price") as string || "0";
-  const weight = formData.get("weight") as string || "0";
-  const imageUrl = formData.get("imageUrl") as string || "";
-  const datasheetUrl = formData.get("datasheetUrl") as string || "";
-  const specsData = formData.get("specsData") as string;
+export async function getProductCategories(): Promise<CategoryOption[]> {
+  const rows = await db()
+    .select({
+      id: categories.id,
+      name: categories.name,
+      slug: categories.slug,
+      status: categories.status,
+    })
+    .from(categories)
+    .orderBy(asc(categories.name));
 
-  try {
-    // Ana tabloyu güncelle
-    await db.update(products).set({
-      sku, basePrice: price, weightKg: weight, imageUrl, datasheetUrl
-    }).where(eq(products.id, id));
-
-    // İsmi güncelle
-    await db.update(localizedContent).set({ title }).where(eq(localizedContent.entityId, id));
-
-    // Spesifikasyonları güncelle (Önce eskileri sil, sonra yenileri yaz)
-    if (specsData) {
-      await db.delete(productSpecs).where(eq(productSpecs.productId, id));
-      const parsedSpecs = JSON.parse(specsData);
-      const validSpecs = parsedSpecs.filter((s: any) => s.key && s.value);
-      if (validSpecs.length > 0) {
-        const specInserts = validSpecs.map((s: any) => ({
-          id: uuidv4(), productId: id, specKey: s.key.toUpperCase(), specValue: s.value, unit: s.unit || "",
-        }));
-        await db.insert(productSpecs).values(specInserts);
-      }
-    }
-
-    revalidatePath("/workshop"); revalidatePath("/admin/products");
-  } catch (error) { throw new Error("Güncelleme Hatası"); }
-  
-  // İşlem bitince URL'deki '?edit=' kısmını temizle
-  redirect("/admin/products"); 
+  return rows;
 }
 
-// ─────────────────────────────────────────────────────────────
-// 3. SİLME VE GÖRÜNÜRLÜK MOTORLARI (DELETE & TOGGLE)
-// ─────────────────────────────────────────────────────────────
-export async function deleteProduct(productId: string) {
-  try {
-    await db.delete(productSpecs).where(eq(productSpecs.productId, productId));
-    await db.delete(localizedContent).where(eq(localizedContent.entityId, productId));
-    await db.delete(products).where(eq(products.id, productId));
-    revalidatePath("/admin/products"); revalidatePath("/workshop");
-  } catch (error) { throw new Error("Silme hatası"); }
+export async function getProducts(filtersInput?: Partial<ProductFilters>) {
+  const filters = productFiltersSchema.parse({
+    q: filtersInput?.q ?? "",
+    status: filtersInput?.status ?? "all",
+    categoryId: filtersInput?.categoryId ?? "all",
+  });
+
+  const whereClauses = [];
+
+  if (filters.q) {
+    whereClauses.push(
+      or(
+        ilike(products.name, `%${filters.q}%`),
+        ilike(products.slug, `%${filters.q}%`),
+        ilike(products.sku, `%${filters.q}%`),
+        ilike(products.shortDescription, `%${filters.q}%`)
+      )
+    );
+  }
+
+  if (filters.status !== "all") {
+    whereClauses.push(eq(products.status, filters.status));
+  }
+
+  if (filters.categoryId !== "all") {
+    whereClauses.push(eq(products.categoryId, filters.categoryId));
+  }
+
+  const rows = await db()
+    .select({
+      id: products.id,
+      name: products.name,
+      slug: products.slug,
+      sku: products.sku,
+      categoryId: products.categoryId,
+      categoryName: categories.name,
+      shortDescription: products.shortDescription,
+      description: products.description,
+      imageUrl: products.imageUrl,
+      datasheetUrl: products.datasheetUrl,
+      basePrice: products.basePrice,
+      weightKg: products.weightKg,
+      powerDrawWatts: products.powerDrawWatts,
+      powerSupplyWatts: products.powerSupplyWatts,
+      status: products.status,
+      createdAt: products.createdAt,
+      updatedAt: products.updatedAt,
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id))
+    .where(whereClauses.length ? and(...whereClauses) : undefined)
+    .orderBy(desc(products.updatedAt), asc(products.name));
+
+  return rows satisfies ProductListItem[];
 }
 
-export async function togglePriceVisibility(productId: string, currentStatus: boolean) {
-  try {
-    const content = await db.query.localizedContent.findFirst({ where: eq(localizedContent.entityId, productId) });
-    if (content) {
-        const currentJson = (content.contentJson as any) || {};
-        await db.update(localizedContent)
-          .set({ contentJson: { ...currentJson, showPrice: !currentStatus } })
-          .where(eq(localizedContent.entityId, productId));
-        revalidatePath("/admin/products"); revalidatePath("/workshop");
-    }
-  } catch (error) { throw new Error("Ayar hatası"); }
+export async function createProduct(
+  _prevState: ProductActionState,
+  formData: FormData
+): Promise<ProductActionState> {
+  const parsed = createProductSchema.safeParse({
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+    sku: formData.get("sku"),
+    categoryId: formData.get("categoryId"),
+    shortDescription: formData.get("shortDescription"),
+    description: formData.get("description"),
+    imageUrl: formData.get("imageUrl"),
+    datasheetUrl: formData.get("datasheetUrl"),
+    basePrice: formData.get("basePrice"),
+    weightKg: formData.get("weightKg"),
+    powerDrawWatts: formData.get("powerDrawWatts"),
+    powerSupplyWatts: formData.get("powerSupplyWatts"),
+    status: formData.get("status"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Form doğrulaması başarısız.",
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = parsed.data;
+  const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
+  const normalizedSku = normalizeSku(data.sku.trim());
+
+  const [category] = await db()
+    .select({
+      id: categories.id,
+      status: categories.status,
+    })
+    .from(categories)
+    .where(eq(categories.id, data.categoryId))
+    .limit(1);
+
+  if (!category) {
+    return {
+      ok: false,
+      message: "Seçilen kategori bulunamadı.",
+    };
+  }
+
+  if (category.status !== "active") {
+    return {
+      ok: false,
+      message: "Yalnızca aktif kategoriye ürün eklenebilir.",
+    };
+  }
+
+  const [slugConflict] = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.slug, normalizedSlug))
+    .limit(1);
+
+  if (slugConflict) {
+    return {
+      ok: false,
+      message: "Bu slug zaten kullanılıyor.",
+      errors: { slug: ["Bu slug zaten kullanılıyor."] },
+    };
+  }
+
+  const [skuConflict] = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.sku, normalizedSku))
+    .limit(1);
+
+  if (skuConflict) {
+    return {
+      ok: false,
+      message: "Bu SKU zaten kullanılıyor.",
+      errors: { sku: ["Bu SKU zaten kullanılıyor."] },
+    };
+  }
+
+  await db().insert(products).values({
+    name: data.name.trim(),
+    slug: normalizedSlug,
+    sku: normalizedSku,
+    categoryId: data.categoryId,
+    materialId: null,
+    shortDescription: emptyToNull(data.shortDescription),
+    description: emptyToNull(data.description),
+    imageUrl: emptyToNull(data.imageUrl),
+    datasheetUrl: emptyToNull(data.datasheetUrl),
+    basePrice: stringNumberToDbNumeric(data.basePrice) ?? "0.00",
+    weightKg: stringNumberToDbNumeric(data.weightKg) ?? "0.000",
+    powerDrawWatts: stringNumberToDbNumeric(data.powerDrawWatts) ?? "0.00",
+    powerSupplyWatts: stringNumberToDbNumeric(data.powerSupplyWatts) ?? "0.00",
+    status: data.status,
+    updatedAt: new Date(),
+  });
+
+  revalidatePath("/admin/products");
+
+  return {
+    ok: true,
+    message: "Ürün başarıyla oluşturuldu.",
+  };
+}
+
+export async function updateProduct(
+  _prevState: ProductActionState,
+  formData: FormData
+): Promise<ProductActionState> {
+  const parsed = updateProductSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+    sku: formData.get("sku"),
+    categoryId: formData.get("categoryId"),
+    shortDescription: formData.get("shortDescription"),
+    description: formData.get("description"),
+    imageUrl: formData.get("imageUrl"),
+    datasheetUrl: formData.get("datasheetUrl"),
+    basePrice: formData.get("basePrice"),
+    weightKg: formData.get("weightKg"),
+    powerDrawWatts: formData.get("powerDrawWatts"),
+    powerSupplyWatts: formData.get("powerSupplyWatts"),
+    status: formData.get("status"),
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Form doğrulaması başarısız.",
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const data = parsed.data;
+  const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
+  const normalizedSku = normalizeSku(data.sku.trim());
+
+  const [current] = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.id, data.id))
+    .limit(1);
+
+  if (!current) {
+    return {
+      ok: false,
+      message: "Güncellenecek ürün bulunamadı.",
+    };
+  }
+
+  const [category] = await db()
+    .select({
+      id: categories.id,
+      status: categories.status,
+    })
+    .from(categories)
+    .where(eq(categories.id, data.categoryId))
+    .limit(1);
+
+  if (!category) {
+    return {
+      ok: false,
+      message: "Seçilen kategori bulunamadı.",
+    };
+  }
+
+  if (category.status !== "active") {
+    return {
+      ok: false,
+      message: "Ürün yalnızca aktif kategoriye bağlanabilir.",
+    };
+  }
+
+  const [slugConflict] = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.slug, normalizedSlug), ne(products.id, data.id)))
+    .limit(1);
+
+  if (slugConflict) {
+    return {
+      ok: false,
+      message: "Bu slug başka bir üründe kullanılıyor.",
+      errors: { slug: ["Bu slug başka bir üründe kullanılıyor."] },
+    };
+  }
+
+  const [skuConflict] = await db()
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.sku, normalizedSku), ne(products.id, data.id)))
+    .limit(1);
+
+  if (skuConflict) {
+    return {
+      ok: false,
+      message: "Bu SKU başka bir üründe kullanılıyor.",
+      errors: { sku: ["Bu SKU başka bir üründe kullanılıyor."] },
+    };
+  }
+
+  await db()
+    .update(products)
+    .set({
+      name: data.name.trim(),
+      slug: normalizedSlug,
+      sku: normalizedSku,
+      categoryId: data.categoryId,
+      shortDescription: emptyToNull(data.shortDescription),
+      description: emptyToNull(data.description),
+      imageUrl: emptyToNull(data.imageUrl),
+      datasheetUrl: emptyToNull(data.datasheetUrl),
+      basePrice: stringNumberToDbNumeric(data.basePrice) ?? "0.00",
+      weightKg: stringNumberToDbNumeric(data.weightKg) ?? "0.000",
+      powerDrawWatts: stringNumberToDbNumeric(data.powerDrawWatts) ?? "0.00",
+      powerSupplyWatts: stringNumberToDbNumeric(data.powerSupplyWatts) ?? "0.00",
+      status: data.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, data.id));
+
+  revalidatePath("/admin/products");
+
+  return {
+    ok: true,
+    message: "Ürün başarıyla güncellendi.",
+  };
+}
+
+export async function archiveProduct(productId: string): Promise<ProductActionState> {
+  const [current] = await db()
+    .select({
+      id: products.id,
+      status: products.status,
+    })
+    .from(products)
+    .where(eq(products.id, productId))
+    .limit(1);
+
+  if (!current) {
+    return {
+      ok: false,
+      message: "Arşivlenecek ürün bulunamadı.",
+    };
+  }
+
+  if (current.status === "archived") {
+    return {
+      ok: true,
+      message: "Ürün zaten arşivde.",
+    };
+  }
+
+  await db()
+    .update(products)
+    .set({
+      status: "archived",
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, productId));
+
+  revalidatePath("/admin/products");
+
+  return {
+    ok: true,
+    message: "Ürün arşive alındı.",
+  };
 }
