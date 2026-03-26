@@ -1,45 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import {
-  ChevronDown,
-  Info,
-  Ruler,
-  Sparkles,
-  Truck,
-  Weight,
-  X,
-} from "lucide-react";
-
 import { saveModel } from "./actions";
-
-type ModelStatus = "draft" | "active" | "archived";
-
-type ModelListItem = {
-  id: string;
-  slug: string;
-  baseWeightKg: string | number;
-  maxPayloadKg: string | number;
-  wheelbaseMm: number;
-  roofLengthMm: number | null;
-  roofWidthMm: number | null;
-  status: ModelStatus;
-};
+import type { ModelListItem, ModelStatus } from "./types";
 
 type AddModelDrawerProps = {
   initialData?: ModelListItem | null;
   disabled?: boolean;
 };
-
-const quickReferenceFamilies = [
-  "Fiat Ducato / Boxer / Jumper",
-  "Ford Transit",
-  "Mercedes-Benz Sprinter",
-  "Volkswagen Crafter / MAN TGE",
-  "Renault Master / Movano / Interstar",
-  "Iveco Daily",
-];
 
 function toFormValues(initialData?: ModelListItem | null) {
   return {
@@ -54,7 +22,7 @@ function toFormValues(initialData?: ModelListItem | null) {
   };
 }
 
-function FieldShell({
+function Field({
   label,
   hint,
   children,
@@ -64,20 +32,18 @@ function FieldShell({
   children: React.ReactNode;
 }) {
   return (
-    <label className="space-y-2">
+    <div className="space-y-2">
       <div>
-        <span className="text-sm font-medium text-neutral-200">{label}</span>
-        {hint ? (
-          <p className="mt-1 text-xs leading-5 text-neutral-500">{hint}</p>
-        ) : null}
+        <label className="text-sm font-medium text-zinc-200">{label}</label>
+        {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       </div>
       {children}
-    </label>
+    </div>
   );
 }
 
 const inputClassName =
-  "w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-white/20 focus:bg-neutral-900";
+  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
 
 export default function AddModelDrawer({
   initialData,
@@ -85,287 +51,226 @@ export default function AddModelDrawer({
 }: AddModelDrawerProps) {
   const isEdit = Boolean(initialData);
   const defaults = useMemo(() => toFormValues(initialData), [initialData]);
-  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<ModelStatus>(defaults.status);
 
   if (disabled) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-        <button
-          type="button"
-          disabled
-          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-500"
-        >
-          Database yapılandırılmadan kayıt açılamaz
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled
+        className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-500"
+      >
+        Veritabanı hazır değil
+      </button>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03]">
-      <div className="grid min-h-[720px] xl:grid-cols-[0.95fr_1.2fr]">
-        <div className="border-b border-white/10 bg-black xl:border-b-0 xl:border-r">
-          <div className="h-full px-8 py-10 xl:px-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-amber-300">
-              <Truck className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-[0.22em]">
-                Models Core
-              </span>
-            </div>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setStatus(defaults.status);
+          setIsOpen(true);
+        }}
+        className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+      >
+        {isEdit ? "Düzenle" : "Model Ekle"}
+      </button>
 
-            <h2 className="mt-8 text-4xl font-semibold tracking-tight text-white">
-              {isEdit ? "Model Düzenleme" : "Yeni Araç Modeli"}
-            </h2>
-
-            <p className="mt-4 max-w-md text-sm leading-7 text-neutral-400">
-              Şasi, taşıma kapasitesi ve görünür yüzey ölçülerini kontrollü
-              biçimde yönetiyoruz. Hata riskini azaltmak için çekirdek veri
-              omurgasını sade tutuyoruz.
-            </p>
-
-            <div className="mt-8 space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-300" />
-                  <p className="text-sm font-semibold text-white">
-                    Referans platform aileleri
-                  </p>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {quickReferenceFamilies.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-300"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-start gap-3">
-                  <Info className="mt-0.5 h-4 w-4 text-neutral-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      Teknik genişleme hazırlığı
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Sonraki aşamada gövde tipi, drivetrain, yakıt tipi, iç
-                      yükseklik, kapı açıklıkları ve dönüşüm/homologasyon alanları
-                      eklenecek.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {isEdit ? (
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                    Düzenlenen kayıt
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">
-                    {defaults.slug}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-neutral-950">
-          <div className="px-8 py-8 xl:px-10">
-            <div className="flex items-start justify-between gap-4">
+      {isOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4">
+          <div className="ml-auto h-full w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                  {isEdit ? "Edit Mode" : "Create Mode"}
+                <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                  Models
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">
-                  {isEdit ? "Araç Şasisini Güncelle" : "Yeni Araç Şasisi Ekle"}
-                </h3>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
-                  Form alanları bilinçli olarak dar tutuldu. Önce güvenli veri
-                  girişi, sonra modül genişlemesi.
+                <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
+                  {isEdit ? "Model Düzenle" : "Yeni Araç Modeli"}
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Şasi, taşıma kapasitesi ve görünür yüzey ölçülerini sade ve
+                  kontrollü şekilde yönet.
                 </p>
               </div>
 
-              <Link
-                href="/admin/models"
-                className="rounded-2xl border border-white/10 bg-white/5 p-2 text-neutral-300 transition hover:bg-white/10 hover:text-white"
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-full border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
               >
-                <X className="h-4 w-4" />
-              </Link>
+                Kapat
+              </button>
             </div>
 
-            <form
-              action={saveModel}
-              onSubmit={() => setLoading(true)}
-              className="mt-8 space-y-8"
-            >
-              {isEdit ? (
-                <input type="hidden" name="id" defaultValue={defaults.id} />
-              ) : null}
+            <form action={saveModel} className="space-y-6 p-6">
+              {isEdit ? <input type="hidden" name="id" value={defaults.id} /> : null}
+              <input type="hidden" name="status" value={status} />
 
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Temel Kimlik
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FieldShell
-                    label="Model Kodu"
-                    hint="Örnek: ford-transit-l4h3"
-                  >
-                    <input
-                      name="slug"
-                      defaultValue={defaults.slug}
-                      placeholder="ford-transit-l4h3"
-                      required
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Durum"
-                    hint="Kayıt yaşam döngüsü"
-                  >
-                    <div className="relative">
-                      <select
-                        name="status"
-                        defaultValue={defaults.status}
-                        className={`${inputClassName} skyvan-select`}
-                      >
-                        <option value="active">Aktif</option>
-                        <option value="draft">Taslak</option>
-                        <option value="archived">Arşiv</option>
-                      </select>
-
-                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                    </div>
-                  </FieldShell>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Weight className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Ağırlık Dinamikleri
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FieldShell
-                    label="Boş Ağırlık (kg)"
-                    hint="500 - 10000 arası"
-                  >
-                    <input
-                      name="baseWeightKg"
-                      type="number"
-                      min="500"
-                      max="10000"
-                      defaultValue={defaults.baseWeightKg}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Maksimum Yük (kg)"
-                    hint="100 - 10000 arası"
-                  >
-                    <input
-                      name="maxPayloadKg"
-                      type="number"
-                      min="100"
-                      max="10000"
-                      defaultValue={defaults.maxPayloadKg}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Fiziksel Boyutlar
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FieldShell
-                    label="Dingil Mesafesi (mm)"
-                    hint="1800 - 6000"
-                  >
-                    <input
-                      name="wheelbaseMm"
-                      type="number"
-                      min="1800"
-                      max="6000"
-                      defaultValue={defaults.wheelbaseMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Tavan Uzunluğu (mm)"
-                    hint="1000 - 10000"
-                  >
-                    <input
-                      name="roofLengthMm"
-                      type="number"
-                      min="1000"
-                      max="10000"
-                      defaultValue={defaults.roofLengthMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Tavan Genişliği (mm)"
-                    hint="500 - 4000"
-                  >
-                    <input
-                      name="roofWidthMm"
-                      type="number"
-                      min="500"
-                      max="4000"
-                      defaultValue={defaults.roofWidthMm}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-                </div>
-              </section>
-
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-2xl border border-white/10 bg-white px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="Model kodu"
+                  hint="Örnek: VIC-MPPT-150/70 veya DUCATO-L4H3"
                 >
-                  {loading
-                    ? "Kaydediliyor..."
-                    : isEdit
-                      ? "Şasiyi Güncelle"
-                      : "Şasiyi Kaydet"}
+                  <input
+                    name="slug"
+                    defaultValue={defaults.slug}
+                    className={inputClassName}
+                    placeholder="VIC-MPPT-150/70"
+                  />
+                </Field>
+
+                <Field
+                  label="Durum"
+                  hint="Model yaşam döngüsünü kontrollü şekilde yönet."
+                >
+                  <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setStatus("draft")}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        status === "draft"
+                          ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                          : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                      }`}
+                    >
+                      Taslak
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStatus("active")}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        status === "active"
+                          ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                          : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                      }`}
+                    >
+                      Aktif
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStatus("archived")}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        status === "archived"
+                          ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                          : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                      }`}
+                    >
+                      Arşiv
+                    </button>
+                  </div>
+                </Field>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="Boş ağırlık (kg)"
+                  hint="Şasi boş ağırlığı."
+                >
+                  <input
+                    name="baseWeightKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={defaults.baseWeightKg}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+
+                <Field
+                  label="Max yük (kg)"
+                  hint="Taşıma kapasitesi."
+                >
+                  <input
+                    name="maxPayloadKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={defaults.maxPayloadKg}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <Field
+                  label="Dingil mesafesi (mm)"
+                  hint="Wheelbase"
+                >
+                  <input
+                    name="wheelbaseMm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={defaults.wheelbaseMm}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+
+                <Field
+                  label="Tavan boyu (mm)"
+                  hint="Opsiyonel"
+                >
+                  <input
+                    name="roofLengthMm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={defaults.roofLengthMm}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+
+                <Field
+                  label="Tavan genişliği (mm)"
+                  hint="Opsiyonel"
+                >
+                  <input
+                    name="roofWidthMm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={defaults.roofWidthMm}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+                Bu batch’te model omurgasını sade tutuyoruz. Gövde tipi,
+                drivetrain, yakıt ve homologasyon alanlarını sonraki kontrollü
+                aşamada açacağız.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+                >
+                  Vazgeç
                 </button>
 
-                <Link
-                  href="/admin/models"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                <button
+                  type="submit"
+                  className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
                 >
-                  İptal
-                </Link>
+                  {isEdit ? "Modeli Güncelle" : "Modeli Kaydet"}
+                </button>
               </div>
             </form>
           </div>
         </div>
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }

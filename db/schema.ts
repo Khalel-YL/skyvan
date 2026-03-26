@@ -169,6 +169,43 @@ export const products = pgTable(
   ]
 );
 
+export const productDocuments = pgTable(
+  "product_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+
+    type: text("type").notNull(),
+
+    title: text("title").notNull(),
+
+    url: text("url").notNull(),
+
+    note: text("note"),
+
+    sortOrder: integer("sort_order").notNull().default(0),
+
+    status: statusEnum("status").default("active").notNull(),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_product_documents_product_id").on(table.productId),
+    index("idx_product_documents_status").on(table.status),
+    index("idx_product_documents_type").on(table.type),
+    uniqueIndex("uq_product_documents_product_type_url").on(
+      table.productId,
+      table.type,
+      table.url
+    ),
+  ]
+);
+
 // ─────────────────────────────────────────────────────────────
 // 3. RULE ENGINE (AI & Uyumluluk Fiziği)
 // ─────────────────────────────────────────────────────────────

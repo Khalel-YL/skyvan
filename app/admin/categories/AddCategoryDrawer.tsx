@@ -1,17 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import {
-  ChevronDown,
-  FolderTree,
-  GitBranch,
-  Info,
-  Layers3,
-  Palette,
-  X,
-} from "lucide-react";
-
 import { saveCategory } from "./actions";
 
 type CategoryStatus = "draft" | "active" | "archived";
@@ -30,17 +19,6 @@ type AddCategoryDrawerProps = {
   disabled?: boolean;
 };
 
-const categoryIdeas = [
-  "Electrical",
-  "Water",
-  "Furniture",
-  "Kitchen",
-  "Bathroom",
-  "Windows",
-  "Seating",
-  "Sleeping",
-];
-
 function toFormValues(initialData?: CategoryListItem | null) {
   return {
     id: initialData?.id ?? "",
@@ -52,7 +30,7 @@ function toFormValues(initialData?: CategoryListItem | null) {
   };
 }
 
-function FieldShell({
+function Field({
   label,
   hint,
   children,
@@ -62,20 +40,18 @@ function FieldShell({
   children: React.ReactNode;
 }) {
   return (
-    <label className="space-y-2">
+    <div className="space-y-2">
       <div>
-        <span className="text-sm font-medium text-neutral-200">{label}</span>
-        {hint ? (
-          <p className="mt-1 text-xs leading-5 text-neutral-500">{hint}</p>
-        ) : null}
+        <label className="text-sm font-medium text-zinc-200">{label}</label>
+        {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       </div>
       {children}
-    </label>
+    </div>
   );
 }
 
 const inputClassName =
-  "w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-white/20 focus:bg-neutral-900";
+  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
 
 export default function AddCategoryDrawer({
   initialData,
@@ -83,266 +59,191 @@ export default function AddCategoryDrawer({
 }: AddCategoryDrawerProps) {
   const isEdit = Boolean(initialData);
   const defaults = useMemo(() => toFormValues(initialData), [initialData]);
-  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<CategoryStatus>(defaults.status);
 
   if (disabled) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-        <button
-          type="button"
-          disabled
-          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-neutral-500"
-        >
-          Database yapılandırılmadan kayıt açılamaz
-        </button>
-      </div>
+      <button
+        type="button"
+        disabled
+        className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-500"
+      >
+        Veritabanı hazır değil
+      </button>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03]">
-      <div className="grid min-h-[680px] xl:grid-cols-[0.9fr_1.15fr]">
-        <div className="border-b border-white/10 bg-black xl:border-b-0 xl:border-r">
-          <div className="h-full px-8 py-10 xl:px-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-cyan-300">
-              <FolderTree className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-[0.22em]">
-                Categories Core
-              </span>
-            </div>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setStatus(defaults.status);
+          setIsOpen(true);
+        }}
+        className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+      >
+        {isEdit ? "Düzenle" : "Kategori Ekle"}
+      </button>
 
-            <h2 className="mt-8 text-4xl font-semibold tracking-tight text-white">
-              {isEdit ? "Kategori Düzenleme" : "Yeni Kategori"}
-            </h2>
-
-            <p className="mt-4 max-w-md text-sm leading-7 text-neutral-400">
-              Kategori katmanı, products ve packages modüllerinin omurgasıdır.
-              Bu yüzden isim, sıra ve durum standardı burada kritik.
-            </p>
-
-            <div className="mt-8 space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-center gap-2">
-                  <Layers3 className="h-4 w-4 text-cyan-300" />
-                  <p className="text-sm font-semibold text-white">
-                    Önerilen kategori aileleri
-                  </p>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {categoryIdeas.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-neutral-300"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-start gap-3">
-                  <GitBranch className="mt-0.5 h-4 w-4 text-neutral-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      Parent-ready mimari
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Hiyerarşik kategori mantığı bir sonraki schema batch’te
-                      kalıcı alana taşınacak. Bu batch’te önce omurgayı bozmadan
-                      stabilize ediyoruz.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex items-start gap-3">
-                  <Info className="mt-0.5 h-4 w-4 text-neutral-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      Soft delete yaklaşımı
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      Bağlı veri varsa sistem hard delete yerine kaydı arşive
-                      çekerek admin akışını kırmaz.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {isEdit ? (
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                    Düzenlenen kayıt
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">
-                    {defaults.name}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-neutral-950">
-          <div className="px-8 py-8 xl:px-10">
-            <div className="flex items-start justify-between gap-4">
+      {isOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4">
+          <div className="ml-auto h-full w-full max-w-xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                  {isEdit ? "Edit Mode" : "Create Mode"}
+                <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                  Categories
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">
-                  {isEdit ? "Kategori Bilgisini Güncelle" : "Yeni Kategori Ekle"}
-                </h3>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-400">
-                  Kategori yapısını temiz ve uzun ömürlü kuruyoruz. Parent-child
-                  veri alanını bilerek bir sonraki migration batch’ine bırakıyoruz.
+                <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
+                  {isEdit ? "Kategori Düzenle" : "Yeni Kategori"}
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {isEdit
+                    ? "Kategori bilgisini sade ve kontrollü şekilde güncelle."
+                    : "Ürün omurgasına yeni bir kategori ekle."}
                 </p>
               </div>
 
-              <Link
-                href="/admin/categories"
-                className="rounded-2xl border border-white/10 bg-white/5 p-2 text-neutral-300 transition hover:bg-white/10 hover:text-white"
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-full border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
               >
-                <X className="h-4 w-4" />
-              </Link>
+                Kapat
+              </button>
             </div>
 
-            <form
-              action={saveCategory}
-              onSubmit={() => setLoading(true)}
-              className="mt-8 space-y-8"
-            >
+            <form action={saveCategory} className="space-y-6 p-6">
               {isEdit ? (
-                <input type="hidden" name="id" defaultValue={defaults.id} />
+                <input type="hidden" name="id" value={defaults.id} />
               ) : null}
 
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FolderTree className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Temel Kimlik
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FieldShell
-                    label="Kategori Adı"
-                    hint="Admin ve seçim ekranlarında görünen başlık"
-                  >
-                    <input
-                      name="name"
-                      defaultValue={defaults.name}
-                      placeholder="Electrical"
-                      required
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Slug"
-                    hint="Boş bırakırsan ad üzerinden türetilir"
-                  >
-                    <input
-                      name="slug"
-                      defaultValue={defaults.slug}
-                      placeholder="electrical"
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Görsel ve Sıralama
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FieldShell
-                    label="Icon Etiketi"
-                    hint="Örnek: bolt, droplet, bed"
-                  >
-                    <input
-                      name="icon"
-                      defaultValue={defaults.icon}
-                      placeholder="bolt"
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-
-                  <FieldShell
-                    label="Sıra Numarası"
-                    hint="Configurator ve admin sıralaması için"
-                  >
-                    <input
-                      name="sortOrder"
-                      type="number"
-                      min="0"
-                      defaultValue={defaults.sortOrder}
-                      className={inputClassName}
-                    />
-                  </FieldShell>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Layers3 className="h-4 w-4 text-neutral-400" />
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-300">
-                    Durum
-                  </h4>
-                </div>
-
-                <FieldShell
-                  label="Kayıt Durumu"
-                  hint="Aktif, taslak veya arşiv"
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="Kategori adı"
+                  hint="Admin ve seçim ekranlarında görünen isim."
                 >
-                  <div className="relative max-w-sm">
-                    <select
-                      name="status"
-                      defaultValue={defaults.status}
-                      className={`${inputClassName} skyvan-select`}
-                    >
-                      <option value="active">Aktif</option>
-                      <option value="draft">Taslak</option>
-                      <option value="archived">Arşiv</option>
-                    </select>
+                  <input
+                    name="name"
+                    defaultValue={defaults.name}
+                    className={inputClassName}
+                    placeholder="Kitchen"
+                  />
+                </Field>
 
-                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                  </div>
-                </FieldShell>
-              </section>
+                <Field
+                  label="Slug"
+                  hint="Boş bırakırsan isimden otomatik türetilir."
+                >
+                  <input
+                    name="slug"
+                    defaultValue={defaults.slug}
+                    className={inputClassName}
+                    placeholder="kitchen"
+                  />
+                </Field>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="İkon etiketi"
+                  hint="Örnek: bolt, droplet, bed"
+                >
+                  <input
+                    name="icon"
+                    defaultValue={defaults.icon}
+                    className={inputClassName}
+                    placeholder="chef-hat"
+                  />
+                </Field>
+
+                <Field
+                  label="Sıra"
+                  hint="Listeleme ve admin sıralaması için."
+                >
+                  <input
+                    name="sortOrder"
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={defaults.sortOrder}
+                    className={inputClassName}
+                    placeholder="0"
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label="Durum"
+                hint="Kategori yaşam döngüsünü kontrollü şekilde yönet."
+              >
+                <input type="hidden" name="status" value={status} />
+
+                <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setStatus("draft")}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                      status === "draft"
+                        ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                        : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                    }`}
+                  >
+                    Taslak
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatus("active")}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                      status === "active"
+                        ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                        : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                    }`}
+                  >
+                    Aktif
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatus("archived")}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                      status === "archived"
+                        ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+                        : "bg-transparent text-zinc-300 hover:text-zinc-100"
+                    }`}
+                  >
+                    Arşiv
+                  </button>
+                </div>
+              </Field>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+                Parent-child category yapısını bu batch’te bilerek açmıyoruz.
+                Önce isim, slug, sıra ve durum omurgasını stabil tutuyoruz.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-2xl border border-white/10 bg-white px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
                 >
-                  {loading
-                    ? "Kaydediliyor..."
-                    : isEdit
-                      ? "Kategoriyi Güncelle"
-                      : "Kategoriyi Kaydet"}
+                  Vazgeç
                 </button>
 
-                <Link
-                  href="/admin/categories"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                <button
+                  type="submit"
+                  className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
                 >
-                  İptal
-                </Link>
+                  {isEdit ? "Kategoriyi Güncelle" : "Kategoriyi Kaydet"}
+                </button>
               </div>
             </form>
           </div>
         </div>
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }

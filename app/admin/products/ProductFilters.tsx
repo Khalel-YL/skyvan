@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-
 import type { CategoryOption } from "./types";
 
 type Props = {
@@ -25,15 +24,33 @@ export function ProductFilters({ categories }: Props) {
     return Boolean(q || status !== "all" || categoryId !== "all");
   }, [q, status, categoryId]);
 
-  function applyFilters() {
+  function buildUrl(next: {
+    q?: string;
+    status?: string;
+    categoryId?: string;
+  }) {
     const params = new URLSearchParams();
 
-    if (q.trim()) params.set("q", q.trim());
-    if (status !== "all") params.set("status", status);
-    if (categoryId !== "all") params.set("categoryId", categoryId);
+    const nextQ = next.q ?? q;
+    const nextStatus = next.status ?? status;
+    const nextCategoryId = next.categoryId ?? categoryId;
+
+    if (nextQ.trim()) params.set("q", nextQ.trim());
+    if (nextStatus !== "all") params.set("status", nextStatus);
+    if (nextCategoryId !== "all") params.set("categoryId", nextCategoryId);
 
     const qs = params.toString();
-    router.push(qs ? `/admin/products?${qs}` : "/admin/products");
+    return qs ? `/admin/products?${qs}` : "/admin/products";
+  }
+
+  function applyFilters() {
+    router.push(
+      buildUrl({
+        q,
+        status,
+        categoryId,
+      })
+    );
   }
 
   function resetFilters() {
@@ -43,76 +60,130 @@ export function ProductFilters({ categories }: Props) {
     router.push("/admin/products");
   }
 
+  function applyStatus(nextStatus: "all" | "draft" | "active" | "archived") {
+    setStatus(nextStatus);
+    router.push(
+      buildUrl({
+        status: nextStatus,
+      })
+    );
+  }
+
+  function segmentedClass(
+    value: "all" | "draft" | "active" | "archived"
+  ) {
+    return status === value
+      ? "border-zinc-600 bg-zinc-100 text-zinc-900"
+      : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100";
+  }
+
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Arama
-          </label>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Ürün adı, slug, SKU..."
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-          />
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 md:p-5">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-zinc-100">Filtreler</div>
+            <div className="text-xs text-zinc-500">
+              Ürünleri arama, durum ve kategoriye göre daralt.
+            </div>
+          </div>
+
+          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
+            <button
+              type="button"
+              onClick={() => applyStatus("all")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+                "all"
+              )}`}
+            >
+              Tümü
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyStatus("draft")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+                "draft"
+              )}`}
+            >
+              Taslak
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyStatus("active")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+                "active"
+              )}`}
+            >
+              Aktif
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyStatus("archived")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+                "archived"
+              )}`}
+            >
+              Arşiv
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Durum
-          </label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-200">Arama</label>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Ürün adı, slug, SKU..."
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 transition focus:border-zinc-700"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-200">
+              Kategori
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-700"
+            >
+              <option value="all">Tümü</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={applyFilters}
+            className="rounded-full bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-white"
           >
-            <option value="all">Tümü</option>
-            <option value="draft">Taslak</option>
-            <option value="active">Aktif</option>
-            <option value="archived">Arşiv</option>
-          </select>
-        </div>
+            Uygula
+          </button>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-300">
-            Kategori
-          </label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="rounded-full border border-zinc-800 bg-zinc-900 px-5 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
           >
-            <option value="all">Tümü</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            Sıfırla
+          </button>
+
+          {hasActiveFilters ? (
+            <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-400">
+              Filtre aktif
+            </span>
+          ) : null}
         </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={applyFilters}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
-        >
-          Uygula
-        </button>
-
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
-        >
-          Sıfırla
-        </button>
-
-        {hasActiveFilters ? (
-          <span className="text-xs text-zinc-500">Filtre aktif</span>
-        ) : null}
       </div>
     </div>
   );
