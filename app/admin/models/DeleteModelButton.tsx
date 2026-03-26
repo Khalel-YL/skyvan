@@ -1,49 +1,32 @@
-"use client";
+import { archiveModel, restoreModel } from "./actions";
+import type { ModelStatus } from "./types";
 
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { deleteModel } from "./actions";
-
-export function DeleteModelButton({
-  id,
-  slug,
-}: {
+type DeleteModelButtonProps = {
   id: string;
-  slug: string;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  status: ModelStatus;
+};
 
-  function handleDelete() {
-    const confirmed = window.confirm(
-      `${slug} kaydını kaldırmak istediğine emin misin?`
-    );
-
-    if (!confirmed) return;
-
-    startTransition(async () => {
-      try {
-        await deleteModel(id);
-        router.refresh();
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Model silinemedi. Kayıt başka veriyle bağlı olabilir.";
-
-        window.alert(message);
-      }
-    });
-  }
+export default function DeleteModelButton({
+  id,
+  status,
+}: DeleteModelButtonProps) {
+  const isArchived = status === "archived";
+  const action = isArchived ? restoreModel : archiveModel;
 
   return (
-    <button
-      type="button"
-      onClick={handleDelete}
-      disabled={isPending}
-      className="rounded-full border border-red-900/70 bg-red-950/40 px-4 py-2 text-sm font-medium text-red-300 transition hover:border-red-800 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {isPending ? "Kaldırılıyor..." : "Kaldır"}
-    </button>
+    <form action={action}>
+      <input type="hidden" name="id" value={id} />
+
+      <button
+        type="submit"
+        className={
+          isArchived
+            ? "rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-400/40 hover:bg-emerald-500/15"
+            : "rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-400/40 hover:bg-amber-500/15"
+        }
+      >
+        {isArchived ? "Geri Al" : "Arşivle"}
+      </button>
+    </form>
   );
 }

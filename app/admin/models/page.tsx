@@ -1,15 +1,28 @@
 import { db } from "@/db/db";
 import { models } from "@/db/schema";
+
 import AddModelDrawer from "./AddModelDrawer";
 import { ModelFilters } from "./ModelFilters";
 import { ModelsList } from "./ModelsList";
 import { ModelsSummary } from "./ModelsSummary";
+import { OfficialVehicleImportCard } from "./OfficialVehicleImportCard";
 import type { ModelListItem, ModelStatus } from "./types";
 
 type ModelsPageProps = {
   searchParams?: Promise<{
     q?: string;
     status?: string;
+    saved?: string;
+    deleted?: string;
+    created?: string;
+    updated?: string;
+    importStatus?: string;
+    importCode?: string;
+    batch?: string;
+    imported?: string;
+    skipped?: string;
+    modelAction?: string;
+    modelCode?: string;
   }>;
 };
 
@@ -50,9 +63,104 @@ async function getModelsSafely(): Promise<ModelListItem[]> {
   }
 }
 
-export default async function ModelsPage({
-  searchParams,
-}: ModelsPageProps) {
+function getFlashMessage(params: Awaited<ModelsPageProps["searchParams"]>) {
+  if (params?.saved && params?.created) {
+    return `Model kaydı oluşturuldu. Kullanılan kod: ${params.created}`;
+  }
+
+  if (params?.saved && params?.updated) {
+    return `Model kaydı güncellendi: ${params.updated}`;
+  }
+
+  if (params?.modelAction === "archived") {
+    return "Model kaydı arşive alındı.";
+  }
+
+  if (params?.modelAction === "restored") {
+    return "Model kaydı yeniden aktife alındı.";
+  }
+
+  if (params?.modelAction === "error") {
+    switch (params.modelCode) {
+      case "invalid-id":
+        return "Geçersiz model işlemi isteği alındı.";
+      case "archive-failed":
+        return "Model arşivlenirken beklenmeyen bir hata oluştu.";
+      case "restore-failed":
+        return "Model geri alınırken beklenmeyen bir hata oluştu.";
+      default:
+        return "Model işlemi sırasında beklenmeyen bir hata oluştu.";
+    }
+  }
+
+  if (params?.deleted) {
+    return "Model kaydı silindi.";
+  }
+
+  return null;
+}
+
+function getBatchLabel(batch?: string) {
+  switch (batch) {
+    case "large-van-core":
+      return "Core Large Van Batch";
+    case "ducato-class":
+      return "Ducato Sınıfı";
+    case "transit-class":
+      return "Transit Sınıfı";
+    case "sprinter-class":
+      return "Sprinter Sınıfı";
+    case "master-class":
+      return "Master Sınıfı";
+    case "crafter-class":
+      return "Crafter Sınıfı";
+    case "daily-class":
+      return "Daily Sınıfı";
+    default:
+      return "Seçilen batch";
+  }
+}
+
+function getImportFeedback(params: Awaited<ModelsPageProps["searchParams"]>) {
+  if (!params?.importStatus) {
+    return null;
+  }
+
+  if (params.importStatus === "success") {
+    const imported = Number.parseInt(params.imported ?? "0", 10);
+    const skipped = Number.parseInt(params.skipped ?? "0", 10);
+    const batchLabel = getBatchLabel(params.batch);
+
+    return {
+      type: "success" as const,
+      message: `${batchLabel} tamamlandı. ${imported} yeni model eklendi, ${skipped} kayıt zaten mevcut olduğu için atlandı.`,
+    };
+  }
+
+  if (params.importStatus === "error") {
+    switch (params.importCode) {
+      case "invalid-batch":
+        return {
+          type: "error" as const,
+          message: "Geçersiz import batch isteği alındı.",
+        };
+      case "empty-batch":
+        return {
+          type: "error" as const,
+          message: "Seçilen batch içinde import edilecek kayıt bulunamadı.",
+        };
+      default:
+        return {
+          type: "error" as const,
+          message: "Vehicle seed import sırasında beklenmeyen bir hata oluştu.",
+        };
+    }
+  }
+
+  return null;
+}
+
+export default async function ModelsPage({ searchParams }: ModelsPageProps) {
   const params = (await searchParams) ?? {};
   const databaseReady = Boolean(db);
 
@@ -67,10 +175,7 @@ export default async function ModelsPage({
       : "all";
 
   const filteredModels = allModels.filter((model) => {
-    const matchesQuery = query
-      ? model.slug.toLowerCase().includes(query)
-      : true;
-
+    const matchesQuery = query ? model.slug.toLowerCase().includes(query) : true;
     const matchesStatus =
       statusFilter === "all" ? true : model.status === statusFilter;
 
@@ -90,8 +195,11 @@ export default async function ModelsPage({
       active: 0,
       draft: 0,
       archived: 0,
-    }
+    },
   );
+
+  const flashMessage = getFlashMessage(params);
+  const importFeedback = getImportFeedback(params);
 
   return (
     <div className="space-y-5">
@@ -122,6 +230,17 @@ export default async function ModelsPage({
           Veritabanı yapılandırılmadığı için kayıt işlemleri pasif durumda.
         </div>
       ) : null}
+
+      {flashMessage ? (
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          {flashMessage}
+        </div>
+      ) : null}
+
+      <OfficialVehicleImportCard
+        disabled={!databaseReady}
+        feedback={importFeedback}
+      />
 
       <ModelsSummary
         total={stats.total}
