@@ -1,10 +1,16 @@
 import AddRuleDrawer from "./AddRuleDrawer";
 import DeleteRuleButton from "./DeleteRuleButton";
-import type { AvailableProductOption, RuleListItem } from "./types";
+import type {
+  AvailableProductOption,
+  RuleConditionCatalog,
+  RuleConditionItem,
+  RuleListItem,
+} from "./types";
 
 type RulesListProps = {
   rules: RuleListItem[];
   availableProducts: AvailableProductOption[];
+  conditionCatalog: RuleConditionCatalog;
   databaseReady: boolean;
 };
 
@@ -40,9 +46,36 @@ function severityBadgeClass(severity: RuleListItem["severity"]) {
   }
 }
 
+function conditionBadgeClass(conditionType: RuleConditionItem["conditionType"]) {
+  switch (conditionType) {
+    case "model":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "package":
+      return "border-violet-500/30 bg-violet-500/10 text-violet-100";
+    case "scenario":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+    default:
+      return "border-zinc-700 bg-zinc-800/70 text-zinc-300";
+  }
+}
+
+function conditionPrefix(conditionType: RuleConditionItem["conditionType"]) {
+  switch (conditionType) {
+    case "model":
+      return "Model";
+    case "package":
+      return "Paket";
+    case "scenario":
+      return "Senaryo";
+    default:
+      return "Koşul";
+  }
+}
+
 export function RulesList({
   rules,
   availableProducts,
+  conditionCatalog,
   databaseReady,
 }: RulesListProps) {
   if (rules.length === 0) {
@@ -88,6 +121,10 @@ export function RulesList({
                 >
                   {rule.severity}
                 </span>
+
+                <span className="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                  {rule.hasConditions ? "Koşullu" : "Global"}
+                </span>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -95,6 +132,25 @@ export function RulesList({
                 {chip(`Hedef ${rule.targetProductSlug}`)}
                 {chip(`Öncelik ${rule.priority}`)}
               </div>
+
+              {rule.conditions.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {rule.conditions.map((condition) => (
+                    <span
+                      key={`${rule.id}-${condition.conditionType}-${condition.targetId}`}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${conditionBadgeClass(
+                        condition.conditionType,
+                      )}`}
+                    >
+                      {conditionPrefix(condition.conditionType)} · {condition.label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  Bu kayıt global çalışır. Model / paket / senaryo koşulu yok.
+                </p>
+              )}
 
               {rule.message ? (
                 <p className="max-w-3xl text-sm leading-6 text-zinc-400">
@@ -107,6 +163,7 @@ export function RulesList({
               <AddRuleDrawer
                 initialData={rule}
                 availableProducts={availableProducts}
+                conditionCatalog={conditionCatalog}
                 disabled={!databaseReady}
               />
               <DeleteRuleButton id={rule.id} />

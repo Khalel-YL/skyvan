@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { saveRule } from "./actions";
 import {
   initialRuleFormState,
   type AvailableProductOption,
+  type RuleConditionCatalog,
+  type RuleConditionItem,
+  type RuleConditionType,
+  type RuleDraftPrefill,
   type RuleFormState,
   type RuleListItem,
   type RuleSeverity,
@@ -15,18 +19,38 @@ import {
 type AddRuleDrawerProps = {
   initialData?: RuleListItem | null;
   availableProducts: AvailableProductOption[];
+  conditionCatalog: RuleConditionCatalog;
   disabled?: boolean;
+  prefillDraft?: RuleDraftPrefill | null;
+  forceOpen?: boolean;
 };
 
-function toFormValues(initialData?: RuleListItem | null) {
+function toFormValues(
+  initialData?: RuleListItem | null,
+  prefillDraft?: RuleDraftPrefill | null,
+) {
+  if (initialData) {
+    return {
+      id: initialData.id,
+      sourceProductId: initialData.sourceProductId,
+      targetProductId: initialData.targetProductId,
+      ruleType: initialData.ruleType,
+      severity: initialData.severity,
+      priority: String(initialData.priority),
+      message: initialData.message ?? "",
+      conditions: initialData.conditions ?? [],
+    };
+  }
+
   return {
-    id: initialData?.id ?? "",
-    sourceProductId: initialData?.sourceProductId ?? "",
-    targetProductId: initialData?.targetProductId ?? "",
-    ruleType: (initialData?.ruleType ?? "requires") as RuleType,
-    severity: (initialData?.severity ?? "hard_block") as RuleSeverity,
-    priority: String(initialData?.priority ?? 10),
-    message: initialData?.message ?? "",
+    id: "",
+    sourceProductId: prefillDraft?.sourceProductId ?? "",
+    targetProductId: prefillDraft?.targetProductId ?? "",
+    ruleType: (prefillDraft?.ruleType ?? "requires") as RuleType,
+    severity: (prefillDraft?.severity ?? "hard_block") as RuleSeverity,
+    priority: String(prefillDraft?.priority ?? "10"),
+    message: prefillDraft?.message ?? "",
+    conditions: prefillDraft?.conditions ?? [],
   };
 }
 
@@ -62,15 +86,61 @@ function segmentedClass(active: boolean) {
     : "border-transparent bg-transparent text-zinc-300 hover:text-zinc-100";
 }
 
+function conditionTypeLabel(type: RuleConditionType) {
+  switch (type) {
+    case "model":
+      return "Model";
+    case "package":
+      return "Paket";
+    case "scenario":
+      return "Senaryo";
+    default:
+      return "Koşul";
+  }
+}
+
+function conditionBadgeClass(type: RuleConditionType) {
+  switch (type) {
+    case "model":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "package":
+      return "border-violet-500/30 bg-violet-500/10 text-violet-100";
+    case "scenario":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+    default:
+      return "border-zinc-700 bg-zinc-800/70 text-zinc-300";
+  }
+}
+
+function getInitialConditionType(
+  conditionCatalog: RuleConditionCatalog,
+): RuleConditionType {
+  if (conditionCatalog.modelOptions.length > 0) {
+    return "model";
+  }
+
+  if (conditionCatalog.packageOptions.length > 0) {
+    return "package";
+  }
+
+  if (conditionCatalog.scenarioOptions.length > 0) {
+    return "scenario";
+  }
+
+  return "model";
+}
+
 function RuleDrawerForm({
   defaults,
   isEdit,
   availableProducts,
+  conditionCatalog,
   onCancel,
 }: {
   defaults: ReturnType<typeof toFormValues>;
   isEdit: boolean;
   availableProducts: AvailableProductOption[];
+  conditionCatalog: RuleConditionCatalog;
   onCancel: () => void;
 }) {
   const [state, formAction, isPending] = useActionState<RuleFormState, FormData>(
@@ -79,6 +149,64 @@ function RuleDrawerForm({
   );
   const [ruleType, setRuleType] = useState<RuleType>(defaults.ruleType);
   const [severity, setSeverity] = useState<RuleSeverity>(defaults.severity);
+  const [conditions, setConditions] = useState<RuleConditionItem[]>(
+    defaults.conditions,
+  );
+  const [pendingConditionType, setPendingConditionType] =
+    useState<RuleConditionType>(() => getInitialConditionType(conditionCatalog));
+  const [pendingTargetId, setPendingTargetId] = useState("");
+
+  const optionGroups = useMemo(
+    () => ({
+      model: conditionCatalog.modelOptions,
+      package: conditionCatalog.packageOptions,
+      scenario: conditionCatalog.scenarioOptions,
+    }),
+    [conditionCatalog],
+  );
+
+  const currentOptions = optionGroups[pendingConditionType];
+
+  useEffect(() => {
+    if (currentOptions.some((option) => option.id === pendingTargetId)) {
+      return;
+    }
+
+    setPendingTargetId(currentOptions[0]?.id ?? "");
+  }, [currentOptions, pendingTargetId]);
+
+  function addCondition() {
+    const option = currentOptions.find((item) => item.id === pendingTargetId);
+
+    if (!option) {
+      return;
+    }
+
+    const alreadyExists = conditions.some(
+      (condition) =>
+        condition.conditionType === pendingConditionType &&
+        condition.targetId === option.id,
+    );
+
+    if (alreadyExists) {
+      return;
+    }
+
+    setConditions((current) => [
+      ...current,
+      {
+        conditionType: pendingConditionType,
+        targetId: option.id,
+        label: option.label,
+      },
+    ]);
+  }
+
+  function removeCondition(index: number) {
+    setConditions((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  const hasConditionOptions = currentOptions.length > 0;
 
   return (
     <form action={formAction} className="space-y-6 p-6">
@@ -86,9 +214,26 @@ function RuleDrawerForm({
       <input type="hidden" name="ruleType" value={ruleType} />
       <input type="hidden" name="severity" value={severity} />
 
+      {conditions.map((condition, index) => (
+        <div
+          key={`${condition.conditionType}-${condition.targetId}-${index}`}
+          className="hidden"
+        >
+          <input type="hidden" name="conditionType" value={condition.conditionType} />
+          <input type="hidden" name="conditionTargetId" value={condition.targetId} />
+        </div>
+      ))}
+
       {state.message ? (
         <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {state.message}
+        </div>
+      ) : null}
+
+      {!isEdit && defaults.sourceProductId && defaults.targetProductId ? (
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          Bu form bir öneri taslağından dolduruldu. Kaydetmeden önce mesajı,
+          severity alanını ve scope koşullarını kontrol et.
         </div>
       ) : null}
 
@@ -234,9 +379,92 @@ function RuleDrawerForm({
         </Field>
       </div>
 
+      <Field
+        label="Koşul kapsamı"
+        hint="Koşul eklersen kural yalnızca ilgili model / paket / senaryo bağlamında çalışır. Boş bırakılırsa global uygulanır."
+        error={state.fieldErrors.conditions}
+      >
+        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+          <div className="grid gap-3 md:grid-cols-[180px_1fr_auto]">
+            <select
+              value={pendingConditionType}
+              onChange={(event) =>
+                setPendingConditionType(event.target.value as RuleConditionType)
+              }
+              className={inputClassName}
+            >
+              <option value="model">Model</option>
+              <option value="package">Paket</option>
+              <option value="scenario">Senaryo</option>
+            </select>
+
+            <select
+              value={pendingTargetId}
+              onChange={(event) => setPendingTargetId(event.target.value)}
+              className={inputClassName}
+              disabled={!hasConditionOptions}
+            >
+              {hasConditionOptions ? null : (
+                <option value="">Seçilebilir kayıt yok</option>
+              )}
+
+              {currentOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={addCondition}
+              disabled={!hasConditionOptions || !pendingTargetId}
+              className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Koşul Ekle
+            </button>
+          </div>
+
+          {!hasConditionOptions ? (
+            <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-500">
+              Seçilen kapsam tipi için henüz kullanılabilir kayıt bulunamadı.
+            </div>
+          ) : null}
+
+          {conditions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {conditions.map((condition, index) => (
+                <div
+                  key={`${condition.conditionType}-${condition.targetId}-${index}`}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${conditionBadgeClass(
+                    condition.conditionType,
+                  )}`}
+                >
+                  <span>
+                    {conditionTypeLabel(condition.conditionType)} · {condition.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeCondition(index)}
+                    className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] transition hover:border-white/30"
+                  >
+                    Kaldır
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-500">
+              Koşul eklenmedi. Bu kayıt global çalışacak.
+            </div>
+          )}
+        </div>
+      </Field>
+
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Bu batch’te yalnızca ürünler arası temel uyumluluk kuralı açılıyor.
-        ruleConditions builder katmanı sonraki mini-batch’e bırakılıyor.
+        Drawer manuel kullanım için de, öneri taslağını düzenlemek için de aynı
+        akışı kullanır. Böylece AI/doküman önerisi nihai kararı otomatik vermez;
+        admin onay katmanı korunur.
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -268,12 +496,25 @@ function RuleDrawerForm({
 export default function AddRuleDrawer({
   initialData,
   availableProducts,
+  conditionCatalog,
   disabled = false,
+  prefillDraft = null,
+  forceOpen = false,
 }: AddRuleDrawerProps) {
   const isEdit = Boolean(initialData);
-  const defaults = useMemo(() => toFormValues(initialData), [initialData]);
-  const [isOpen, setIsOpen] = useState(false);
+  const defaults = useMemo(
+    () => toFormValues(initialData, prefillDraft),
+    [initialData, prefillDraft],
+  );
+  const [isOpen, setIsOpen] = useState(Boolean(forceOpen));
   const [formKey, setFormKey] = useState(0);
+
+  useEffect(() => {
+    if (forceOpen) {
+      setFormKey((current) => current + 1);
+      setIsOpen(true);
+    }
+  }, [forceOpen]);
 
   if (disabled) {
     return (
@@ -336,6 +577,7 @@ export default function AddRuleDrawer({
               defaults={defaults}
               isEdit={isEdit}
               availableProducts={availableProducts}
+              conditionCatalog={conditionCatalog}
               onCancel={closeDrawer}
             />
           </div>

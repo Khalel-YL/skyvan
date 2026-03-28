@@ -2,6 +2,7 @@ type RuleFiltersProps = {
   query: string;
   ruleType: string;
   severity: string;
+  scope: string;
 };
 
 const selectClassName =
@@ -11,6 +12,7 @@ export function RuleFilters({
   query,
   ruleType,
   severity,
+  scope,
 }: RuleFiltersProps) {
   return (
     <form
@@ -21,18 +23,18 @@ export function RuleFilters({
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-zinc-100">Filtreler</h2>
           <p className="text-sm text-zinc-400">
-            Kuralları ürün, tip ve şiddet bilgisine göre daralt.
+            Kuralları ürün, tip, şiddet ve kapsam bilgisine göre daralt.
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr_0.8fr_auto]">
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_0.85fr_0.85fr_0.85fr_auto]">
           <div className="space-y-2">
             <label className="text-sm font-medium text-zinc-200">Kural ara</label>
             <input
               type="text"
               name="q"
               defaultValue={query}
-              placeholder="Ürün adı, slug veya mesaj..."
+              placeholder="Ürün adı, slug, mesaj veya koşul..."
               className={selectClassName}
             />
           </div>
@@ -64,6 +66,19 @@ export function RuleFilters({
             </select>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-200">Kapsam</label>
+            <select
+              name="scope"
+              defaultValue={scope}
+              className={selectClassName}
+            >
+              <option value="all">Tümü</option>
+              <option value="global">Global</option>
+              <option value="conditional">Koşullu</option>
+            </select>
+          </div>
+
           <div className="flex items-end gap-2">
             <button
               type="submit"
@@ -84,3 +99,5 @@ export function RuleFilters({
     </form>
   );
 }
+
+export default RuleFilters;
