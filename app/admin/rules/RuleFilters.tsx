@@ -2,6 +2,7 @@ type RuleFiltersProps = {
   query: string;
   ruleType: string;
   severity: string;
+  scope: string;
 };
 
 const inputClassName =
@@ -14,23 +15,24 @@ export function RuleFilters({
   query,
   ruleType,
   severity,
+  scope,
 }: RuleFiltersProps) {
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div>
         <h2 className="text-lg font-semibold text-zinc-100">Filtreler</h2>
         <p className="mt-1 text-sm text-zinc-400">
-          Kuralları ürün, tip ve şiddet bilgisine göre daralt.
+          Kuralları ürün, tip, şiddet ve kapsam bilgisine göre daralt.
         </p>
       </div>
 
       <form className="mt-5 space-y-3">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px_220px]">
           <input
             type="search"
             name="q"
             defaultValue={query}
-            placeholder="Kaynak, hedef veya açıklama ara"
+            placeholder="Kaynak, hedef, açıklama veya koşul ara"
             className={inputClassName}
           />
 
@@ -53,6 +55,16 @@ export function RuleFilters({
             <option value="all">Tüm şiddetler</option>
             <option value="hard_block">Sert blok</option>
             <option value="soft_warning">Yumuşak uyarı</option>
+          </select>
+
+          <select
+            name="scope"
+            defaultValue={scope}
+            className={selectClassName}
+          >
+            <option value="all">Tüm kapsamlar</option>
+            <option value="global">Global</option>
+            <option value="conditional">Koşullu</option>
           </select>
         </div>
 

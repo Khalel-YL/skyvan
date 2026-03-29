@@ -501,6 +501,7 @@ export default function AddRuleDrawer({
   disabled = false,
   prefillDraft = null,
   forceOpen = false,
+  triggerLabel,
 }: AddRuleDrawerProps) {
   const isEdit = Boolean(initialData);
   const defaults = useMemo(

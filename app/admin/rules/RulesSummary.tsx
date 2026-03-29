@@ -3,8 +3,12 @@ type RulesSummaryProps = {
   requiresCount: number;
   excludesCount: number;
   recommendsCount: number;
-  hardBlockCount: number;
-  softWarningCount: number;
+  globalCount: number;
+  conditionalCount: number;
+  topSourceLabel: string | null;
+  topSourceCount: number;
+  topTargetLabel: string | null;
+  topTargetCount: number;
 };
 
 function SummaryCard({
@@ -13,7 +17,7 @@ function SummaryCard({
   hint,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   hint: string;
 }) {
   return (
@@ -32,17 +36,55 @@ export function RulesSummary({
   requiresCount,
   excludesCount,
   recommendsCount,
-  hardBlockCount,
-  softWarningCount,
+  globalCount,
+  conditionalCount,
+  topSourceLabel,
+  topSourceCount,
+  topTargetLabel,
+  topTargetCount,
 }: RulesSummaryProps) {
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <SummaryCard label="Toplam Kural" value={total} hint="Filtreye göre görünen kayıt" />
-      <SummaryCard label="Zorunlu" value={requiresCount} hint="Requires ilişkileri" />
-      <SummaryCard label="Engeller" value={excludesCount} hint="Excludes ilişkileri" />
-      <SummaryCard label="Önerir" value={recommendsCount} hint="Recommends ilişkileri" />
-      <SummaryCard label="Sert Blok" value={hardBlockCount} hint="Hard block şiddeti" />
-      <SummaryCard label="Yumuşak Uyarı" value={softWarningCount} hint="Soft warning şiddeti" />
+      <SummaryCard
+        label="Toplam Kural"
+        value={total}
+        hint="Filtreye göre görünen kayıt"
+      />
+      <SummaryCard
+        label="Zorunlu"
+        value={requiresCount}
+        hint="Requires ilişkileri"
+      />
+      <SummaryCard
+        label="Engeller"
+        value={excludesCount}
+        hint="Excludes ilişkileri"
+      />
+      <SummaryCard
+        label="Önerir"
+        value={recommendsCount}
+        hint="Recommends ilişkileri"
+      />
+      <SummaryCard
+        label="Global Scope"
+        value={globalCount}
+        hint="Koşulsuz çalışan kayıtlar"
+      />
+      <SummaryCard
+        label="Koşullu Scope"
+        value={conditionalCount}
+        hint="Model / paket / senaryo koşullu kayıtlar"
+      />
+      <SummaryCard
+        label="En Yoğun Kaynak"
+        value={topSourceLabel ?? "-"}
+        hint={topSourceLabel ? `${topSourceCount} kayıt` : "Kaynak yoğunluğu yok"}
+      />
+      <SummaryCard
+        label="En Yoğun Hedef"
+        value={topTargetLabel ?? "-"}
+        hint={topTargetLabel ? `${topTargetCount} kayıt` : "Hedef yoğunluğu yok"}
+      />
     </section>
   );
 }

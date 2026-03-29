@@ -12,16 +12,16 @@ import {
   products,
   productSpecs,
   ruleConditions,
-  ruleTemplates,
   scenarioMappings,
 } from "@/db/schema";
 
 import AddRuleDrawer from "./AddRuleDrawer";
+import RuleOpsHealthPanel from "./RuleOpsHealthPanel";
 import { RuleFilters } from "./RuleFilters";
+import RuleSuggestionLab from "./RuleSuggestionLab";
 import { RulesList } from "./RulesList";
-import { RuleSuggestionLab } from "./RuleSuggestionLab";
+import RulesStarterTemplates from "./RulesStarterTemplates";
 import { RulesSummary } from "./RulesSummary";
-import RuleTemplatesPanel from "./RuleTemplatesPanel";
 import type {
   AvailableProductOption,
   RuleConditionCatalog,
@@ -37,7 +37,6 @@ import type {
   RuleSuggestionExcerptItem,
   RuleSuggestionItem,
   RuleSuggestionSourceSummary,
-  RuleTemplateListItem,
   RuleType,
 } from "./types";
 
@@ -61,8 +60,6 @@ type RulesPageProps = {
     draftPriority?: string;
     draftMessage?: string;
     draftConditions?: string;
-    templateAction?: string;
-    templateCode?: string;
   }>;
 };
 
@@ -318,7 +315,9 @@ function parseDraftConditions(value?: string) {
       const targetId = targetParts.join(":").trim();
 
       if (
-        (rawType !== "model" && rawType !== "package" && rawType !== "scenario") ||
+        (rawType !== "model" &&
+          rawType !== "package" &&
+          rawType !== "scenario") ||
         !targetId
       ) {
         return null;
@@ -386,35 +385,6 @@ function getFlashMessage(params: Awaited<RulesPageProps["searchParams"]>) {
         return "Kural kaldırılırken beklenmeyen bir hata oluştu.";
       default:
         return "Kural işlemi sırasında beklenmeyen bir hata oluştu.";
-    }
-  }
-
-  if (params?.templateAction === "created") {
-    return "Rule template oluşturuldu.";
-  }
-
-  if (params?.templateAction === "updated") {
-    return "Rule template güncellendi.";
-  }
-
-  if (params?.templateAction === "archived") {
-    return "Rule template arşive alındı.";
-  }
-
-  if (params?.templateAction === "restored") {
-    return "Rule template yeniden aktifleştirildi.";
-  }
-
-  if (params?.templateAction === "error") {
-    switch (params.templateCode) {
-      case "invalid-id":
-        return "Geçersiz template işlemi isteği alındı.";
-      case "archive-failed":
-        return "Template arşivlenirken beklenmeyen bir hata oluştu.";
-      case "restore-failed":
-        return "Template geri alınırken beklenmeyen bir hata oluştu.";
-      default:
-        return "Template işlemi sırasında beklenmeyen bir hata oluştu.";
     }
   }
 
@@ -565,7 +535,9 @@ function serializeConditionSignature(conditions: RuleConditionItem[]) {
 }
 
 function isStrongSuggestion(item: RuleSuggestionItem & { score: number }) {
-  const hasChunkEvidence = item.evidence.some((evidence) => evidence.kind === "chunk");
+  const hasChunkEvidence = item.evidence.some(
+    (evidence) => evidence.kind === "chunk",
+  );
   const hasScenarioCondition = item.conditions.some(
     (condition) => condition.conditionType === "scenario",
   );
@@ -1335,57 +1307,78 @@ function buildRuleSuggestions(
     .map(({ score: _score, ...item }) => item);
 }
 
+type ConflictPreviewItem = {
+  pairLabel: string;
+  totalCount: number;
+  hasGlobal: boolean;
+  hasConditional: boolean;
+  ruleTypes: string[];
+  severities: string[];
+};
 
-async function getRuleTemplatesSafely(): Promise<RuleTemplateListItem[]> {
-  if (!db) {
-    return [];
+function buildConflictPreview(rules: RuleListItem[]): ConflictPreviewItem[] {
+  const pairMap = new Map<
+    string,
+    {
+      pairLabel: string;
+      totalCount: number;
+      hasGlobal: boolean;
+      hasConditional: boolean;
+      ruleTypes: Set<string>;
+      severities: Set<string>;
+    }
+  >();
+
+  for (const rule of rules) {
+    const key = `${rule.sourceProductId}::${rule.targetProductId}`;
+    const pairLabel = `${rule.sourceProductLabel} → ${rule.targetProductLabel}`;
+    const current =
+      pairMap.get(key) ??
+      {
+        pairLabel,
+        totalCount: 0,
+        hasGlobal: false,
+        hasConditional: false,
+        ruleTypes: new Set<string>(),
+        severities: new Set<string>(),
+      };
+
+    current.totalCount += 1;
+    current.hasGlobal = current.hasGlobal || rule.scopeKind === "global";
+    current.hasConditional =
+      current.hasConditional || rule.scopeKind === "conditional";
+    current.ruleTypes.add(rule.ruleType);
+    current.severities.add(rule.severity);
+
+    pairMap.set(key, current);
   }
 
-  try {
-    const rows = await db
-      .select({
-        id: ruleTemplates.id,
-        title: ruleTemplates.title,
-        slug: ruleTemplates.slug,
-        description: ruleTemplates.description,
-        sourceHint: ruleTemplates.sourceHint,
-        targetHint: ruleTemplates.targetHint,
-        defaultRuleType: ruleTemplates.defaultRuleType,
-        defaultSeverity: ruleTemplates.defaultSeverity,
-        defaultPriority: ruleTemplates.defaultPriority,
-        defaultMessage: ruleTemplates.defaultMessage,
-        status: ruleTemplates.status,
-        sortOrder: ruleTemplates.sortOrder,
-        createdAt: ruleTemplates.createdAt,
-        updatedAt: ruleTemplates.updatedAt,
-      })
-      .from(ruleTemplates)
-      .orderBy(
-        asc(ruleTemplates.status),
-        asc(ruleTemplates.sortOrder),
-        asc(ruleTemplates.title),
-      );
+  return Array.from(pairMap.values())
+    .filter((item) => item.totalCount > 1)
+    .map((item) => ({
+      pairLabel: item.pairLabel,
+      totalCount: item.totalCount,
+      hasGlobal: item.hasGlobal,
+      hasConditional: item.hasConditional,
+      ruleTypes: Array.from(item.ruleTypes.values()).sort((a, b) =>
+        a.localeCompare(b, "tr"),
+      ),
+      severities: Array.from(item.severities.values()).sort((a, b) =>
+        a.localeCompare(b, "tr"),
+      ),
+    }))
+    .sort((a, b) => {
+      if (b.totalCount !== a.totalCount) {
+        return b.totalCount - a.totalCount;
+      }
 
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      slug: row.slug,
-      description: row.description,
-      sourceHint: row.sourceHint,
-      targetHint: row.targetHint,
-      defaultRuleType: row.defaultRuleType as RuleType,
-      defaultSeverity: row.defaultSeverity as RuleSeverity,
-      defaultPriority: row.defaultPriority,
-      defaultMessage: row.defaultMessage,
-      status: row.status as RuleTemplateListItem["status"],
-      sortOrder: row.sortOrder,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
-  } catch (error) {
-    console.error("Rules templates fetch error:", error);
-    return [];
-  }
+      if (a.hasGlobal !== b.hasGlobal) {
+        return a.hasGlobal ? -1 : 1;
+      }
+
+      return a.pairLabel.localeCompare(b.pairLabel, "tr");
+    })
+    .slice(0, 6);
 }
 
 export default async function RulesPage({ searchParams }: RulesPageProps) {
@@ -1397,23 +1390,22 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
     getProductsKnowledgeSafely(),
   ]);
 
-  const availableProducts = productsKnowledge
-    .filter((product) => product.status !== "archived")
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      status: product.status,
-    }));
+  const activeProductsKnowledge = productsKnowledge.filter(
+    (product) => product.status !== "archived",
+  );
+
+  const availableProducts = activeProductsKnowledge.map((product) => ({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    status: product.status,
+  }));
 
   const productMap = new Map(
     availableProducts.map((product) => [product.id, product]),
   );
 
-  const [allRules, templates] = await Promise.all([
-    getRulesSafely(productMap, conditionLookups.labels),
-    getRuleTemplatesSafely(),
-  ]);
+  const allRules = await getRulesSafely(productMap, conditionLookups.labels);
 
   const draftPrefill = buildDraftPrefill(params, conditionLookups.labels);
 
@@ -1474,8 +1466,9 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
 
   const suggestionSourceProductId = params.suggestSourceProductId?.trim() ?? "";
   const suggestionSource =
-    productsKnowledge.find((product) => product.id === suggestionSourceProductId) ??
+    activeProductsKnowledge.find((product) => product.id === suggestionSourceProductId) ??
     null;
+
   const sourceAiEvidence = suggestionSource
     ? await getSourceAiEvidenceSafely(suggestionSource.id)
     : null;
@@ -1487,7 +1480,7 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
   const suggestions: RuleSuggestionItem[] = suggestionSource
     ? buildRuleSuggestions(
         suggestionSource,
-        productsKnowledge.filter((product) => product.status !== "archived"),
+        activeProductsKnowledge,
         existingDirectionalPairKeys,
         sourceAiEvidence,
       )
@@ -1496,6 +1489,39 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
   const topSource = getTopDensity(filteredRules, "sourceProductLabel");
   const topTarget = getTopDensity(filteredRules, "targetProductLabel");
   const flashMessage = getFlashMessage(params);
+
+  const productsWithRules = new Set<string>();
+  for (const rule of allRules) {
+    productsWithRules.add(rule.sourceProductId);
+    productsWithRules.add(rule.targetProductId);
+  }
+
+  const uncoveredProducts = activeProductsKnowledge.filter(
+    (product) => !productsWithRules.has(product.id),
+  );
+
+  const sourceReadyProducts = activeProductsKnowledge.filter(
+    (product) =>
+      product.documents.length > 0 ||
+      product.specs.length > 0 ||
+      product.scenarios.length > 0 ||
+      product.powerDrawWatts > 0 ||
+      product.powerSupplyWatts > 0,
+  );
+
+  const productsWithSourceRules = new Set(
+    allRules.map((rule) => rule.sourceProductId),
+  );
+
+  const sourceReadyUnruledCount = sourceReadyProducts.filter(
+    (product) => !productsWithSourceRules.has(product.id),
+  ).length;
+
+  const highConfidenceSuggestionCount = suggestions.filter(
+    (item) => item.confidence === "high",
+  ).length;
+
+  const conflictPreview = buildConflictPreview(allRules);
 
   return (
     <div className="space-y-5">
@@ -1514,9 +1540,9 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
               ve operasyonel biçimde yönet.
             </p>
             <p className="mt-2 text-xs text-zinc-500">
-              Bu stabil sürümde suggestion lab yalnızca yeterli sinyal ve/veya
-              kanıt üreten önerileri gösterir. Öneriler doğrudan kaydolmaz;
-              drawer içinde admin onayıyla finalize edilir.
+              Suggestion lab yalnızca yeterli sinyal ve/veya kanıt üreten
+              önerileri gösterir. Öneriler doğrudan kaydolmaz; drawer içinde
+              admin onayıyla finalize edilir.
             </p>
           </div>
         </div>
@@ -1544,6 +1570,8 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
         </div>
       ) : null}
 
+      <RulesStarterTemplates productsKnowledge={activeProductsKnowledge} />
+
       <RuleSuggestionLab
         availableProducts={availableProducts}
         selectedSourceProductId={suggestionSourceProductId}
@@ -1565,6 +1593,19 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
         topTargetCount={topTarget.count}
       />
 
+      <RuleOpsHealthPanel
+        totalProducts={activeProductsKnowledge.length}
+        coveredProductCount={activeProductsKnowledge.length - uncoveredProducts.length}
+        uncoveredProductNames={uncoveredProducts.map((product) => product.name)}
+        sourceReadyProductCount={sourceReadyProducts.length}
+        sourceReadyUnruledCount={sourceReadyUnruledCount}
+        pendingSuggestionCount={suggestions.length}
+        highConfidenceSuggestionCount={highConfidenceSuggestionCount}
+        globalRuleCount={stats.globalCount}
+        conditionalRuleCount={stats.conditionalCount}
+        conflictPreview={conflictPreview}
+      />
+
       <RuleFilters
         query={params.q ?? ""}
         ruleType={ruleTypeFilter}
@@ -1574,13 +1615,6 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
 
       <RulesList
         rules={filteredRules}
-        availableProducts={availableProducts}
-        conditionCatalog={conditionLookups.catalog}
-        databaseReady={databaseReady}
-      />
-
-      <RuleTemplatesPanel
-        templates={templates}
         availableProducts={availableProducts}
         conditionCatalog={conditionLookups.catalog}
         databaseReady={databaseReady}
