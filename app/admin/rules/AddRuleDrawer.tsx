@@ -23,6 +23,7 @@ type AddRuleDrawerProps = {
   disabled?: boolean;
   prefillDraft?: RuleDraftPrefill | null;
   forceOpen?: boolean;
+  triggerLabel?: string;
 };
 
 function toFormValues(
@@ -544,7 +545,7 @@ export default function AddRuleDrawer({
         onClick={openDrawer}
         className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
       >
-        {isEdit ? "Düzenle" : "Kural Ekle"}
+        {triggerLabel ?? (isEdit ? "Düzenle" : "Kural Ekle")}
       </button>
 
       {isOpen ? (

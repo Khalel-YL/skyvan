@@ -15,8 +15,9 @@ export function AdminTopbar({
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-              Stabilization Phase
+              Stabilizasyon Aşaması
             </p>
+
             <h2 className="mt-1 text-lg font-semibold text-white">
               Admin çekirdeği güvenli modda
             </h2>
@@ -34,7 +35,8 @@ export function AdminTopbar({
                 isOnline ? "bg-emerald-400" : "bg-amber-400"
               }`}
             />
-            {isOnline ? "Database Ready" : "Safe Mode"}
+
+            {isOnline ? "Veritabanı Hazır" : "Güvenli Mod"}
           </div>
         </div>
 

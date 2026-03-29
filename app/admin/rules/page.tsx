@@ -12,6 +12,7 @@ import {
   products,
   productSpecs,
   ruleConditions,
+  ruleTemplates,
   scenarioMappings,
 } from "@/db/schema";
 
@@ -20,6 +21,7 @@ import { RuleFilters } from "./RuleFilters";
 import { RulesList } from "./RulesList";
 import { RuleSuggestionLab } from "./RuleSuggestionLab";
 import { RulesSummary } from "./RulesSummary";
+import RuleTemplatesPanel from "./RuleTemplatesPanel";
 import type {
   AvailableProductOption,
   RuleConditionCatalog,
@@ -35,6 +37,7 @@ import type {
   RuleSuggestionExcerptItem,
   RuleSuggestionItem,
   RuleSuggestionSourceSummary,
+  RuleTemplateListItem,
   RuleType,
 } from "./types";
 
@@ -58,6 +61,8 @@ type RulesPageProps = {
     draftPriority?: string;
     draftMessage?: string;
     draftConditions?: string;
+    templateAction?: string;
+    templateCode?: string;
   }>;
 };
 
@@ -381,6 +386,35 @@ function getFlashMessage(params: Awaited<RulesPageProps["searchParams"]>) {
         return "Kural kaldırılırken beklenmeyen bir hata oluştu.";
       default:
         return "Kural işlemi sırasında beklenmeyen bir hata oluştu.";
+    }
+  }
+
+  if (params?.templateAction === "created") {
+    return "Rule template oluşturuldu.";
+  }
+
+  if (params?.templateAction === "updated") {
+    return "Rule template güncellendi.";
+  }
+
+  if (params?.templateAction === "archived") {
+    return "Rule template arşive alındı.";
+  }
+
+  if (params?.templateAction === "restored") {
+    return "Rule template yeniden aktifleştirildi.";
+  }
+
+  if (params?.templateAction === "error") {
+    switch (params.templateCode) {
+      case "invalid-id":
+        return "Geçersiz template işlemi isteği alındı.";
+      case "archive-failed":
+        return "Template arşivlenirken beklenmeyen bir hata oluştu.";
+      case "restore-failed":
+        return "Template geri alınırken beklenmeyen bir hata oluştu.";
+      default:
+        return "Template işlemi sırasında beklenmeyen bir hata oluştu.";
     }
   }
 
@@ -1301,6 +1335,59 @@ function buildRuleSuggestions(
     .map(({ score: _score, ...item }) => item);
 }
 
+
+async function getRuleTemplatesSafely(): Promise<RuleTemplateListItem[]> {
+  if (!db) {
+    return [];
+  }
+
+  try {
+    const rows = await db
+      .select({
+        id: ruleTemplates.id,
+        title: ruleTemplates.title,
+        slug: ruleTemplates.slug,
+        description: ruleTemplates.description,
+        sourceHint: ruleTemplates.sourceHint,
+        targetHint: ruleTemplates.targetHint,
+        defaultRuleType: ruleTemplates.defaultRuleType,
+        defaultSeverity: ruleTemplates.defaultSeverity,
+        defaultPriority: ruleTemplates.defaultPriority,
+        defaultMessage: ruleTemplates.defaultMessage,
+        status: ruleTemplates.status,
+        sortOrder: ruleTemplates.sortOrder,
+        createdAt: ruleTemplates.createdAt,
+        updatedAt: ruleTemplates.updatedAt,
+      })
+      .from(ruleTemplates)
+      .orderBy(
+        asc(ruleTemplates.status),
+        asc(ruleTemplates.sortOrder),
+        asc(ruleTemplates.title),
+      );
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      description: row.description,
+      sourceHint: row.sourceHint,
+      targetHint: row.targetHint,
+      defaultRuleType: row.defaultRuleType as RuleType,
+      defaultSeverity: row.defaultSeverity as RuleSeverity,
+      defaultPriority: row.defaultPriority,
+      defaultMessage: row.defaultMessage,
+      status: row.status as RuleTemplateListItem["status"],
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  } catch (error) {
+    console.error("Rules templates fetch error:", error);
+    return [];
+  }
+}
+
 export default async function RulesPage({ searchParams }: RulesPageProps) {
   const params = (await searchParams) ?? {};
   const databaseReady = Boolean(db);
@@ -1323,7 +1410,10 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
     availableProducts.map((product) => [product.id, product]),
   );
 
-  const allRules = await getRulesSafely(productMap, conditionLookups.labels);
+  const [allRules, templates] = await Promise.all([
+    getRulesSafely(productMap, conditionLookups.labels),
+    getRuleTemplatesSafely(),
+  ]);
 
   const draftPrefill = buildDraftPrefill(params, conditionLookups.labels);
 
@@ -1484,6 +1574,13 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
 
       <RulesList
         rules={filteredRules}
+        availableProducts={availableProducts}
+        conditionCatalog={conditionLookups.catalog}
+        databaseReady={databaseReady}
+      />
+
+      <RuleTemplatesPanel
+        templates={templates}
         availableProducts={availableProducts}
         conditionCatalog={conditionLookups.catalog}
         databaseReady={databaseReady}

@@ -2,8 +2,10 @@ type RuleFiltersProps = {
   query: string;
   ruleType: string;
   severity: string;
-  scope: string;
 };
+
+const inputClassName =
+  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
 
 const selectClassName =
   "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-700";
@@ -12,92 +14,64 @@ export function RuleFilters({
   query,
   ruleType,
   severity,
-  scope,
 }: RuleFiltersProps) {
   return (
-    <form
-      action="/admin/rules"
-      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5"
-    >
-      <div className="flex flex-col gap-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-zinc-100">Filtreler</h2>
-          <p className="text-sm text-zinc-400">
-            Kuralları ürün, tip, şiddet ve kapsam bilgisine göre daralt.
-          </p>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1.5fr_0.85fr_0.85fr_0.85fr_auto]">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Kural ara</label>
-            <input
-              type="text"
-              name="q"
-              defaultValue={query}
-              placeholder="Ürün adı, slug, mesaj veya koşul..."
-              className={selectClassName}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Kural tipi</label>
-            <select
-              name="ruleType"
-              defaultValue={ruleType}
-              className={selectClassName}
-            >
-              <option value="all">Tümü</option>
-              <option value="requires">Requires</option>
-              <option value="excludes">Excludes</option>
-              <option value="recommends">Recommends</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Şiddet</label>
-            <select
-              name="severity"
-              defaultValue={severity}
-              className={selectClassName}
-            >
-              <option value="all">Tümü</option>
-              <option value="hard_block">Hard Block</option>
-              <option value="soft_warning">Soft Warning</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Kapsam</label>
-            <select
-              name="scope"
-              defaultValue={scope}
-              className={selectClassName}
-            >
-              <option value="all">Tümü</option>
-              <option value="global">Global</option>
-              <option value="conditional">Koşullu</option>
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
-            >
-              Uygula
-            </button>
-
-            <a
-              href="/admin/rules"
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
-            >
-              Sıfırla
-            </a>
-          </div>
-        </div>
+    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-100">Filtreler</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Kuralları ürün, tip ve şiddet bilgisine göre daralt.
+        </p>
       </div>
-    </form>
+
+      <form className="mt-5 space-y-3">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+          <input
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="Kaynak, hedef veya açıklama ara"
+            className={inputClassName}
+          />
+
+          <select
+            name="ruleType"
+            defaultValue={ruleType}
+            className={selectClassName}
+          >
+            <option value="all">Tüm tipler</option>
+            <option value="requires">Zorunlu</option>
+            <option value="excludes">Engeller</option>
+            <option value="recommends">Önerir</option>
+          </select>
+
+          <select
+            name="severity"
+            defaultValue={severity}
+            className={selectClassName}
+          >
+            <option value="all">Tüm şiddetler</option>
+            <option value="hard_block">Sert blok</option>
+            <option value="soft_warning">Yumuşak uyarı</option>
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:border-zinc-600"
+          >
+            Uygula
+          </button>
+
+          <a
+            href="/admin/rules"
+            className="rounded-2xl border border-zinc-800 bg-transparent px-4 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+          >
+            Sıfırla
+          </a>
+        </div>
+      </form>
+    </section>
   );
 }
-
-export default RuleFilters;

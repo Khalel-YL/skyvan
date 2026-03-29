@@ -137,3 +137,62 @@ export const initialRuleFormState: RuleFormState = {
   message: null,
   fieldErrors: {},
 };
+
+export type RuleTemplateStatus = "draft" | "active" | "archived";
+
+export type RuleTemplateListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  sourceHint: string | null;
+  targetHint: string | null;
+  defaultRuleType: RuleType;
+  defaultSeverity: RuleSeverity;
+  defaultPriority: number;
+  defaultMessage: string;
+  status: RuleTemplateStatus;
+  sortOrder: number;
+  createdAt: Date | string | null;
+  updatedAt: Date | string | null;
+};
+
+export type RuleTemplateFormValues = {
+  id?: string;
+  title: string;
+  slug: string;
+  description: string;
+  sourceHint: string;
+  targetHint: string;
+  defaultRuleType: RuleType;
+  defaultSeverity: RuleSeverity;
+  defaultPriority: string;
+  defaultMessage: string;
+  status: Exclude<RuleTemplateStatus, "archived">;
+  sortOrder: string;
+};
+
+export type RuleTemplateFieldName =
+  | "title"
+  | "slug"
+  | "description"
+  | "sourceHint"
+  | "targetHint"
+  | "defaultRuleType"
+  | "defaultSeverity"
+  | "defaultPriority"
+  | "defaultMessage"
+  | "status"
+  | "sortOrder";
+
+export type RuleTemplateFormState = {
+  status: "idle" | "error";
+  message: string | null;
+  fieldErrors: Partial<Record<RuleTemplateFieldName, string>>;
+};
+
+export const initialRuleTemplateFormState: RuleTemplateFormState = {
+  status: "idle",
+  message: null,
+  fieldErrors: {},
+};

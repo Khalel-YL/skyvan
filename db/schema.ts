@@ -249,6 +249,33 @@ export const ruleConditions = pgTable("rule_conditions", {
   targetId: text("target_id").notNull(),
 });
 
+
+
+export const ruleTemplates = pgTable(
+  "rule_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
+    sourceHint: text("source_hint"),
+    targetHint: text("target_hint"),
+    defaultRuleType: ruleTypeEnum("default_rule_type").notNull(),
+    defaultSeverity: severityEnum("default_severity").notNull(),
+    defaultPriority: integer("default_priority").notNull().default(10),
+    defaultMessage: text("default_message").notNull(),
+    status: statusEnum("status").default("draft").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_rule_templates_status").on(table.status),
+    index("idx_rule_templates_sort_order").on(table.sortOrder),
+    uniqueIndex("uq_rule_templates_slug").on(table.slug),
+  ]
+);
+
 export const scenarioMappings = pgTable(
   "scenario_mappings",
   {
