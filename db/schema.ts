@@ -207,6 +207,39 @@ export const productDocuments = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────
+// 2.5 MANUFACTURER SOURCE REGISTRY
+// ─────────────────────────────────────────────────────────────
+export const manufacturerSourceRegistries = pgTable(
+  "manufacturer_source_registries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    manufacturerName: text("manufacturer_name").notNull(),
+    domain: text("domain").notNull(),
+    normalizedDomain: text("normalized_domain").notNull(),
+    allowedContentTypes: jsonb("allowed_content_types").$type<string[]>().notNull(),
+    notes: text("notes"),
+
+    ingestionEnabled: boolean("ingestion_enabled").notNull().default(false),
+    allowSubdomains: boolean("allow_subdomains").notNull().default(false),
+    respectRobotsTxt: boolean("respect_robots_txt").notNull().default(true),
+    defaultFetchMode: text("default_fetch_mode").notNull().default("manual_review"),
+    pathAllowlist: jsonb("path_allowlist").$type<string[]>().notNull().default([]),
+    pathBlocklist: jsonb("path_blocklist").$type<string[]>().notNull().default([]),
+
+    status: statusEnum("status").default("active").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_manufacturer_source_registries_status").on(table.status),
+    index("idx_manufacturer_source_registries_name").on(table.manufacturerName),
+    uniqueIndex("uq_manufacturer_source_registries_normalized_domain").on(
+      table.normalizedDomain
+    ),
+  ]
+);
+
+// ─────────────────────────────────────────────────────────────
 // 3. RULE ENGINE (AI & Uyumluluk Fiziği)
 // ─────────────────────────────────────────────────────────────
 export const compatibilityRules = pgTable(
@@ -248,8 +281,6 @@ export const ruleConditions = pgTable("rule_conditions", {
   conditionType: conditionTypeEnum("condition_type").notNull(),
   targetId: text("target_id").notNull(),
 });
-
-
 
 export const ruleTemplates = pgTable(
   "rule_templates",
