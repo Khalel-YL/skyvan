@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
-import { leads } from "@/db/schema";
-import type { LeadFormState, LeadStatus } from "./types";
+import { buildVersions, leads } from "@/db/schema";
+
+import {
+  initialLeadFormErrors,
+  initialLeadFormState,
+  type LeadFormState,
+  type LeadStatus,
+} from "./types";
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -48,7 +54,7 @@ export async function saveLead(
   const whatsappOptIn = String(formData.get("whatsappOptIn") ?? "") === "on";
   const status = normalizeLeadStatus(getTrimmed(formData, "status"));
 
-  const values: LeadFormState["values"] = {
+  const values = {
     id,
     buildVersionId,
     fullName,
@@ -58,7 +64,9 @@ export async function saveLead(
     status,
   };
 
-  const errors: NonNullable<LeadFormState["errors"]> = {};
+  const errors = {
+    ...initialLeadFormErrors,
+  };
 
   if (!buildVersionId) {
     errors.buildVersionId = "Build versiyonu seçmelisin.";
@@ -72,7 +80,7 @@ export async function saveLead(
     errors.email = "Geçerli bir e-posta gir.";
   }
 
-  if (Object.keys(errors).length > 0) {
+  if (errors.buildVersionId || errors.fullName || errors.email) {
     return {
       ok: false,
       message: "Form eksik veya hatalı.",
@@ -82,6 +90,24 @@ export async function saveLead(
   }
 
   try {
+    const buildVersionRow = await db
+      .select({ id: buildVersions.id })
+      .from(buildVersions)
+      .where(eq(buildVersions.id, buildVersionId))
+      .limit(1);
+
+    if (!buildVersionRow[0]) {
+      return {
+        ok: false,
+        message: "Seçilen build versiyonu bulunamadı.",
+        values,
+        errors: {
+          ...initialLeadFormErrors,
+          buildVersionId: "Geçerli bir build versiyonu seç.",
+        },
+      };
+    }
+
     if (id) {
       await db
         .update(leads)
@@ -106,8 +132,10 @@ export async function saveLead(
     }
 
     revalidatePath("/admin/leads");
+    revalidatePath("/admin/offers");
 
     return {
+      ...initialLeadFormState,
       ok: true,
       message: id ? "Lead güncellendi." : "Lead oluşturuldu.",
     };
@@ -118,6 +146,7 @@ export async function saveLead(
       ok: false,
       message: "Lead kaydı sırasında beklenmeyen bir hata oluştu.",
       values,
+      errors,
     };
   }
 }
@@ -133,6 +162,7 @@ export async function deleteLead(id: string) {
   try {
     await db.delete(leads).where(eq(leads.id, normalizedId));
     revalidatePath("/admin/leads");
+    revalidatePath("/admin/offers");
   } catch (error) {
     console.error("deleteLead error", error);
   }

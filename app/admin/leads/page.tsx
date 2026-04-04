@@ -1,46 +1,70 @@
 import Link from "next/link";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
-  ArrowUpRight,
-  CheckCircle2,
-  CircleDashed,
-  MessageSquare,
+  Activity,
+  BadgeEuro,
+  ChevronRight,
+  GitBranch,
   Plus,
-  Search,
-  Target,
-  Trophy,
-  XCircle,
+  Trash2,
+  UserRound,
 } from "lucide-react";
 
 import { db } from "@/db/db";
-import { builds, buildVersions, leads, models, packages } from "@/db/schema";
-import { AddLeadDrawer } from "./AddLeadDrawer";
+import { builds, buildVersions, leads } from "@/db/schema";
+
 import { deleteLead } from "./action";
-import type { LeadStatus } from "./types";
-import { PageHeader } from "../_components/page-header";
-import EmptyState from "../_components/empty-state";
+import { AddLeadDrawer } from "./AddLeadDrawer";
+import { type LeadStatus } from "./types";
 
-type SearchParams = Promise<{
-  q?: string;
-  status?: string;
-  new?: string;
-  edit?: string;
-}>;
-
-type PageProps = {
-  searchParams: SearchParams;
+type LeadsPageProps = {
+  searchParams?: Promise<{
+    q?: string;
+    status?: string;
+    new?: string;
+  }>;
 };
 
-const statusTabs: Array<{ key: "all" | LeadStatus; label: string }> = [
-  { key: "all", label: "Tümü" },
-  { key: "new", label: "Yeni" },
-  { key: "contacted", label: "Temas" },
-  { key: "qualified", label: "Nitelikli" },
-  { key: "converted", label: "Dönüştü" },
-  { key: "lost", label: "Kaybedildi" },
-];
+function getStatusLabel(status: string) {
+  if (status === "contacted") return "İletişim";
+  if (status === "qualified") return "Nitelikli";
+  if (status === "converted") return "Dönüştü";
+  if (status === "lost") return "Kaybedildi";
+  return "Yeni";
+}
 
-function normalizeStatus(value: string | undefined): "all" | LeadStatus {
+function getStatusClassName(status: string) {
+  if (status === "converted") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+  }
+
+  if (status === "qualified") {
+    return "border-blue-500/20 bg-blue-500/10 text-blue-300";
+  }
+
+  if (status === "contacted") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+  }
+
+  if (status === "lost") {
+    return "border-red-500/20 bg-red-500/10 text-red-300";
+  }
+
+  return "border-zinc-700 bg-zinc-800/80 text-zinc-300";
+}
+
+function formatDate(value: Date | string | null) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function normalizeStatusFilter(value: string | undefined) {
   if (
     value === "new" ||
     value === "contacted" ||
@@ -54,414 +78,378 @@ function normalizeStatus(value: string | undefined): "all" | LeadStatus {
   return "all";
 }
 
-function formatDate(value: Date | string | null | undefined) {
-  if (!value) return "—";
-
-  const date = value instanceof Date ? value : new Date(value);
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
-function getStatusUi(status: LeadStatus) {
-  switch (status) {
-    case "new":
-      return {
-        label: "Yeni",
-        className: "border-sky-500/20 bg-sky-500/10 text-sky-200",
-        icon: CircleDashed,
-      };
-    case "contacted":
-      return {
-        label: "Temas kuruldu",
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-200",
-        icon: MessageSquare,
-      };
-    case "qualified":
-      return {
-        label: "Nitelikli",
-        className: "border-violet-500/20 bg-violet-500/10 text-violet-200",
-        icon: Target,
-      };
-    case "converted":
-      return {
-        label: "Dönüştü",
-        className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
-        icon: CheckCircle2,
-      };
-    case "lost":
-      return {
-        label: "Kaybedildi",
-        className: "border-rose-500/20 bg-rose-500/10 text-rose-200",
-        icon: XCircle,
-      };
-  }
-}
-
-export default async function LeadsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const q = typeof params.q === "string" ? params.q.trim() : "";
-  const status = normalizeStatus(typeof params.status === "string" ? params.status : undefined);
-  const isDrawerOpen = params.new === "true" || typeof params.edit === "string";
+export default async function LeadsPage({ searchParams }: LeadsPageProps) {
+  const params = (await searchParams) ?? {};
+  const isDrawerOpen = params.new === "true";
+  const query = (params.q ?? "").trim().toLocaleLowerCase("tr");
+  const statusFilter = normalizeStatusFilter(params.status);
 
   if (!db) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Admin · Leads"
-          title="Lead Yönetimi"
-          description="Veritabanı bağlantısı olmadığı için leads modülü güvenli modda."
-        />
-        <EmptyState
-          title="Veritabanı bağlantısı yok"
-          description="DATABASE_URL aktif olduğunda native leads omurgası çalışır."
-        />
-      </div>
+      <section className="space-y-6">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
+            Admin · Leads
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">Leads</h1>
+          <p className="mt-3 max-w-2xl text-sm text-zinc-400">
+            Veritabanı bağlantısı olmadığı için Leads modülü güvenli pasif modda.
+          </p>
+        </div>
+      </section>
     );
   }
 
-  const whereClause = and(
-    status !== "all" ? eq(leads.status, status) : undefined,
-    q
-      ? or(
-          ilike(leads.fullName, `%${q}%`),
-          ilike(leads.email, `%${q}%`),
-          ilike(leads.phoneNumber, `%${q}%`),
-        )
-      : undefined,
-  );
+  const leadRows = await db
+    .select({
+      id: leads.id,
+      fullName: leads.fullName,
+      email: leads.email,
+      phoneNumber: leads.phoneNumber,
+      whatsappOptIn: leads.whatsappOptIn,
+      status: leads.status,
+      createdAt: leads.createdAt,
+      buildVersionId: leads.buildVersionId,
+      versionNumber: buildVersions.versionNumber,
+      buildShortCode: builds.shortCode,
+    })
+    .from(leads)
+    .leftJoin(buildVersions, eq(leads.buildVersionId, buildVersions.id))
+    .leftJoin(builds, eq(buildVersions.buildId, builds.id))
+    .orderBy(desc(leads.createdAt));
 
-  const [leadRows, buildVersionRows, summaryRows] = await Promise.all([
-    db
-      .select({
-        id: leads.id,
-        buildVersionId: leads.buildVersionId,
-        fullName: leads.fullName,
-        email: leads.email,
-        phoneNumber: leads.phoneNumber,
-        whatsappOptIn: leads.whatsappOptIn,
-        status: leads.status,
-        createdAt: leads.createdAt,
-        buildShortCode: builds.shortCode,
-        versionNumber: buildVersions.versionNumber,
-        modelSlug: models.slug,
-        packageName: packages.name,
-      })
-      .from(leads)
-      .leftJoin(buildVersions, eq(leads.buildVersionId, buildVersions.id))
-      .leftJoin(builds, eq(buildVersions.buildId, builds.id))
-      .leftJoin(models, eq(builds.modelId, models.id))
-      .leftJoin(packages, eq(buildVersions.packageId, packages.id))
-      .where(whereClause)
-      .orderBy(desc(leads.createdAt)),
+  const buildVersionRows = await db
+    .select({
+      id: buildVersions.id,
+      versionNumber: buildVersions.versionNumber,
+      createdAt: buildVersions.createdAt,
+      buildShortCode: builds.shortCode,
+    })
+    .from(buildVersions)
+    .leftJoin(builds, eq(buildVersions.buildId, builds.id))
+    .orderBy(desc(buildVersions.createdAt));
 
-    db
-      .select({
-        id: buildVersions.id,
-        versionNumber: buildVersions.versionNumber,
-        buildShortCode: builds.shortCode,
-        modelSlug: models.slug,
-        packageName: packages.name,
-        createdAt: buildVersions.createdAt,
-      })
-      .from(buildVersions)
-      .leftJoin(builds, eq(buildVersions.buildId, builds.id))
-      .leftJoin(models, eq(builds.modelId, models.id))
-      .leftJoin(packages, eq(buildVersions.packageId, packages.id))
-      .orderBy(desc(buildVersions.createdAt)),
+  const buildVersionOptions = buildVersionRows.map((row) => {
+    const shortCode = row.buildShortCode ?? "BUILD";
+    const versionLabel = `V${row.versionNumber}`;
+    const createdAtLabel = formatDate(row.createdAt);
 
-    db
-      .select({
-        status: leads.status,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(leads)
-      .groupBy(leads.status),
-  ]);
+    return {
+      id: row.id,
+      label: `${shortCode} · ${versionLabel}`,
+      meta: `Build: ${shortCode} · Versiyon: ${versionLabel} · Oluşturulma: ${createdAtLabel}`,
+    };
+  });
 
-  const summaryMap = new Map<LeadStatus, number>(
-    summaryRows.map((item) => [item.status as LeadStatus, Number(item.count ?? 0)]),
-  );
-
-  const totalLeads = summaryRows.reduce((acc, item) => acc + Number(item.count ?? 0), 0);
-  const convertedCount = summaryMap.get("converted") ?? 0;
-  const contactedCount = summaryMap.get("contacted") ?? 0;
-  const qualifiedCount = summaryMap.get("qualified") ?? 0;
-  const lostCount = summaryMap.get("lost") ?? 0;
-
-  const buildVersionOptions = buildVersionRows.map((row) => ({
-    id: row.id,
-    label: `${row.buildShortCode ?? "BUILD"} · v${row.versionNumber}`,
-    meta: [
-      row.modelSlug ? `Model: ${row.modelSlug}` : null,
-      row.packageName ? `Paket: ${row.packageName}` : null,
-      row.createdAt ? `Tarih: ${formatDate(row.createdAt)}` : null,
+  const filteredLeads = leadRows.filter((lead) => {
+    const searchable = [
+      lead.fullName,
+      lead.email ?? "",
+      lead.phoneNumber ?? "",
+      lead.buildShortCode ?? "",
+      `v${lead.versionNumber ?? ""}`,
     ]
-      .filter(Boolean)
-      .join(" · "),
-  }));
+      .join(" ")
+      .toLocaleLowerCase("tr");
 
-  const editLead =
-    typeof params.edit === "string"
-      ? leadRows.find((item) => item.id === params.edit) ?? null
-      : null;
+    const matchesQuery = query ? searchable.includes(query) : true;
+    const matchesStatus =
+      statusFilter === "all" ? true : lead.status === statusFilter;
 
-  const editData = editLead
-    ? {
-        id: editLead.id,
-        buildVersionId: editLead.buildVersionId,
-        fullName: editLead.fullName,
-        email: editLead.email ?? "",
-        phoneNumber: editLead.phoneNumber ?? "",
-        whatsappOptIn: editLead.whatsappOptIn,
-        status: editLead.status as LeadStatus,
-      }
-    : null;
+    return matchesQuery && matchesStatus;
+  });
+
+  const stats = filteredLeads.reduce(
+    (acc, item) => {
+      acc.total += 1;
+      if (item.status === "new") acc.new += 1;
+      if (item.status === "contacted") acc.contacted += 1;
+      if (item.status === "qualified") acc.qualified += 1;
+      if (item.status === "converted") acc.converted += 1;
+      if (item.status === "lost") acc.lost += 1;
+      return acc;
+    },
+    {
+      total: 0,
+      new: 0,
+      contacted: 0,
+      qualified: 0,
+      converted: 0,
+      lost: 0,
+    },
+  );
+
+  const createEnabled = buildVersionOptions.length > 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin · Leads"
-        title="Lead Yönetimi"
-        description="Native CRM giriş omurgası. Lead kaydı doğrudan build version ile bağlıdır."
-        actions={
-          <Link
-            href="/admin/leads?new=true"
-            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-              buildVersionOptions.length === 0
-                ? "cursor-not-allowed border border-zinc-800 bg-zinc-900 text-zinc-500"
-                : "bg-white text-black hover:bg-zinc-200"
-            }`}
-          >
-            <Plus size={16} />
-            Yeni lead
-          </Link>
-        }
-      />
+    <section className="space-y-6">
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
+              Admin · Leads
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold text-zinc-100">
+              Leads
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-zinc-400">
+              Lead akışı doğal dependency ile çalışır. Her lead bir build
+              version kaydına bağlıdır ve offer hattı buradan beslenir.
+            </p>
+          </div>
 
-      {buildVersionOptions.length === 0 ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-          Lead oluşturmak için önce en az bir build version kaydı gerekli.
+          {createEnabled ? (
+            <Link
+              href="/admin/leads?new=true"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+            >
+              <Plus size={16} />
+              Yeni Lead
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-800 px-5 py-3 text-sm font-medium text-zinc-500"
+            >
+              <Plus size={16} />
+              Önce Build Version Gerekli
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!createEnabled ? (
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
+          Leads create akışı için en az bir build version kaydı gerekli.
+          Build version oluşmadan lead açılmıyor.
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Toplam lead</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{totalLeads}</p>
-          <p className="mt-1 text-xs text-zinc-500">Native CRM omurgası</p>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <UserRound size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Toplam
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.total}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Temas + nitelikli
-          </p>
-          <p className="mt-3 text-2xl font-semibold text-white">
-            {contactedCount + qualifiedCount}
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">Pipeline orta katman</p>
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <Activity size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Yeni
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.new}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Dönüştü</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{convertedCount}</p>
-          <p className="mt-1 text-xs text-zinc-500">Teklif öncesi güçlü sinyal</p>
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <ChevronRight size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                İletişim
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.contacted}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Kaybedildi</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{lostCount}</p>
-          <p className="mt-1 text-xs text-zinc-500">Takip kalite sinyali</p>
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <GitBranch size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Nitelikli
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.qualified}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <BadgeEuro size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Dönüşen
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.converted}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-        <form className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            {statusTabs.map((tab) => {
-              const isActive = status === tab.key;
+      <form
+        method="GET"
+        className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <input
+            type="text"
+            name="q"
+            defaultValue={params.q ?? ""}
+            placeholder="Ad, e-posta, telefon, build kodu ara..."
+            className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700 lg:max-w-md"
+          />
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: "all", label: "Tümü" },
+              { value: "new", label: "Yeni" },
+              { value: "contacted", label: "İletişim" },
+              { value: "qualified", label: "Nitelikli" },
+              { value: "converted", label: "Dönüştü" },
+              { value: "lost", label: "Kaybedildi" },
+            ].map((item) => {
+              const isActive = statusFilter === item.value;
 
               return (
-                <Link
-                  key={tab.key}
-                  href={{
-                    pathname: "/admin/leads",
-                    query: {
-                      ...(q ? { q } : {}),
-                      ...(tab.key !== "all" ? { status: tab.key } : {}),
-                    },
-                  }}
-                  className={`rounded-2xl border px-3 py-2 text-sm transition ${
+                <button
+                  key={item.value}
+                  type="submit"
+                  name="status"
+                  value={item.value}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
                     isActive
-                      ? "border-white bg-white text-black"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-white"
+                      ? "border-zinc-200 bg-zinc-100 text-zinc-900"
+                      : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100"
                   }`}
                 >
-                  {tab.label}
-                </Link>
+                  {item.label}
+                </button>
               );
             })}
           </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-              />
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Ad, e-posta veya telefon ara"
-                className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 py-2.5 pl-10 pr-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-700 sm:w-72"
-              />
-              <input type="hidden" name="status" value={status} />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-200 transition hover:border-zinc-700 hover:text-white"
-              >
-                Uygula
-              </button>
-              <Link
-                href="/admin/leads"
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
-              >
-                Sıfırla
-              </Link>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {leadRows.length === 0 ? (
-        <EmptyState
-          title="Lead kaydı bulunamadı"
-          description="Filtreyi genişlet veya yeni bir lead ekleyerek CRM hattını başlat."
-        />
-      ) : (
-        <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/60">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-zinc-900">
-              <thead className="bg-zinc-950/90">
-                <tr className="text-left text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  <th className="px-4 py-3 font-medium">Lead</th>
-                  <th className="px-4 py-3 font-medium">Build bağı</th>
-                  <th className="px-4 py-3 font-medium">Durum</th>
-                  <th className="px-4 py-3 font-medium">İletişim</th>
-                  <th className="px-4 py-3 font-medium">Tarih</th>
-                  <th className="px-4 py-3 font-medium text-right">İşlem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-900">
-                {leadRows.map((lead) => {
-                  const statusUi = getStatusUi(lead.status as LeadStatus);
-                  const StatusIcon = statusUi.icon;
-
-                  return (
-                    <tr key={lead.id} className="align-top">
-                      <td className="px-4 py-4">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-white">{lead.fullName}</p>
-                          <p className="text-xs text-zinc-500">ID: {lead.id.slice(0, 8)}</p>
-                          {lead.whatsappOptIn ? (
-                            <p className="text-xs text-emerald-400">WhatsApp onayı mevcut</p>
-                          ) : null}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="space-y-1">
-                          <p className="text-sm text-zinc-200">
-                            {lead.buildShortCode ?? "—"} · v{lead.versionNumber ?? "—"}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            {lead.modelSlug ? `Model: ${lead.modelSlug}` : "Model yok"}
-                            {lead.packageName ? ` · Paket: ${lead.packageName}` : ""}
-                          </p>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div
-                          className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-xs ${statusUi.className}`}
-                        >
-                          <StatusIcon size={14} />
-                          {statusUi.label}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="space-y-1 text-sm text-zinc-300">
-                          <p>{lead.email ?? "E-posta yok"}</p>
-                          <p className="text-zinc-500">{lead.phoneNumber ?? "Telefon yok"}</p>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-zinc-400">
-                        {formatDate(lead.createdAt)}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/admin/leads?edit=${lead.id}`}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 transition hover:border-zinc-700 hover:text-white"
-                          >
-                            Düzenle
-                            <ArrowUpRight size={14} />
-                          </Link>
-
-                          <form
-                            action={async () => {
-                              "use server";
-                              await deleteLead(lead.id);
-                            }}
-                          >
-                            <button
-                              type="submit"
-                              className="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400 transition hover:border-rose-500/30 hover:text-rose-300"
-                            >
-                              Sil
-                            </button>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
         </div>
-      )}
+      </form>
 
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-2 text-zinc-300">
-            <Trophy size={18} />
+      <div className="space-y-3">
+        {filteredLeads.length === 0 ? (
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 text-sm text-zinc-400">
+            Eşleşen lead kaydı bulunamadı.
           </div>
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-white">Batch sonucu</h3>
-            <p className="text-sm leading-6 text-zinc-400">
-              Leads modülü artık placeholder içerik mantığı yerine native tabloyu kullanır.
-              Böylece Offers ve Orders hattı için doğru başlangıç omurgası açılmış olur.
-            </p>
-          </div>
-        </div>
+        ) : (
+          filteredLeads.map((lead) => {
+            const buildLabel = lead.buildShortCode
+              ? `${lead.buildShortCode} · V${lead.versionNumber ?? "?"}`
+              : `V${lead.versionNumber ?? "?"}`;
+
+            return (
+              <div
+                key={lead.id}
+                className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold text-zinc-100">
+                        {lead.fullName}
+                      </h2>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusClassName(
+                          lead.status,
+                        )}`}
+                      >
+                        {getStatusLabel(lead.status)}
+                      </span>
+                      {lead.whatsappOptIn ? (
+                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                          WhatsApp Onaylı
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-2 text-sm text-zinc-400 md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                          Build Version
+                        </p>
+                        <p className="mt-1 text-zinc-200">{buildLabel}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                          E-posta
+                        </p>
+                        <p className="mt-1 text-zinc-200">{lead.email || "—"}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                          Telefon
+                        </p>
+                        <p className="mt-1 text-zinc-200">
+                          {lead.phoneNumber || "—"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                          Oluşturulma
+                        </p>
+                        <p className="mt-1 text-zinc-200">
+                          {formatDate(lead.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form
+                    action={async () => {
+                      "use server";
+                      await deleteLead(lead.id);
+                    }}
+                  >
+                    <button
+                      type="submit"
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:border-red-500/30 hover:bg-red-500/15"
+                    >
+                      <Trash2 size={15} />
+                      Sil
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {isDrawerOpen ? (
         <AddLeadDrawer
           buildVersionOptions={buildVersionOptions}
-          initialData={editData}
+          initialData={null}
         />
       ) : null}
-    </div>
+    </section>
   );
 }
