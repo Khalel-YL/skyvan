@@ -25,6 +25,18 @@ type SourceBindingCounts = {
   archived: number;
 };
 
+type SourceBindingQuality = {
+  activeTotal: number;
+  targetedActive: number;
+  broadActive: number;
+};
+
+type ReadinessMeta = {
+  label: string;
+  tone: string;
+  detail: string;
+};
+
 async function getDocumentCountsByProductIds(productIds: string[]) {
   if (!productIds.length) {
     return new Map<string, DocumentCounts>();
@@ -116,9 +128,72 @@ async function getSourceBindingCountsByProductIds(productIds: string[]) {
   );
 }
 
+async function getSourceBindingQualityByProductIds(productIds: string[]) {
+  if (!productIds.length) {
+    return new Map<string, SourceBindingQuality>();
+  }
+
+  const db = getDbOrThrow();
+
+  const productIdsSql = sql.join(
+    productIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+
+  const result = await db.execute(sql`
+    select
+      product_id,
+      sum(case when status = 'active' then 1 else 0 end)::int as active_total,
+      sum(
+        case
+          when status = 'active'
+            and path_hint is not null
+            and btrim(path_hint) <> ''
+          then 1
+          else 0
+        end
+      )::int as targeted_active,
+      sum(
+        case
+          when status = 'active'
+            and (
+              path_hint is null
+              or btrim(path_hint) = ''
+            )
+          then 1
+          else 0
+        end
+      )::int as broad_active
+    from product_source_bindings
+    where product_id in (${productIdsSql})
+    group by product_id
+  `);
+
+  type Row = {
+    product_id: string;
+    active_total: number | string | null;
+    targeted_active: number | string | null;
+    broad_active: number | string | null;
+  };
+
+  const rows = result.rows as Row[];
+
+  return new Map<string, SourceBindingQuality>(
+    rows.map((row) => [
+      row.product_id,
+      {
+        activeTotal: Number(row.active_total ?? 0),
+        targetedActive: Number(row.targeted_active ?? 0),
+        broadActive: Number(row.broad_active ?? 0),
+      },
+    ]),
+  );
+}
+
 function getReadinessScore(
   documentCounts: DocumentCounts,
   sourceBindingCounts: SourceBindingCounts,
+  sourceBindingQuality: SourceBindingQuality,
 ) {
   let score = 0;
 
@@ -126,24 +201,43 @@ function getReadinessScore(
     score += 50;
   }
 
-  if (sourceBindingCounts.active > 0) {
-    score += 50;
+  if (sourceBindingCounts.active === 0) {
+    return score;
   }
 
+  if (sourceBindingQuality.targetedActive > 0) {
+    score += 50;
+    return score;
+  }
+
+  score += 25;
   return score;
 }
 
 function getReadinessMeta(
   documentCounts: DocumentCounts,
   sourceBindingCounts: SourceBindingCounts,
-) {
-  const score = getReadinessScore(documentCounts, sourceBindingCounts);
+  sourceBindingQuality: SourceBindingQuality,
+): ReadinessMeta {
+  const score = getReadinessScore(
+    documentCounts,
+    sourceBindingCounts,
+    sourceBindingQuality,
+  );
 
   if (score === 100) {
     return {
       label: "AI Hazır",
       tone: "border-emerald-900/60 bg-emerald-950/30 text-emerald-300",
-      detail: "Aktif belge ve aktif binding mevcut.",
+      detail: "AI hazır (ürün canlı öneri verebilir).",
+    };
+  }
+
+  if (score === 75) {
+    return {
+      label: "Binding Zayıf",
+      tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
+      detail: "Belge var ancak binding hedefi geniş; path hint daraltılmalı.",
     };
   }
 
@@ -151,7 +245,7 @@ function getReadinessMeta(
     return {
       label: "Binding Eksik",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Belge var ama aktif source binding yok.",
+      detail: "Belge var ancak AI veri kaynağı bağlı değil.",
     };
   }
 
@@ -159,15 +253,33 @@ function getReadinessMeta(
     return {
       label: "Belge Eksik",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Binding var ama aktif belge yok.",
+      detail: "Kaynak bağlı ancak AI içerik öğrenemiyor (belge eksik).",
     };
   }
 
   return {
     label: "Hazırlık Eksik",
     tone: "border-red-900/60 bg-red-950/30 text-red-300",
-    detail: "Aktif belge ve aktif binding henüz yok.",
+    detail: "AI için veri yok (belge ve kaynak eksik).",
   };
+}
+
+function getReadinessPriority(
+  meta: ReadinessMeta,
+  score: number,
+) {
+  if (score === 0) return 0;
+  if (meta.label === "Belge Eksik") return 1;
+  if (meta.label === "Binding Eksik") return 2;
+  if (meta.label === "Binding Zayıf") return 3;
+  if (score === 100) return 4;
+  return 5;
+}
+
+function formatShortId(value: string) {
+  if (!value) return "-";
+  if (value.length <= 16) return value;
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
 function InfoChip({
@@ -226,27 +338,26 @@ function InlineCountsSection({
 }
 
 function ReadinessBadge({
-  documentCounts,
-  sourceBindingCounts,
+  meta,
 }: {
-  documentCounts: DocumentCounts;
-  sourceBindingCounts: SourceBindingCounts;
+  meta: ReadinessMeta;
 }) {
-  const meta = getReadinessMeta(documentCounts, sourceBindingCounts);
-
   return <InfoChip className={meta.tone}>{meta.label}</InfoChip>;
 }
 
 function ReadinessPanel({
   documentCounts,
   sourceBindingCounts,
+  sourceBindingQuality,
+  meta,
+  score,
 }: {
   documentCounts: DocumentCounts;
   sourceBindingCounts: SourceBindingCounts;
+  sourceBindingQuality: SourceBindingQuality;
+  meta: ReadinessMeta;
+  score: number;
 }) {
-  const score = getReadinessScore(documentCounts, sourceBindingCounts);
-  const meta = getReadinessMeta(documentCounts, sourceBindingCounts);
-
   return (
     <div className="flex w-full flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
       <div className="flex items-start justify-between gap-3">
@@ -292,6 +403,30 @@ function ReadinessPanel({
             : []),
         ]}
       />
+
+      {sourceBindingCounts.active > 0 ? (
+        <InlineCountsSection
+          label="Binding Kalitesi"
+          items={[
+            ...(sourceBindingQuality.targetedActive > 0
+              ? [
+                  {
+                    text: `Hedefli ${sourceBindingQuality.targetedActive}`,
+                    tone: "text-emerald-300",
+                  },
+                ]
+              : []),
+            ...(sourceBindingQuality.broadActive > 0
+              ? [
+                  {
+                    text: `Geniş ${sourceBindingQuality.broadActive}`,
+                    tone: "text-amber-300",
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ) : null}
     </div>
   );
 }
@@ -316,117 +451,192 @@ export async function ProductsTable({
 
   const productIds = products.map((product) => product.id);
 
-  const [documentCountsByProductId, sourceBindingCountsByProductId] =
-    await Promise.all([
-      getDocumentCountsByProductIds(productIds),
-      getSourceBindingCountsByProductIds(productIds),
-    ]);
+  const [
+    documentCountsByProductId,
+    sourceBindingCountsByProductId,
+    sourceBindingQualityByProductId,
+  ] = await Promise.all([
+    getDocumentCountsByProductIds(productIds),
+    getSourceBindingCountsByProductIds(productIds),
+    getSourceBindingQualityByProductIds(productIds),
+  ]);
+
+  const enrichedProducts = products
+    .map((product) => {
+      const documentCounts = documentCountsByProductId.get(product.id) ?? {
+        total: 0,
+        active: 0,
+        archived: 0,
+      };
+
+      const sourceBindingCounts = sourceBindingCountsByProductId.get(
+        product.id,
+      ) ?? {
+        total: 0,
+        active: 0,
+        draft: 0,
+        archived: 0,
+      };
+
+      const sourceBindingQuality = sourceBindingQualityByProductId.get(
+        product.id,
+      ) ?? {
+        activeTotal: 0,
+        targetedActive: 0,
+        broadActive: 0,
+      };
+
+      const score = getReadinessScore(
+        documentCounts,
+        sourceBindingCounts,
+        sourceBindingQuality,
+      );
+
+      const meta = getReadinessMeta(
+        documentCounts,
+        sourceBindingCounts,
+        sourceBindingQuality,
+      );
+
+      return {
+        product,
+        documentCounts,
+        sourceBindingCounts,
+        sourceBindingQuality,
+        score,
+        meta,
+        priority: getReadinessPriority(meta, score),
+      };
+    })
+    .sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+
+      return (
+        new Date(b.product.updatedAt).getTime() -
+        new Date(a.product.updatedAt).getTime()
+      );
+    });
 
   return (
     <div className="grid gap-4">
-      {products.map((product) => {
-        const documentCounts = documentCountsByProductId.get(product.id) ?? {
-          total: 0,
-          active: 0,
-          archived: 0,
-        };
+      {enrichedProducts.map(
+        ({
+          product,
+          documentCounts,
+          sourceBindingCounts,
+          sourceBindingQuality,
+          score,
+          meta,
+        }) => {
+          const documentsNeedAttention = documentCounts.active === 0;
+          const bindingsNeedAttention =
+            sourceBindingCounts.active === 0 ||
+            sourceBindingQuality.broadActive > 0;
 
-        const sourceBindingCounts = sourceBindingCountsByProductId.get(
-          product.id,
-        ) ?? {
-          total: 0,
-          active: 0,
-          draft: 0,
-          archived: 0,
-        };
+          const documentsButtonClass = documentsNeedAttention
+            ? "border-amber-900/60 bg-amber-950/30 text-amber-300 hover:bg-amber-950/50"
+            : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100";
 
-        return (
-          <div
-            key={product.id}
-            className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 xl:flex-row xl:items-start xl:justify-between"
-          >
-            <div className="min-w-0 flex-1 space-y-4">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-                  <ProductStatusBadge status={product.status} />
-                  <ReadinessBadge
-                    documentCounts={documentCounts}
-                    sourceBindingCounts={sourceBindingCounts}
+          const bindingsButtonClass = bindingsNeedAttention
+            ? "border-amber-900/60 bg-amber-950/30 text-amber-300 hover:bg-amber-950/50"
+            : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100";
+
+          return (
+            <div
+              key={product.id}
+              className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 xl:flex-row xl:items-start xl:justify-between"
+            >
+              <div className="min-w-0 flex-1 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+                    <ProductStatusBadge status={product.status} />
+                    <ReadinessBadge meta={meta} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <InfoChip className="border-zinc-700 text-zinc-100">
+                      {product.categoryName}
+                    </InfoChip>
+
+                    {product.sku ? <InfoChip>{product.sku}</InfoChip> : null}
+
+                    <InfoChip className="text-zinc-500">
+                      {formatShortId(product.slug)}
+                    </InfoChip>
+                  </div>
+                </div>
+
+                {product.shortDescription ? (
+                  <p className="max-w-3xl text-sm leading-6 text-zinc-400">
+                    {product.shortDescription}
+                  </p>
+                ) : null}
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard label="Fiyat" value={formatMoney(product.basePrice)} />
+                  <MetricCard
+                    label="Ağırlık"
+                    value={formatMetric(product.weightKg, "kg")}
+                  />
+                  <MetricCard
+                    label="Güç Tüketimi"
+                    value={formatWatts(product.powerDrawWatts)}
+                    subValue={formatWatts(product.powerSupplyWatts)}
+                  />
+                  <MetricCard
+                    label="Güncelleme"
+                    value={new Date(product.updatedAt).toLocaleDateString("tr-TR")}
+                    subValue={new Date(product.updatedAt).toLocaleTimeString(
+                      "tr-TR",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      },
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="flex w-full shrink-0 flex-col items-stretch gap-3 xl:w-[360px] xl:items-end">
+                <div className="flex flex-wrap gap-2 xl:justify-end">
+                  <Link
+                    href={`/admin/products/${product.id}/documents`}
+                    className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition ${documentsButtonClass}`}
+                  >
+                    Belgeler
+                  </Link>
+
+                  <Link
+                    href={`/admin/products/${product.id}/sources`}
+                    className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition ${bindingsButtonClass}`}
+                  >
+                    Kaynak Bağları
+                  </Link>
+
+                  <EditProductDrawer product={product} categories={categories} />
+
+                  <DeleteProductDialog
+                    productId={product.id}
+                    productName={product.name}
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <InfoChip>{product.categoryName}</InfoChip>
-                  <InfoChip>{product.slug}</InfoChip>
-                  <InfoChip>{product.sku}</InfoChip>
-                </div>
-              </div>
-
-              {product.shortDescription ? (
-                <p className="max-w-3xl text-sm leading-6 text-zinc-400">
-                  {product.shortDescription}
-                </p>
-              ) : null}
-
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <MetricCard label="Fiyat" value={formatMoney(product.basePrice)} />
-                <MetricCard
-                  label="Ağırlık"
-                  value={formatMetric(product.weightKg, "kg")}
-                />
-                <MetricCard
-                  label="Güç Tüketimi"
-                  value={formatWatts(product.powerDrawWatts)}
-                  subValue={formatWatts(product.powerSupplyWatts)}
-                />
-                <MetricCard
-                  label="Güncelleme"
-                  value={new Date(product.updatedAt).toLocaleDateString("tr-TR")}
-                  subValue={new Date(product.updatedAt).toLocaleTimeString(
-                    "tr-TR",
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    },
-                  )}
+                <ReadinessPanel
+                  documentCounts={documentCounts}
+                  sourceBindingCounts={sourceBindingCounts}
+                  sourceBindingQuality={sourceBindingQuality}
+                  meta={meta}
+                  score={score}
                 />
               </div>
             </div>
-
-            <div className="flex w-full shrink-0 flex-col items-stretch gap-3 xl:w-[360px] xl:items-end">
-              <div className="flex flex-wrap gap-2 xl:justify-end">
-                <Link
-                  href={`/admin/products/${product.id}/documents`}
-                  className="inline-flex items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
-                >
-                  Belgeler
-                </Link>
-
-                <Link
-                  href={`/admin/products/${product.id}/sources`}
-                  className="inline-flex items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
-                >
-                  Kaynak Bağları
-                </Link>
-
-                <EditProductDrawer product={product} categories={categories} />
-
-                <DeleteProductDialog
-                  productId={product.id}
-                  productName={product.name}
-                />
-              </div>
-
-              <ReadinessPanel
-                documentCounts={documentCounts}
-                sourceBindingCounts={sourceBindingCounts}
-              />
-            </div>
-          </div>
-        );
-      })}
+          );
+        },
+      )}
     </div>
   );
 }
