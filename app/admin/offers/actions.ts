@@ -1,53 +1,82 @@
 "use server";
 
-import { db } from "@/db/db";
-import { localizedContent } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
+import { eq } from "drizzle-orm";
+
+import { getDbOrThrow } from "@/db/db";
+import { offers } from "@/db/schema";
+
+export type OfferStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "rejected"
+  | "expired";
+
+function normalizeStatus(value: string): OfferStatus {
+  if (
+    value === "draft" ||
+    value === "sent" ||
+    value === "accepted" ||
+    value === "rejected" ||
+    value === "expired"
+  ) {
+    return value;
+  }
+  return "draft";
+}
 
 export async function saveOffer(formData: FormData) {
-  const id = formData.get("id") as string;
-  const leadName = formData.get("leadName") as string;
-  const caravanModel = formData.get("caravanModel") as string;
-  const price = formData.get("price") as string;
-  const status = formData.get("status") as string; // pending, negotiating, won
+  const db = getDbOrThrow();
 
-  const contentJson = {
-    leadName,
-    caravanModel,
-    price: Number(price) || 0,
-    status: status || "pending",
-    updatedAt: new Date().toISOString()
-  };
+  const id = String(formData.get("id") ?? "").trim();
+  const leadId = String(formData.get("leadId") ?? "").trim();
+  const offerReference = String(formData.get("offerReference") ?? "").trim();
+  const validUntilRaw = String(formData.get("validUntil") ?? "").trim();
+  const totalAmountRaw = String(formData.get("totalAmount") ?? "").trim();
 
-  try {
-    if (id && id !== "undefined" && id !== "") {
-      await db.update(localizedContent).set({ title: `${leadName} - ${caravanModel}`, contentJson }).where(eq(localizedContent.id, id));
-    } else {
-      await db.insert(localizedContent).values({
-        id: uuidv4(),
-        entityId: uuidv4(),
-        entityType: "offer",
-        locale: "tr",
-        title: `${leadName} - ${caravanModel}`,
-        contentJson
-      });
-    }
-  } catch (error) {
-    console.error("Teklif Kayıt Hatası:", error);
+  const status = normalizeStatus(
+    String(formData.get("status") ?? "").trim(),
+  );
+
+  if (!leadId || !offerReference) {
+    throw new Error("Lead ve referans zorunlu");
+  }
+
+  const validUntil = validUntilRaw
+    ? new Date(validUntilRaw)
+    : new Date();
+
+  // 🔥 CRITICAL FIX (string'e çeviriyoruz)
+  const totalAmount = totalAmountRaw || "0";
+
+  if (id) {
+    await db
+      .update(offers)
+      .set({
+        leadId,
+        offerReference,
+        validUntil,
+        totalAmount,
+        status,
+      })
+      .where(eq(offers.id, id));
+  } else {
+    await db.insert(offers).values({
+      leadId,
+      offerReference,
+      validUntil,
+      totalAmount,
+      status,
+    });
   }
 
   revalidatePath("/admin/offers");
-  redirect("/admin/offers");
 }
 
 export async function deleteOffer(id: string) {
-  try {
-    await db.delete(localizedContent).where(eq(localizedContent.id, id));
-    revalidatePath("/admin/offers");
-  } catch (error) {
-    console.error("Teklif Silme Hatası:", error);
-  }
+  const db = getDbOrThrow();
+
+  await db.delete(offers).where(eq(offers.id, id));
+  revalidatePath("/admin/offers");
 }
