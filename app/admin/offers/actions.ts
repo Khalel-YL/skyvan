@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
 import { leads, offers } from "@/db/schema";
@@ -46,10 +46,26 @@ function normalizeStatus(value: string): OfferStatus {
   return "draft";
 }
 
+function getTodayInput() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function parseDateInput(value: string): Date | null {
   if (!value) return null;
 
-  const parsed = new Date(`${value}T00:00:00.000Z`);
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
@@ -60,7 +76,7 @@ function parseDateInput(value: string): Date | null {
 function normalizeAmount(value: string): string | null {
   if (!value) return null;
 
-  const normalized = value.replace(",", ".");
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
   const parsed = Number(normalized);
 
   if (Number.isNaN(parsed) || parsed < 0) {
@@ -68,6 +84,40 @@ function normalizeAmount(value: string): string | null {
   }
 
   return parsed.toFixed(2);
+}
+
+function isNewFormatOfferReference(value: string) {
+  return /^OFF-\d{4}-\d{4,}$/.test(value);
+}
+
+async function generateOfferReference() {
+  const db = getDbOrThrow();
+  const year = new Date().getFullYear();
+
+  const latestRows = await db
+    .select({
+      offerReference: offers.offerReference,
+    })
+    .from(offers)
+    .orderBy(desc(offers.createdAt))
+    .limit(50);
+
+  let maxSequence = 0;
+
+  for (const row of latestRows) {
+    const match = row.offerReference.match(/^OFF-(\d{4})-(\d{4,})$/);
+
+    if (!match) continue;
+    if (Number(match[1]) !== year) continue;
+
+    const sequence = Number(match[2]);
+
+    if (!Number.isNaN(sequence) && sequence > maxSequence) {
+      maxSequence = sequence;
+    }
+  }
+
+  return `OFF-${year}-${String(maxSequence + 1).padStart(4, "0")}`;
 }
 
 export async function saveOffer(
@@ -78,10 +128,36 @@ export async function saveOffer(
 
   const id = getTrimmed(formData, "id");
   const leadId = getTrimmed(formData, "leadId");
-  const offerReference = getTrimmed(formData, "offerReference");
-  const validUntilInput = getTrimmed(formData, "validUntil");
+  const rawOfferReferenceInput = getTrimmed(formData, "offerReference");
+  const validUntilInput = getTrimmed(formData, "validUntil") || getTodayInput();
   const totalAmountInput = getTrimmed(formData, "totalAmount");
   const status = normalizeStatus(getTrimmed(formData, "status"));
+
+  const existingOfferRows = id
+    ? await db
+        .select({
+          id: offers.id,
+          offerReference: offers.offerReference,
+        })
+        .from(offers)
+        .where(eq(offers.id, id))
+        .limit(1)
+    : [];
+
+  const existingOffer = existingOfferRows[0] ?? null;
+
+  let offerReference = "";
+
+  if (!rawOfferReferenceInput) {
+    offerReference = existingOffer?.offerReference ?? (await generateOfferReference());
+  } else if (
+    existingOffer &&
+    rawOfferReferenceInput.toLowerCase() === existingOffer.offerReference.toLowerCase()
+  ) {
+    offerReference = existingOffer.offerReference;
+  } else {
+    offerReference = rawOfferReferenceInput.toUpperCase();
+  }
 
   const values: OfferFormState["values"] = {
     id,
@@ -100,14 +176,23 @@ export async function saveOffer(
 
   if (!offerReference) {
     errors.offerReference = "Teklif referansı zorunludur.";
+  } else {
+    const isExistingLegacyReference =
+      existingOffer !== null && offerReference === existingOffer.offerReference;
+
+    if (!isNewFormatOfferReference(offerReference) && !isExistingLegacyReference) {
+      errors.offerReference = "Referans formatı OFF-YYYY-0001 şeklinde olmalıdır.";
+    }
   }
 
   const parsedValidUntil = parseDateInput(validUntilInput);
+
   if (!parsedValidUntil) {
     errors.validUntil = "Geçerli bir tarih gir.";
   }
 
   const parsedTotalAmount = normalizeAmount(totalAmountInput);
+
   if (!parsedTotalAmount) {
     errors.totalAmount = "Geçerli bir tutar gir.";
   }
@@ -121,22 +206,38 @@ export async function saveOffer(
     };
   }
 
-  const validUntil = parsedValidUntil as Date;
-  const totalAmount = parsedTotalAmount as string;
-
-  const leadExists = await db
+  const leadRows = await db
     .select({ id: leads.id })
     .from(leads)
     .where(eq(leads.id, leadId))
     .limit(1);
 
-  if (leadExists.length === 0) {
+  if (leadRows.length === 0) {
     return {
       ok: false,
       message: "Seçilen lead bulunamadı.",
       values,
       errors: {
-        form: "Offer kaydı yalnızca mevcut bir lead kaydına bağlanabilir.",
+        form: "Teklif yalnızca mevcut bir lead kaydına bağlanabilir.",
+      },
+    };
+  }
+
+  const conflictingReferenceRows = await db
+    .select({
+      id: offers.id,
+    })
+    .from(offers)
+    .where(eq(offers.offerReference, offerReference))
+    .limit(1);
+
+  if (conflictingReferenceRows.length > 0 && conflictingReferenceRows[0].id !== id) {
+    return {
+      ok: false,
+      message: "Teklif referansı zaten kullanımda.",
+      values,
+      errors: {
+        offerReference: "Bu teklif referansı zaten kayıtlı.",
       },
     };
   }
@@ -148,8 +249,8 @@ export async function saveOffer(
         .set({
           leadId,
           offerReference,
-          validUntil,
-          totalAmount,
+          validUntil: parsedValidUntil as Date,
+          totalAmount: parsedTotalAmount as string,
           status,
         })
         .where(eq(offers.id, id));
@@ -157,17 +258,27 @@ export async function saveOffer(
       await db.insert(offers).values({
         leadId,
         offerReference,
-        validUntil,
-        totalAmount,
+        validUntil: parsedValidUntil as Date,
+        totalAmount: parsedTotalAmount as string,
         status,
       });
     }
 
     revalidatePath("/admin/offers");
+    revalidatePath("/admin/leads");
 
     return {
       ok: true,
       message: id ? "Teklif güncellendi." : "Teklif oluşturuldu.",
+      values: {
+        id: "",
+        leadId: "",
+        offerReference: "",
+        validUntil: getTodayInput(),
+        totalAmount: "",
+        status: "draft",
+      },
+      errors: {},
     };
   } catch (error) {
     console.error("saveOffer error:", error);
@@ -177,7 +288,7 @@ export async function saveOffer(
       message: "Teklif kaydı sırasında beklenmeyen bir hata oluştu.",
       values,
       errors: {
-        form: "Offer reference benzersiz olmalı ve lead bağı geçerli olmalı.",
+        form: "Kayıt tamamlanamadı. Referans benzersizliği ve lead bağı tekrar kontrol edilmeli.",
       },
     };
   }
@@ -187,8 +298,12 @@ export async function deleteOffer(id: string) {
   const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
 
-  if (!normalizedId) return;
+  if (!normalizedId) {
+    return;
+  }
 
   await db.delete(offers).where(eq(offers.id, normalizedId));
+
   revalidatePath("/admin/offers");
+  revalidatePath("/admin/leads");
 }
