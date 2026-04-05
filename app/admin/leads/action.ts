@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
-import { buildVersions, leads } from "@/db/schema";
+import { buildVersions, leads, offers } from "@/db/schema";
 
 import {
   initialLeadFormErrors,
@@ -74,6 +74,8 @@ export async function saveLead(
 
   if (!fullName) {
     errors.fullName = "Ad soyad zorunludur.";
+  } else if (fullName.length < 2) {
+    errors.fullName = "Ad soyad en az 2 karakter olmalıdır.";
   }
 
   if (email && !isValidEmail(email)) {
@@ -109,6 +111,21 @@ export async function saveLead(
     }
 
     if (id) {
+      const leadRow = await db
+        .select({ id: leads.id })
+        .from(leads)
+        .where(eq(leads.id, id))
+        .limit(1);
+
+      if (!leadRow[0]) {
+        return {
+          ok: false,
+          message: "Düzenlenmek istenen lead kaydı bulunamadı.",
+          values,
+          errors,
+        };
+      }
+
       await db
         .update(leads)
         .set({
@@ -151,16 +168,28 @@ export async function saveLead(
   }
 }
 
-export async function deleteLead(id: string) {
+export async function deleteLead(formData: FormData): Promise<void> {
   const db = getDbOrThrow();
-  const normalizedId = String(id ?? "").trim();
+  const id = getTrimmed(formData, "id");
 
-  if (!normalizedId) {
+  if (!id) {
     return;
   }
 
   try {
-    await db.delete(leads).where(eq(leads.id, normalizedId));
+    const offerCountRow = await db
+      .select({ count: count(offers.id) })
+      .from(offers)
+      .where(eq(offers.leadId, id));
+
+    const relatedOfferCount = Number(offerCountRow[0]?.count ?? 0);
+
+    if (relatedOfferCount > 0) {
+      return;
+    }
+
+    await db.delete(leads).where(eq(leads.id, id));
+
     revalidatePath("/admin/leads");
     revalidatePath("/admin/offers");
   } catch (error) {

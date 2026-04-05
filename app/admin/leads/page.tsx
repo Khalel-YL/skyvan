@@ -1,17 +1,26 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+} from "drizzle-orm";
 import {
   Activity,
   BadgeEuro,
   ChevronRight,
+  FileText,
   GitBranch,
+  Pencil,
   Plus,
   Trash2,
   UserRound,
 } from "lucide-react";
 
 import { db } from "@/db/db";
-import { builds, buildVersions, leads } from "@/db/schema";
+import { builds, buildVersions, leads, offers } from "@/db/schema";
 
 import { deleteLead } from "./action";
 import { AddLeadDrawer } from "./AddLeadDrawer";
@@ -22,8 +31,13 @@ type LeadsPageProps = {
     q?: string;
     status?: string;
     new?: string;
+    edit?: string;
+    notice?: string;
+    noticeTone?: string;
   }>;
 };
+
+type StatusFilter = LeadStatus | "all";
 
 function getStatusLabel(status: string) {
   if (status === "contacted") return "İletişim";
@@ -31,6 +45,15 @@ function getStatusLabel(status: string) {
   if (status === "converted") return "Dönüştü";
   if (status === "lost") return "Kaybedildi";
   return "Yeni";
+}
+
+function getOfferStatusLabel(status: string | null) {
+  if (status === "draft") return "Taslak";
+  if (status === "sent") return "Gönderildi";
+  if (status === "accepted") return "Kabul edildi";
+  if (status === "rejected") return "Reddedildi";
+  if (status === "expired") return "Süresi doldu";
+  return "—";
 }
 
 function getStatusClassName(status: string) {
@@ -53,6 +76,22 @@ function getStatusClassName(status: string) {
   return "border-zinc-700 bg-zinc-800/80 text-zinc-300";
 }
 
+function getNoticeClassName(tone: string | undefined) {
+  if (tone === "success") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+  }
+
+  if (tone === "error") {
+    return "border-rose-500/20 bg-rose-500/10 text-rose-200";
+  }
+
+  return "border-zinc-800 bg-zinc-950/60 text-zinc-300";
+}
+
 function formatDate(value: Date | string | null) {
   if (!value) {
     return "—";
@@ -64,7 +103,7 @@ function formatDate(value: Date | string | null) {
   }).format(new Date(value));
 }
 
-function normalizeStatusFilter(value: string | undefined) {
+function normalizeStatusFilter(value: string | undefined): StatusFilter {
   if (
     value === "new" ||
     value === "contacted" ||
@@ -80,9 +119,14 @@ function normalizeStatusFilter(value: string | undefined) {
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = (await searchParams) ?? {};
-  const isDrawerOpen = params.new === "true";
-  const query = (params.q ?? "").trim().toLocaleLowerCase("tr");
+  const query = (params.q ?? "").trim();
   const statusFilter = normalizeStatusFilter(params.status);
+  const editId = (params.edit ?? "").trim();
+  const isCreateDrawerOpen = params.new === "true";
+  const isEditDrawerOpen = editId.length > 0;
+  const isDrawerOpen = isCreateDrawerOpen || isEditDrawerOpen;
+  const notice = (params.notice ?? "").trim();
+  const noticeTone = (params.noticeTone ?? "").trim();
 
   if (!db) {
     return (
@@ -97,6 +141,25 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           </p>
         </div>
       </section>
+    );
+  }
+
+  const leadFilters = [];
+
+  if (statusFilter !== "all") {
+    leadFilters.push(eq(leads.status, statusFilter));
+  }
+
+  if (query) {
+    const pattern = `%${query}%`;
+
+    leadFilters.push(
+      or(
+        ilike(leads.fullName, pattern),
+        ilike(leads.email, pattern),
+        ilike(leads.phoneNumber, pattern),
+        ilike(builds.shortCode, pattern),
+      )!,
     );
   }
 
@@ -116,6 +179,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     .from(leads)
     .leftJoin(buildVersions, eq(leads.buildVersionId, buildVersions.id))
     .leftJoin(builds, eq(buildVersions.buildId, builds.id))
+    .where(leadFilters.length > 0 ? and(...leadFilters) : undefined)
     .orderBy(desc(leads.createdAt));
 
   const buildVersionRows = await db
@@ -141,25 +205,91 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     };
   });
 
-  const filteredLeads = leadRows.filter((lead) => {
-    const searchable = [
-      lead.fullName,
-      lead.email ?? "",
-      lead.phoneNumber ?? "",
-      lead.buildShortCode ?? "",
-      `v${lead.versionNumber ?? ""}`,
-    ]
-      .join(" ")
-      .toLocaleLowerCase("tr");
+  const selectedLeadRow = editId
+    ? await db
+        .select({
+          id: leads.id,
+          buildVersionId: leads.buildVersionId,
+          fullName: leads.fullName,
+          email: leads.email,
+          phoneNumber: leads.phoneNumber,
+          whatsappOptIn: leads.whatsappOptIn,
+          status: leads.status,
+        })
+        .from(leads)
+        .where(eq(leads.id, editId))
+        .limit(1)
+    : [];
 
-    const matchesQuery = query ? searchable.includes(query) : true;
-    const matchesStatus =
-      statusFilter === "all" ? true : lead.status === statusFilter;
+  const selectedLead = selectedLeadRow[0]
+    ? {
+        id: selectedLeadRow[0].id,
+        buildVersionId: selectedLeadRow[0].buildVersionId,
+        fullName: selectedLeadRow[0].fullName,
+        email: selectedLeadRow[0].email ?? "",
+        phoneNumber: selectedLeadRow[0].phoneNumber ?? "",
+        whatsappOptIn: selectedLeadRow[0].whatsappOptIn,
+        status: selectedLeadRow[0].status as LeadStatus,
+      }
+    : null;
 
-    return matchesQuery && matchesStatus;
+  const leadIds = leadRows.map((item) => item.id);
+
+  const offerRows =
+    leadIds.length > 0
+      ? await db
+          .select({
+            id: offers.id,
+            leadId: offers.leadId,
+            status: offers.status,
+            offerReference: offers.offerReference,
+            createdAt: offers.createdAt,
+          })
+          .from(offers)
+          .where(inArray(offers.leadId, leadIds))
+          .orderBy(desc(offers.createdAt))
+      : [];
+
+  const offerMap = new Map<
+    string,
+    {
+      count: number;
+      latestStatus: string | null;
+      latestReference: string | null;
+    }
+  >();
+
+  for (const offer of offerRows) {
+    const previous = offerMap.get(offer.leadId);
+
+    if (!previous) {
+      offerMap.set(offer.leadId, {
+        count: 1,
+        latestStatus: offer.status,
+        latestReference: offer.offerReference,
+      });
+      continue;
+    }
+
+    offerMap.set(offer.leadId, {
+      count: previous.count + 1,
+      latestStatus: previous.latestStatus,
+      latestReference: previous.latestReference,
+    });
+  }
+
+  const enrichedLeads = leadRows.map((lead) => {
+    const offerInfo = offerMap.get(lead.id);
+
+    return {
+      ...lead,
+      offerCount: offerInfo?.count ?? 0,
+      latestOfferStatus: offerInfo?.latestStatus ?? null,
+      latestOfferReference: offerInfo?.latestReference ?? null,
+    };
   });
 
-  const stats = filteredLeads.reduce(
+  const stats = enrichedLeads.reduce(
     (acc, item) => {
       acc.total += 1;
       if (item.status === "new") acc.new += 1;
@@ -167,6 +297,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       if (item.status === "qualified") acc.qualified += 1;
       if (item.status === "converted") acc.converted += 1;
       if (item.status === "lost") acc.lost += 1;
+      if (item.offerCount > 0) acc.withOffers += 1;
       return acc;
     },
     {
@@ -176,6 +307,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       qualified: 0,
       converted: 0,
       lost: 0,
+      withOffers: 0,
     },
   );
 
@@ -219,6 +351,16 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
       </div>
 
+      {notice ? (
+        <div
+          className={`rounded-3xl border px-5 py-4 text-sm ${getNoticeClassName(
+            noticeTone,
+          )}`}
+        >
+          {notice}
+        </div>
+      ) : null}
+
       {!createEnabled ? (
         <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
           Leads create akışı için en az bir build version kaydı gerekli.
@@ -226,7 +368,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
@@ -306,6 +448,22 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
             </div>
           </div>
         </div>
+
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
+              <FileText size={18} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Teklifli
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-100">
+                {stats.withOffers}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <form
@@ -316,7 +474,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           <input
             type="text"
             name="q"
-            defaultValue={params.q ?? ""}
+            defaultValue={query}
             placeholder="Ad, e-posta, telefon, build kodu ara..."
             className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700 lg:max-w-md"
           />
@@ -353,15 +511,17 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       </form>
 
       <div className="space-y-3">
-        {filteredLeads.length === 0 ? (
+        {enrichedLeads.length === 0 ? (
           <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 text-sm text-zinc-400">
             Eşleşen lead kaydı bulunamadı.
           </div>
         ) : (
-          filteredLeads.map((lead) => {
+          enrichedLeads.map((lead) => {
             const buildLabel = lead.buildShortCode
               ? `${lead.buildShortCode} · V${lead.versionNumber ?? "?"}`
               : `V${lead.versionNumber ?? "?"}`;
+
+            const hasOffer = lead.offerCount > 0;
 
             return (
               <div
@@ -369,11 +529,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 space-y-3">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold text-zinc-100">
                         {lead.fullName}
                       </h2>
+
                       <span
                         className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusClassName(
                           lead.status,
@@ -381,62 +542,110 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                       >
                         {getStatusLabel(lead.status)}
                       </span>
+
                       {lead.whatsappOptIn ? (
                         <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
                           WhatsApp Onaylı
                         </span>
                       ) : null}
+
+                      {hasOffer ? (
+                        <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
+                          {lead.offerCount} teklif
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                          Teklif yok
+                        </span>
+                      )}
                     </div>
 
-                    <div className="grid gap-2 text-sm text-zinc-400 md:grid-cols-2 xl:grid-cols-4">
-                      <div>
+                    <div className="grid gap-4 text-sm text-zinc-400 md:grid-cols-2 xl:grid-cols-5">
+                      <div className="min-w-0">
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                           Build Version
                         </p>
-                        <p className="mt-1 text-zinc-200">{buildLabel}</p>
+                        <p className="mt-1 truncate text-zinc-200">
+                          {buildLabel}
+                        </p>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                           E-posta
                         </p>
-                        <p className="mt-1 text-zinc-200">{lead.email || "—"}</p>
+                        <p className="mt-1 truncate text-zinc-200">
+                          {lead.email || "—"}
+                        </p>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                           Telefon
                         </p>
-                        <p className="mt-1 text-zinc-200">
+                        <p className="mt-1 truncate text-zinc-200">
                           {lead.phoneNumber || "—"}
                         </p>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
+                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                          Son Teklif
+                        </p>
+                        <p className="mt-1 truncate text-zinc-200">
+                          {lead.latestOfferReference
+                            ? `${lead.latestOfferReference} · ${getOfferStatusLabel(
+                                lead.latestOfferStatus,
+                              )}`
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="min-w-0">
                         <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                           Oluşturulma
                         </p>
-                        <p className="mt-1 text-zinc-200">
+                        <p className="mt-1 truncate text-zinc-200">
                           {formatDate(lead.createdAt)}
                         </p>
                       </div>
                     </div>
+
+                    {hasOffer ? (
+                      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+                        Bu lead kaydına bağlı teklif olduğu için silme işlemi
+                        engellenir. Gerekirse önce teklif tarafını kapat veya
+                        yönet.
+                      </div>
+                    ) : null}
                   </div>
 
-                  <form
-                    action={async () => {
-                      "use server";
-                      await deleteLead(lead.id);
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:border-red-500/30 hover:bg-red-500/15"
+                  <div className="flex flex-wrap items-center gap-2 lg:w-auto lg:flex-col lg:items-end">
+                    <Link
+                      href={`/admin/leads?edit=${lead.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
                     >
-                      <Trash2 size={15} />
-                      Sil
-                    </button>
-                  </form>
+                      <Pencil size={15} />
+                      Düzenle
+                    </Link>
+
+                    <form action={deleteLead}>
+                      <input type="hidden" name="id" value={lead.id} />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:border-red-500/30 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={hasOffer}
+                        title={
+                          hasOffer
+                            ? "Bağlı teklif varken silme kapalıdır."
+                            : "Lead kaydını sil"
+                        }
+                      >
+                        <Trash2 size={15} />
+                        Sil
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             );
@@ -447,7 +656,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       {isDrawerOpen ? (
         <AddLeadDrawer
           buildVersionOptions={buildVersionOptions}
-          initialData={null}
+          initialData={selectedLead}
         />
       ) : null}
     </section>
