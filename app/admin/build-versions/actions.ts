@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { builds, buildVersions, models, packages } from "@/db/schema";
 
 import type {
+  BuildCurrentVersionFormState,
   BuildVersionFormMode,
   BuildVersionFormState,
 } from "./types";
@@ -17,11 +18,7 @@ function getTrimmed(formData: FormData, key: string) {
 }
 
 function normalizeMode(value: string): BuildVersionFormMode {
-  if (value === "existing_build") {
-    return "existing_build";
-  }
-
-  return "new_build";
+  return value === "existing_build" ? "existing_build" : "new_build";
 }
 
 function normalizeShortCode(value: string) {
@@ -42,7 +39,7 @@ function createAdminSessionId() {
   return `admin-${Date.now()}-${uuidv4().slice(0, 8)}`;
 }
 
-function parseOptionalJson(
+function parseOptionalSnapshot(
   value: string,
 ): { ok: true; parsed: unknown | null } | { ok: false; message: string } {
   if (!value) {
@@ -56,8 +53,11 @@ function parseOptionalJson(
     };
   } catch {
     return {
-      ok: false,
-      message: "State snapshot alanı geçerli JSON olmalıdır.",
+      ok: true,
+      parsed: {
+        note: value,
+        source: "admin_manual_note",
+      },
     };
   }
 }
@@ -87,10 +87,7 @@ export async function saveBuildVersion(
 
   const errors: NonNullable<BuildVersionFormState["errors"]> = {};
 
-  const parsedSnapshot = parseOptionalJson(stateSnapshotInput);
-  if (!parsedSnapshot.ok) {
-    errors.stateSnapshot = parsedSnapshot.message;
-  }
+  const parsedSnapshot = parseOptionalSnapshot(stateSnapshotInput);
 
   let resolvedBuildId = "";
   let resolvedShortCode = "";
@@ -278,7 +275,7 @@ export async function saveBuildVersion(
         currentVersionId: newBuildVersionId,
         updatedAt: new Date(),
       })
-      .where(and(eq(builds.id, resolvedBuildId), eq(builds.shortCode, resolvedShortCode)));
+      .where(eq(builds.id, resolvedBuildId));
 
     revalidatePath("/admin");
     revalidatePath("/admin/build-versions");
@@ -306,6 +303,106 @@ export async function saveBuildVersion(
       values,
       errors: {
         form: "Build ve version bağı kaydedilemedi.",
+      },
+    };
+  }
+}
+
+export async function setBuildCurrentVersion(
+  _prevState: BuildCurrentVersionFormState,
+  formData: FormData,
+): Promise<BuildCurrentVersionFormState> {
+  const db = getDbOrThrow();
+
+  const buildId = getTrimmed(formData, "buildId");
+  const versionId = getTrimmed(formData, "versionId");
+
+  if (!buildId || !versionId) {
+    return {
+      ok: false,
+      message: "Build veya version bilgisi eksik.",
+      errors: {
+        form: "Geçerli build ve version seçilmelidir.",
+      },
+    };
+  }
+
+  const buildRow = await db
+    .select({
+      id: builds.id,
+    })
+    .from(builds)
+    .where(eq(builds.id, buildId))
+    .limit(1);
+
+  if (buildRow.length === 0) {
+    return {
+      ok: false,
+      message: "Build kaydı bulunamadı.",
+      errors: {
+        buildId: "Geçerli bir build seçilmelidir.",
+      },
+    };
+  }
+
+  const versionRow = await db
+    .select({
+      id: buildVersions.id,
+      buildId: buildVersions.buildId,
+      versionNumber: buildVersions.versionNumber,
+    })
+    .from(buildVersions)
+    .where(eq(buildVersions.id, versionId))
+    .limit(1);
+
+  if (versionRow.length === 0) {
+    return {
+      ok: false,
+      message: "Version kaydı bulunamadı.",
+      errors: {
+        versionId: "Geçerli bir version seçilmelidir.",
+      },
+    };
+  }
+
+  const selectedVersion = versionRow[0];
+
+  if (selectedVersion.buildId !== buildId) {
+    return {
+      ok: false,
+      message: "Seçilen version bu build’e ait değil.",
+      errors: {
+        form: "Build ve version bağı uyuşmuyor.",
+      },
+    };
+  }
+
+  try {
+    await db
+      .update(builds)
+      .set({
+        currentVersionId: versionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(builds.id, buildId));
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/build-versions");
+    revalidatePath("/admin/leads");
+    revalidatePath("/admin/offers");
+
+    return {
+      ok: true,
+      message: `Current version v${selectedVersion.versionNumber} olarak güncellendi.`,
+    };
+  } catch (error) {
+    console.error("setBuildCurrentVersion error:", error);
+
+    return {
+      ok: false,
+      message: "Current version güncellenemedi.",
+      errors: {
+        form: "Current version bağı kaydedilemedi.",
       },
     };
   }

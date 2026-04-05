@@ -34,3 +34,18 @@ export const initialBuildVersionFormState: BuildVersionFormState = {
     stateSnapshot: "",
   },
 };
+
+export type BuildCurrentVersionFormState = {
+  ok: boolean;
+  message: string;
+  errors?: {
+    buildId?: string;
+    versionId?: string;
+    form?: string;
+  };
+};
+
+export const initialBuildCurrentVersionFormState: BuildCurrentVersionFormState = {
+  ok: false,
+  message: "",
+};

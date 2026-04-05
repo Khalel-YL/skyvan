@@ -34,6 +34,7 @@ type AddBuildVersionDrawerProps = {
   buildOptions: BuildOption[];
   modelOptions: ModelOption[];
   packageOptions: PackageOption[];
+  initialBuildId?: string;
 };
 
 function getFieldValue(
@@ -53,11 +54,19 @@ export function AddBuildVersionDrawer({
   buildOptions,
   modelOptions,
   packageOptions,
+  initialBuildId = "",
 }: AddBuildVersionDrawerProps) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     saveBuildVersion,
-    initialBuildVersionFormState,
+    {
+      ...initialBuildVersionFormState,
+      values: {
+        ...initialBuildVersionFormState.values,
+        mode: initialBuildId ? "existing_build" : "new_build",
+        buildId: initialBuildId,
+      },
+    },
   );
 
   useEffect(() => {
@@ -68,11 +77,11 @@ export function AddBuildVersionDrawer({
   }, [router, state.ok]);
 
   const selectedMode = String(
-    getFieldValue(state, "mode") || "new_build",
+    getFieldValue(state, "mode") || (initialBuildId ? "existing_build" : "new_build"),
   ) as BuildVersionFormMode;
 
   const selectedModelId = String(getFieldValue(state, "modelId") ?? "");
-  const selectedBuildId = String(getFieldValue(state, "buildId") ?? "");
+  const selectedBuildId = String(getFieldValue(state, "buildId") ?? initialBuildId);
   const selectedPackageId = String(getFieldValue(state, "packageId") ?? "");
   const selectedShortCode = String(getFieldValue(state, "shortCode") ?? "");
   const selectedSnapshot = String(getFieldValue(state, "stateSnapshot") ?? "");
@@ -111,8 +120,8 @@ export function AddBuildVersionDrawer({
               Yeni build version oluştur
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Build ve version bağı gerçek şemaya sadık şekilde burada açılır.
-              Bu kayıt Leads hattının doğal dependency kilidini çözer.
+              Build ve version bağı gerçek şemaya sadık şekilde burada yönetilir.
+              Her yeni version, current version bağını da doğal olarak günceller.
             </p>
           </div>
 
@@ -192,7 +201,7 @@ export function AddBuildVersionDrawer({
                     <input
                       name="shortCode"
                       defaultValue={selectedShortCode}
-                      placeholder="SVN-L2-001"
+                      placeholder="PSA-L2-1"
                       className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"
                     />
                     {state.errors?.shortCode ? (
@@ -312,15 +321,19 @@ export function AddBuildVersionDrawer({
 
                 <div>
                   <label className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-                    State snapshot (opsiyonel JSON)
+                    State snapshot / not (opsiyonel)
                   </label>
                   <textarea
                     name="stateSnapshot"
                     defaultValue={selectedSnapshot}
                     rows={8}
-                    placeholder='{"source":"admin","note":"ilk versiyon"}'
+                    placeholder={'{"note":"ikinci versiyon denemesi"} veya kısa düz not'}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"
                   />
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    JSON yazabilirsin. Düz metin yazarsan sistem bunu otomatik olarak
+                    not formatına çevirir.
+                  </p>
                   {state.errors?.stateSnapshot ? (
                     <p className="mt-2 text-xs text-rose-300">
                       {state.errors.stateSnapshot}
