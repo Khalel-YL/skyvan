@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
-import { offers, orders, productionUpdates } from "@/db/schema";
+import { orders, offers, productionUpdates } from "@/db/schema";
 
 export type ProductionStatus =
   | "pending"
@@ -72,42 +72,59 @@ function normalizeProductionStatus(value: string): ProductionStatus {
   return "pending";
 }
 
-function parseDateInput(value: string): string | null {
-  if (!value) return null;
-
-  const [year, month, day] = value.split("-").map(Number);
-
-  if (!year || !month || !day) {
+function normalizeDateInput(value: string): string | null {
+  if (!value) {
     return null;
   }
 
-  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+  const parts = value.split("-");
+  if (parts.length !== 3) {
+    return null;
+  }
 
-  if (Number.isNaN(parsed.getTime())) {
+  const [yearRaw, monthRaw, dayRaw] = parts;
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    year < 1900 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
     return null;
   }
 
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function parseDateForDb(value: string) {
-  const normalized = parseDateInput(value);
-
-  if (!normalized) return null;
-
-  const [year, month, day] = normalized.split("-").map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0, 0);
-}
-
 function isPastDay(value: string) {
-  const parsed = parseDateForDb(value);
+  const normalized = normalizeDateInput(value);
+  if (!normalized) {
+    return false;
+  }
 
-  if (!parsed) return false;
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const target = new Date(parsed);
-  target.setHours(23, 59, 59, 999);
-
-  return target.getTime() < Date.now();
+  return normalized < todayKey;
 }
 
 function normalizeVin(value: string) {
@@ -138,9 +155,7 @@ export async function saveOrder(
 
   const id = getTrimmed(formData, "id");
   const offerId = getTrimmed(formData, "offerId");
-  const productionStatus = normalizeProductionStatus(
-    getTrimmed(formData, "productionStatus"),
-  );
+  const productionStatus = normalizeProductionStatus(getTrimmed(formData, "productionStatus"));
   const estimatedDeliveryDateInput = getTrimmed(formData, "estimatedDeliveryDate");
   const vinNumberInput = normalizeVin(getTrimmed(formData, "vinNumber"));
 
@@ -158,23 +173,31 @@ export async function saveOrder(
     errors.offerId = "Order bir teklif kaydına bağlı olmalıdır.";
   }
 
-  if (
-    estimatedDeliveryDateInput &&
-    !parseDateInput(estimatedDeliveryDateInput)
-  ) {
+  const normalizedEstimatedDeliveryDate = estimatedDeliveryDateInput
+    ? normalizeDateInput(estimatedDeliveryDateInput)
+    : null;
+
+  if (estimatedDeliveryDateInput && !normalizedEstimatedDeliveryDate) {
     errors.estimatedDeliveryDate = "Geçerli bir teslim tarihi gir.";
   }
 
   if (
     estimatedDeliveryDateInput &&
-    parseDateInput(estimatedDeliveryDateInput) &&
-    isPastDay(estimatedDeliveryDateInput)
+    normalizedEstimatedDeliveryDate &&
+    isPastDay(normalizedEstimatedDeliveryDate)
   ) {
     errors.estimatedDeliveryDate = "Tahmini teslim tarihi geçmişte olamaz.";
   }
 
   if (vinNumberInput && !isValidVin(vinNumberInput)) {
     errors.vinNumber = "VIN 11-17 karakter olmalı ve geçersiz karakter içermemeli.";
+  }
+
+  if (
+    (productionStatus === "testing" || productionStatus === "completed") &&
+    !vinNumberInput
+  ) {
+    errors.vinNumber = "Testing ve Completed aşamalarında VIN zorunludur.";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -263,10 +286,6 @@ export async function saveOrder(
     }
   }
 
-  const normalizedDeliveryDate = estimatedDeliveryDateInput
-    ? parseDateInput(estimatedDeliveryDateInput)
-    : null;
-
   try {
     if (id) {
       if (productionStatus === "completed") {
@@ -293,7 +312,7 @@ export async function saveOrder(
         .set({
           offerId,
           productionStatus,
-          estimatedDeliveryDate: normalizedDeliveryDate,
+          estimatedDeliveryDate: normalizedEstimatedDeliveryDate,
           vinNumber: vinNumberInput || null,
           updatedAt: new Date(),
         })
@@ -302,12 +321,17 @@ export async function saveOrder(
       await db.insert(orders).values({
         offerId,
         productionStatus,
-        estimatedDeliveryDate: normalizedDeliveryDate,
+        estimatedDeliveryDate: normalizedEstimatedDeliveryDate,
         vinNumber: vinNumberInput || null,
       });
     }
 
     revalidatePath("/admin/orders");
+
+    if (id) {
+      revalidatePath(`/admin/orders/${id}`);
+    }
+
     revalidatePath("/admin/offers");
 
     return {
@@ -343,7 +367,7 @@ export async function saveProductionUpdate(
   const db = getDbOrThrow();
 
   const orderId = getTrimmed(formData, "orderId");
-  const stage = getTrimmed(formData, "stage");
+  const stage = normalizeProductionStatus(getTrimmed(formData, "stage"));
   const description = getTrimmed(formData, "description");
   const imageUrl = getTrimmed(formData, "imageUrl");
 
@@ -368,6 +392,10 @@ export async function saveProductionUpdate(
     errors.description = "Açıklama zorunludur.";
   }
 
+  if (description.length > 1200) {
+    errors.description = "Açıklama en fazla 1200 karakter olabilir.";
+  }
+
   if (imageUrl && !isValidHttpUrl(imageUrl)) {
     errors.imageUrl = "Görsel bağlantısı geçerli bir http/https adresi olmalıdır.";
   }
@@ -385,6 +413,7 @@ export async function saveProductionUpdate(
     .select({
       id: orders.id,
       productionStatus: orders.productionStatus,
+      vinNumber: orders.vinNumber,
     })
     .from(orders)
     .where(eq(orders.id, orderId))
@@ -403,6 +432,17 @@ export async function saveProductionUpdate(
     };
   }
 
+  if ((stage === "testing" || stage === "completed") && !order.vinNumber) {
+    return {
+      ok: false,
+      message: "VIN eksik.",
+      values,
+      errors: {
+        form: "Testing veya Completed güncellemesi eklenmeden önce order kaydına VIN girilmelidir.",
+      },
+    };
+  }
+
   try {
     await db.insert(productionUpdates).values({
       orderId,
@@ -411,44 +451,23 @@ export async function saveProductionUpdate(
       imageUrl: imageUrl || null,
     });
 
-    const normalizedStage = stage.toLowerCase().trim();
-    const stageToStatus: Record<string, ProductionStatus | undefined> = {
-      pending: "pending",
-      chassis: "chassis",
-      insulation: "insulation",
-      furniture: "furniture",
-      systems: "systems",
-      testing: "testing",
-      completed: "completed",
-    };
-
-    const nextStatus = stageToStatus[normalizedStage];
-
-    if (nextStatus && nextStatus !== order.productionStatus) {
-      await db
-        .update(orders)
-        .set({
-          productionStatus: nextStatus,
-          updatedAt: new Date(),
-        })
-        .where(eq(orders.id, orderId));
-    } else {
-      await db
-        .update(orders)
-        .set({
-          updatedAt: new Date(),
-        })
-        .where(eq(orders.id, orderId));
-    }
+    await db
+      .update(orders)
+      .set({
+        productionStatus: stage,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
 
     revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
 
     return {
       ok: true,
       message: "Üretim güncellemesi eklendi.",
       values: {
         orderId,
-        stage: "",
+        stage,
         description: "",
         imageUrl: "",
       },
