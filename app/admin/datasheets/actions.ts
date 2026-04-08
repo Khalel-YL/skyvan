@@ -6,11 +6,12 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db/db";
 import { aiKnowledgeDocuments } from "@/db/schema";
-
 import {
   hasBlockedScheme,
   normalizeWhitespace,
 } from "./validation";
+import { writeAuditLog } from "@/app/lib/admin/audit";
+import { getDatasheetGuardrailBlockers } from "@/app/lib/admin/governance";
 
 type FieldName = "title" | "docType" | "parsingStatus" | "s3Key";
 
@@ -57,8 +58,7 @@ export async function saveDatasheet(
   if (!db) {
     return {
       status: "error",
-      message:
-        "Veritabanı yapılandırılmadığı için kayıt işlemi şu anda pasif durumda.",
+      message: "Veritabanı yapılandırılmadığı için kayıt işlemi şu anda pasif durumda.",
       fieldErrors: {},
     };
   }
@@ -97,6 +97,18 @@ export async function saveDatasheet(
       "Aynı belge bağlantısı / storage anahtarı ile kayıt zaten mevcut.";
   }
 
+  const governanceBlockers = getDatasheetGuardrailBlockers({
+    title,
+    productId,
+    docType,
+    parsingStatus: parsingStatus as "pending" | "processing" | "completed" | "failed",
+    s3Key,
+  });
+
+  if (governanceBlockers.length > 0) {
+    fieldErrors.parsingStatus = governanceBlockers.join(" ");
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return {
       status: "error",
@@ -108,6 +120,24 @@ export async function saveDatasheet(
   const now = new Date();
 
   try {
+    const previousRows = id
+      ? await db
+          .select({
+            id: aiKnowledgeDocuments.id,
+            productId: aiKnowledgeDocuments.productId,
+            title: aiKnowledgeDocuments.title,
+            docType: aiKnowledgeDocuments.docType,
+            parsingStatus: aiKnowledgeDocuments.parsingStatus,
+            s3Key: aiKnowledgeDocuments.s3Key,
+            updatedAt: aiKnowledgeDocuments.updatedAt,
+          })
+          .from(aiKnowledgeDocuments)
+          .where(eq(aiKnowledgeDocuments.id, id))
+          .limit(1)
+      : [];
+
+    const previousDocument = previousRows[0] ?? null;
+
     if (id) {
       await db
         .update(aiKnowledgeDocuments)
@@ -124,19 +154,57 @@ export async function saveDatasheet(
           updatedAt: now,
         })
         .where(eq(aiKnowledgeDocuments.id, id));
-    } else {
-      await db.insert(aiKnowledgeDocuments).values({
-        productId: productId || null,
-        title,
-        docType: docType as "datasheet" | "manual" | "rulebook",
-        parsingStatus: parsingStatus as
-          | "pending"
-          | "processing"
-          | "completed"
-          | "failed",
-        s3Key,
-        updatedAt: now,
+
+      await writeAuditLog({
+        entityType: "datasheet",
+        entityId: id,
+        action: "update",
+        previousState: previousDocument,
+        newState: {
+          productId: productId || null,
+          title,
+          docType,
+          parsingStatus,
+          s3Key,
+          updatedAt: now,
+        },
       });
+    } else {
+      const insertedRows = await db
+        .insert(aiKnowledgeDocuments)
+        .values({
+          productId: productId || null,
+          title,
+          docType: docType as "datasheet" | "manual" | "rulebook",
+          parsingStatus: parsingStatus as
+            | "pending"
+            | "processing"
+            | "completed"
+            | "failed",
+          s3Key,
+          updatedAt: now,
+        })
+        .returning({
+          id: aiKnowledgeDocuments.id,
+        });
+
+      const insertedId = insertedRows[0]?.id ?? "";
+
+      if (insertedId) {
+        await writeAuditLog({
+          entityType: "datasheet",
+          entityId: insertedId,
+          action: "create",
+          newState: {
+            productId: productId || null,
+            title,
+            docType,
+            parsingStatus,
+            s3Key,
+            updatedAt: now,
+          },
+        });
+      }
     }
   } catch (error) {
     console.error("Datasheet save error:", error);
@@ -168,9 +236,31 @@ export async function deleteDatasheet(id: string) {
   }
 
   try {
-    await db
-      .delete(aiKnowledgeDocuments)
-      .where(eq(aiKnowledgeDocuments.id, id));
+    const rows = await db
+      .select({
+        id: aiKnowledgeDocuments.id,
+        productId: aiKnowledgeDocuments.productId,
+        title: aiKnowledgeDocuments.title,
+        docType: aiKnowledgeDocuments.docType,
+        parsingStatus: aiKnowledgeDocuments.parsingStatus,
+        s3Key: aiKnowledgeDocuments.s3Key,
+      })
+      .from(aiKnowledgeDocuments)
+      .where(eq(aiKnowledgeDocuments.id, id))
+      .limit(1);
+
+    const existingDocument = rows[0] ?? null;
+
+    await db.delete(aiKnowledgeDocuments).where(eq(aiKnowledgeDocuments.id, id));
+
+    if (existingDocument) {
+      await writeAuditLog({
+        entityType: "datasheet",
+        entityId: existingDocument.id,
+        action: "delete",
+        previousState: existingDocument,
+      });
+    }
   } catch (error) {
     console.error("Datasheet delete error:", error);
     redirect("/admin/datasheets?docAction=error&docCode=delete-failed");

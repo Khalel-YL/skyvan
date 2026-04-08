@@ -5,8 +5,11 @@ import { desc, eq } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
 import { leads, offers } from "@/db/schema";
-
-type OfferStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+import {
+  getOfferMutationBlocker,
+  type OfferStatus,
+} from "@/app/lib/admin/governance";
+import { writeAuditLog } from "@/app/lib/admin/audit";
 
 export type OfferFormState = {
   ok: boolean;
@@ -137,7 +140,11 @@ export async function saveOffer(
     ? await db
         .select({
           id: offers.id,
+          leadId: offers.leadId,
           offerReference: offers.offerReference,
+          validUntil: offers.validUntil,
+          totalAmount: offers.totalAmount,
+          status: offers.status,
         })
         .from(offers)
         .where(eq(offers.id, id))
@@ -197,6 +204,12 @@ export async function saveOffer(
     errors.totalAmount = "Geçerli bir tutar gir.";
   }
 
+  const offerStatusBlocker = getOfferMutationBlocker(status);
+
+  if (offerStatusBlocker) {
+    errors.form = offerStatusBlocker;
+  }
+
   if (Object.keys(errors).length > 0) {
     return {
       ok: false,
@@ -224,9 +237,7 @@ export async function saveOffer(
   }
 
   const conflictingReferenceRows = await db
-    .select({
-      id: offers.id,
-    })
+    .select({ id: offers.id })
     .from(offers)
     .where(eq(offers.offerReference, offerReference))
     .limit(1);
@@ -243,7 +254,7 @@ export async function saveOffer(
   }
 
   try {
-    if (id) {
+    if (id && existingOffer) {
       await db
         .update(offers)
         .set({
@@ -254,14 +265,50 @@ export async function saveOffer(
           status,
         })
         .where(eq(offers.id, id));
-    } else {
-      await db.insert(offers).values({
-        leadId,
-        offerReference,
-        validUntil: parsedValidUntil as Date,
-        totalAmount: parsedTotalAmount as string,
-        status,
+
+      await writeAuditLog({
+        entityType: "offer",
+        entityId: id,
+        action: "update",
+        previousState: existingOffer,
+        newState: {
+          leadId,
+          offerReference,
+          validUntil: parsedValidUntil,
+          totalAmount: parsedTotalAmount,
+          status,
+        },
       });
+    } else {
+      const insertedRows = await db
+        .insert(offers)
+        .values({
+          leadId,
+          offerReference,
+          validUntil: parsedValidUntil as Date,
+          totalAmount: parsedTotalAmount as string,
+          status,
+        })
+        .returning({
+          id: offers.id,
+        });
+
+      const insertedId = insertedRows[0]?.id ?? "";
+
+      if (insertedId) {
+        await writeAuditLog({
+          entityType: "offer",
+          entityId: insertedId,
+          action: "create",
+          newState: {
+            leadId,
+            offerReference,
+            validUntil: parsedValidUntil,
+            totalAmount: parsedTotalAmount,
+            status,
+          },
+        });
+      }
     }
 
     revalidatePath("/admin/offers");
@@ -302,7 +349,31 @@ export async function deleteOffer(id: string) {
     return;
   }
 
+  const existingRows = await db
+    .select({
+      id: offers.id,
+      leadId: offers.leadId,
+      offerReference: offers.offerReference,
+      validUntil: offers.validUntil,
+      totalAmount: offers.totalAmount,
+      status: offers.status,
+    })
+    .from(offers)
+    .where(eq(offers.id, normalizedId))
+    .limit(1);
+
+  const existingOffer = existingRows[0] ?? null;
+
   await db.delete(offers).where(eq(offers.id, normalizedId));
+
+  if (existingOffer) {
+    await writeAuditLog({
+      entityType: "offer",
+      entityId: existingOffer.id,
+      action: "delete",
+      previousState: existingOffer,
+    });
+  }
 
   revalidatePath("/admin/offers");
   revalidatePath("/admin/leads");
