@@ -177,6 +177,17 @@ export async function saveOffer(
 
   const errors: NonNullable<OfferFormState["errors"]> = {};
 
+  if (id && !existingOffer) {
+    return {
+      ok: false,
+      message: "Güncellenecek teklif kaydı bulunamadı.",
+      values,
+      errors: {
+        form: "Teklif kaydı artık mevcut değil. Listeyi yenileyip tekrar dene.",
+      },
+    };
+  }
+
   if (!leadId) {
     errors.leadId = "Lead seçmelisin.";
   }
@@ -204,7 +215,10 @@ export async function saveOffer(
     errors.totalAmount = "Geçerli bir tutar gir.";
   }
 
-  const offerStatusBlocker = getOfferMutationBlocker(status);
+  const offerStatusBlocker = getOfferMutationBlocker({
+    previousStatus: existingOffer?.status ?? null,
+    nextStatus: status,
+  });
 
   if (offerStatusBlocker) {
     errors.form = offerStatusBlocker;

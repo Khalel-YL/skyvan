@@ -69,8 +69,32 @@ export async function saveDatasheet(
   const docType = getTrimmed(formData, "docType");
   const parsingStatus = getTrimmed(formData, "parsingStatus");
   const s3Key = getTrimmed(formData, "s3Key");
+  const previousRows = id
+    ? await db
+        .select({
+          id: aiKnowledgeDocuments.id,
+          productId: aiKnowledgeDocuments.productId,
+          title: aiKnowledgeDocuments.title,
+          docType: aiKnowledgeDocuments.docType,
+          parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          s3Key: aiKnowledgeDocuments.s3Key,
+          updatedAt: aiKnowledgeDocuments.updatedAt,
+        })
+        .from(aiKnowledgeDocuments)
+        .where(eq(aiKnowledgeDocuments.id, id))
+        .limit(1)
+    : [];
+  const previousDocument = previousRows[0] ?? null;
 
   const fieldErrors: DatasheetActionState["fieldErrors"] = {};
+
+  if (id && !previousDocument) {
+    return {
+      status: "error",
+      message: "Güncellenecek datasheet kaydı bulunamadı.",
+      fieldErrors: {},
+    };
+  }
 
   if (!title) {
     fieldErrors.title = "Doküman başlığı zorunlu.";
@@ -102,6 +126,14 @@ export async function saveDatasheet(
     productId,
     docType,
     parsingStatus: parsingStatus as "pending" | "processing" | "completed" | "failed",
+    previousParsingStatus:
+      (previousDocument?.parsingStatus as
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | null
+        | undefined) ?? null,
     s3Key,
   });
 
@@ -120,24 +152,6 @@ export async function saveDatasheet(
   const now = new Date();
 
   try {
-    const previousRows = id
-      ? await db
-          .select({
-            id: aiKnowledgeDocuments.id,
-            productId: aiKnowledgeDocuments.productId,
-            title: aiKnowledgeDocuments.title,
-            docType: aiKnowledgeDocuments.docType,
-            parsingStatus: aiKnowledgeDocuments.parsingStatus,
-            s3Key: aiKnowledgeDocuments.s3Key,
-            updatedAt: aiKnowledgeDocuments.updatedAt,
-          })
-          .from(aiKnowledgeDocuments)
-          .where(eq(aiKnowledgeDocuments.id, id))
-          .limit(1)
-      : [];
-
-    const previousDocument = previousRows[0] ?? null;
-
     if (id) {
       await db
         .update(aiKnowledgeDocuments)
@@ -218,6 +232,7 @@ export async function saveDatasheet(
 
   revalidatePath("/admin");
   revalidatePath("/admin/datasheets");
+  revalidatePath("/admin/ai-core");
 
   redirect(
     id
@@ -268,6 +283,7 @@ export async function deleteDatasheet(id: string) {
 
   revalidatePath("/admin");
   revalidatePath("/admin/datasheets");
+  revalidatePath("/admin/ai-core");
 
   redirect("/admin/datasheets?docAction=deleted");
 }

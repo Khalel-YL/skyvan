@@ -1,10 +1,9 @@
-import { count, eq } from "drizzle-orm";
+import { count } from "drizzle-orm";
 import {
   AlertTriangle,
   BrainCircuit,
   CheckCircle2,
   FileWarning,
-  Lock,
   ShieldCheck,
 } from "lucide-react";
 
@@ -19,12 +18,12 @@ import {
 } from "@/app/lib/admin/governance";
 import { getAuditRuntimeSummary } from "@/app/lib/admin/audit";
 
-type DocumentRow = {
-  id: string;
+type RuntimeTone = "success" | "warning" | "danger" | "neutral";
+
+type RuntimeItem = {
   title: string;
-  docType: "datasheet" | "manual" | "rulebook";
-  parsingStatus: "pending" | "processing" | "completed" | "failed";
-  s3Key: string;
+  description: string;
+  tone: RuntimeTone;
 };
 
 function toneClasses(tone: "success" | "warning" | "danger" | "neutral") {
@@ -43,9 +42,46 @@ function toneClasses(tone: "success" | "warning" | "danger" | "neutral") {
   return "border-zinc-800 bg-zinc-950/60 text-zinc-200";
 }
 
+function getRuntimeItems(params: {
+  audit: ReturnType<typeof getAuditRuntimeSummary>;
+  governance: ReturnType<typeof getGovernanceRuntime>;
+}): RuntimeItem[] {
+  return [
+    {
+      title: "Audit runtime",
+      description: params.audit.reason,
+      tone: params.audit.enabled ? "success" : "warning",
+    },
+    {
+      title: "Publish boundary",
+      description: params.governance.allowDirectPublishWithoutSeo
+        ? "SEO'suz doğrudan publish override açık."
+        : "SEO'suz doğrudan publish default olarak blokeli.",
+      tone: params.governance.allowDirectPublishWithoutSeo ? "warning" : "success",
+    },
+    {
+      title: "AI completed boundary",
+      description: params.governance.allowManualAiReadyStatus
+        ? "Manual completed override açık."
+        : "Manual completed override kapalı.",
+      tone: params.governance.allowManualAiReadyStatus ? "warning" : "success",
+    },
+    {
+      title: "Critical offer boundary",
+      description: params.governance.allowCriticalOfferStatusTransitions
+        ? "accepted / rejected / expired geçişleri override ile açık."
+        : "accepted / rejected / expired geçişleri governance kilidi altında.",
+      tone: params.governance.allowCriticalOfferStatusTransitions
+        ? "warning"
+        : "success",
+    },
+  ];
+}
+
 export default async function AICoreAdminPage() {
   const governance = getGovernanceRuntime();
   const audit = getAuditRuntimeSummary();
+  const runtimeItems = getRuntimeItems({ audit, governance });
 
   if (!db) {
     return (
@@ -63,36 +99,19 @@ export default async function AICoreAdminPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className={`rounded-3xl border p-5 ${toneClasses("warning")}`}>
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5" />
-              <div className="text-sm font-medium">Audit yazımı</div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {runtimeItems.map((item) => (
+            <div
+              key={item.title}
+              className={`rounded-3xl border p-5 ${toneClasses(item.tone)}`}
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="h-5 w-5" />
+                <div className="text-sm font-medium">{item.title}</div>
+              </div>
+              <div className="mt-3 text-sm">{item.description}</div>
             </div>
-            <div className="mt-3 text-sm">{audit.reason}</div>
-          </div>
-
-          <div className={`rounded-3xl border p-5 ${toneClasses("warning")}`}>
-            <div className="flex items-center gap-3">
-              <Lock className="h-5 w-5" />
-              <div className="text-sm font-medium">AI completed kilidi</div>
-            </div>
-            <div className="mt-3 text-sm">
-              {governance.allowManualAiReadyStatus
-                ? "Manuel completed geçişi açık."
-                : "Manuel completed geçişi kapalı."}
-            </div>
-          </div>
-
-          <div className={`rounded-3xl border p-5 ${toneClasses("neutral")}`}>
-            <div className="flex items-center gap-3">
-              <BrainCircuit className="h-5 w-5" />
-              <div className="text-sm font-medium">AI action sınırı</div>
-            </div>
-            <div className="mt-3 text-sm">
-              AI yalnızca completed + chunk üreten belge mantığıyla değerlendirilmelidir.
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -102,6 +121,7 @@ export default async function AICoreAdminPage() {
     db
       .select({
         id: aiKnowledgeDocuments.id,
+        productId: aiKnowledgeDocuments.productId,
         title: aiKnowledgeDocuments.title,
         docType: aiKnowledgeDocuments.docType,
         parsingStatus: aiKnowledgeDocuments.parsingStatus,
@@ -124,6 +144,8 @@ export default async function AICoreAdminPage() {
   const evaluatedDocuments = documents.map((document) => {
     const chunkCount = chunkMap.get(document.id) ?? 0;
     const readiness = getAiKnowledgeReadiness({
+      docType: document.docType,
+      productId: document.productId,
       parsingStatus: document.parsingStatus,
       title: document.title,
       s3Key: document.s3Key,
@@ -148,6 +170,12 @@ export default async function AICoreAdminPage() {
   const queueCount = evaluatedDocuments.filter(
     (item) =>
       item.parsingStatus === "pending" || item.parsingStatus === "processing",
+  ).length;
+  const missingProductReferenceCount = evaluatedDocuments.filter(
+    (item) => item.docType !== "rulebook" && !item.productId,
+  ).length;
+  const completedWithoutChunksCount = evaluatedDocuments.filter(
+    (item) => item.parsingStatus === "completed" && item.chunkCount <= 0,
   ).length;
 
   const topBlocked = evaluatedDocuments
@@ -211,38 +239,26 @@ export default async function AICoreAdminPage() {
           <div className="flex items-center gap-3">
             <BrainCircuit className="h-5 w-5 text-zinc-300" />
             <h2 className="text-lg font-semibold text-white">
-              AI action sınırları
+              Governance runtime
             </h2>
           </div>
 
           <div className="mt-5 grid gap-3">
-            <div className={`rounded-2xl border p-4 ${toneClasses("neutral")}`}>
-              <div className="text-sm font-medium">Belge completed kilidi</div>
-              <div className="mt-2 text-sm">
-                {governance.allowManualAiReadyStatus
-                  ? "Manuel completed geçişi açık. Bu yalnızca kontrollü operasyonda kullanılmalı."
-                  : "Manuel completed geçişi kapalı. Datasheet aksiyonları completed geçişini guardrail ile sınırlar."}
+            {runtimeItems.map((item) => (
+              <div
+                key={item.title}
+                className={`rounded-2xl border p-4 ${toneClasses(item.tone)}`}
+              >
+                <div className="text-sm font-medium">{item.title}</div>
+                <div className="mt-2 text-sm">{item.description}</div>
               </div>
-            </div>
-
-            <div className={`rounded-2xl border p-4 ${toneClasses(audit.enabled ? "success" : "warning")}`}>
-              <div className="text-sm font-medium">Audit runtime</div>
-              <div className="mt-2 text-sm">{audit.reason}</div>
-            </div>
+            ))}
 
             <div className={`rounded-2xl border p-4 ${toneClasses("neutral")}`}>
-              <div className="text-sm font-medium">Kritik publish mantığı</div>
+              <div className="text-sm font-medium">AI konuşma sınırı</div>
               <div className="mt-2 text-sm">
-                Pages tarafında SEO’suz doğrudan publish default olarak bloke edilir.
-              </div>
-            </div>
-
-            <div className={`rounded-2xl border p-4 ${toneClasses(governance.allowCriticalOfferStatusTransitions ? "warning" : "success")}`}>
-              <div className="text-sm font-medium">Kritik ticari durumlar</div>
-              <div className="mt-2 text-sm">
-                {governance.allowCriticalOfferStatusTransitions
-                  ? "accepted / rejected / expired geçişleri açık."
-                  : "accepted / rejected / expired geçişleri governance kilidi altında."}
+                AI yalnızca completed, storage alanları dolu ve chunk üretmiş
+                belgeleri knowledge-ready kabul etmelidir.
               </div>
             </div>
           </div>
@@ -257,6 +273,35 @@ export default async function AICoreAdminPage() {
           </div>
 
           <div className="mt-5 space-y-3">
+            <div className={`rounded-2xl border p-4 ${toneClasses("neutral")}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-medium">Hazır olma özeti</div>
+                <div className="text-xs text-zinc-400">
+                  AI-ready: {approvedCount} / {evaluatedDocuments.length}
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/5 bg-black/20 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                    Chunk&apos;sız completed
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-white">
+                    {completedWithoutChunksCount}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/5 bg-black/20 px-3 py-2">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                    Eksik ürün bağı
+                  </div>
+                  <div className="mt-2 text-lg font-semibold text-white">
+                    {missingProductReferenceCount}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {topBlocked.length === 0 ? (
               <div className={`rounded-2xl border p-4 ${toneClasses("success")}`}>
                 <div className="flex items-center gap-2 text-sm font-medium">
@@ -280,6 +325,7 @@ export default async function AICoreAdminPage() {
                       <div className="text-sm font-medium">{item.title}</div>
                       <div className="mt-1 text-xs opacity-80">
                         {item.docType} · {item.parsingStatus} · chunk: {item.chunkCount}
+                        {item.productId ? "" : " · ürün bağı yok"}
                       </div>
                     </div>
 

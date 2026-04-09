@@ -5,6 +5,7 @@ import { auditLogs, publishRevisions } from "@/db/schema";
 import { getGovernanceRuntime } from "./governance";
 
 type AuditAction = "create" | "update" | "delete";
+type AuditActorStatus = "configured" | "missing" | "invalid";
 
 type WriteAuditLogInput = {
   entityType: string;
@@ -19,38 +20,66 @@ type PublishRevisionInput = {
   status?: "draft" | "published" | "rolled_back";
 };
 
+type AuditActorResolution = {
+  actorId: string;
+  status: AuditActorStatus;
+  reason: string;
+};
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
 }
 
-export function getAuditRuntimeSummary() {
+function resolveAuditActor(): AuditActorResolution {
   const runtime = getGovernanceRuntime();
+  const actorId = runtime.auditActorId.trim();
 
-  if (!runtime.auditActorId || !isUuid(runtime.auditActorId)) {
+  if (!actorId) {
     return {
-      enabled: false,
+      actorId,
+      status: "missing",
       reason:
-        "SKYVAN_ADMIN_AUDIT_USER_ID tanımlı değil veya geçerli UUID formatında değil.",
+        "SKYVAN_ADMIN_AUDIT_USER_ID tanımlı değil. Audit ve publish revision yazımı safe-degrade modunda no-op çalışır.",
+    };
+  }
+
+  if (!isUuid(actorId)) {
+    return {
+      actorId,
+      status: "invalid",
+      reason:
+        "SKYVAN_ADMIN_AUDIT_USER_ID geçerli UUID formatında değil. Audit ve publish revision yazımı safe-degrade modunda no-op çalışır.",
     };
   }
 
   return {
-    enabled: true,
-    reason: "Audit yazımı aktif.",
+    actorId,
+    status: "configured",
+    reason: "Audit actor yapılandırılmış. Audit ve publish revision yazımı aktif.",
+  };
+}
+
+export function getAuditRuntimeSummary() {
+  const actor = resolveAuditActor();
+
+  return {
+    enabled: actor.status === "configured",
+    actorId: actor.actorId,
+    actorStatus: actor.status,
+    reason: actor.reason,
   };
 }
 
 export async function writeAuditLog(input: WriteAuditLogInput) {
-  const runtime = getGovernanceRuntime();
+  const actor = resolveAuditActor();
 
-  if (!runtime.auditActorId || !isUuid(runtime.auditActorId)) {
+  if (actor.status !== "configured") {
     return {
       ok: false as const,
       skipped: true as const,
-      reason:
-        "SKYVAN_ADMIN_AUDIT_USER_ID tanımlı değil veya geçerli UUID formatında değil.",
+      reason: actor.reason,
     };
   }
 
@@ -59,7 +88,7 @@ export async function writeAuditLog(input: WriteAuditLogInput) {
   await db.insert(auditLogs).values({
     entityType: input.entityType,
     entityId: input.entityId,
-    adminUserId: runtime.auditActorId,
+    adminUserId: actor.actorId,
     action: input.action,
     previousState: input.previousState ?? null,
     newState: input.newState ?? null,
@@ -72,14 +101,13 @@ export async function writeAuditLog(input: WriteAuditLogInput) {
 }
 
 export async function createPublishRevision(input: PublishRevisionInput) {
-  const runtime = getGovernanceRuntime();
+  const actor = resolveAuditActor();
 
-  if (!runtime.auditActorId || !isUuid(runtime.auditActorId)) {
+  if (actor.status !== "configured") {
     return {
       ok: false as const,
       skipped: true as const,
-      reason:
-        "SKYVAN_ADMIN_AUDIT_USER_ID tanımlı değil veya geçerli UUID formatında değil.",
+      reason: actor.reason,
     };
   }
 
@@ -87,7 +115,7 @@ export async function createPublishRevision(input: PublishRevisionInput) {
 
   await db.insert(publishRevisions).values({
     revisionName: input.revisionName,
-    publishedBy: runtime.auditActorId,
+    publishedBy: actor.actorId,
     status: input.status ?? "published",
   });
 

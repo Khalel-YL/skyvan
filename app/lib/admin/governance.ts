@@ -2,10 +2,24 @@ import "server-only";
 
 export type OfferStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
 export type DatasheetParsingStatus = "pending" | "processing" | "completed" | "failed";
+export type PagePublishTransition = "publish" | "rollback";
 
 type TruthyValue = "1" | "true" | "yes" | "on";
 
 const TRUTHY_VALUES = new Set<TruthyValue>(["1", "true", "yes", "on"]);
+const COMPLETED_DATASET_STATUS: DatasheetParsingStatus = "completed";
+const CRITICAL_OFFER_STATUSES = new Set<OfferStatus>([
+  "accepted",
+  "rejected",
+  "expired",
+]);
+
+const GOVERNANCE_ENV = {
+  auditActorId: "SKYVAN_ADMIN_AUDIT_USER_ID",
+  allowCriticalOfferStatusTransitions: "SKYVAN_ALLOW_CRITICAL_OFFER_STATUS_CHANGE",
+  allowDirectPublishWithoutSeo: "SKYVAN_ALLOW_DIRECT_PUBLISH_WITHOUT_SEO",
+  allowManualAiReadyStatus: "SKYVAN_ALLOW_MANUAL_AI_READY_STATUS",
+} as const;
 
 function readBooleanEnv(name: string, fallback = false) {
   const rawValue = String(process.env[name] ?? "")
@@ -29,36 +43,44 @@ function isSafeHttpUrl(value: string) {
 }
 
 export function getGovernanceRuntime() {
-  const auditActorId = String(process.env.SKYVAN_ADMIN_AUDIT_USER_ID ?? "").trim();
+  const auditActorId = String(process.env[GOVERNANCE_ENV.auditActorId] ?? "").trim();
 
   return {
     auditActorId,
     hasAuditActor: Boolean(auditActorId),
     allowCriticalOfferStatusTransitions: readBooleanEnv(
-      "SKYVAN_ALLOW_CRITICAL_OFFER_STATUS_CHANGE",
+      GOVERNANCE_ENV.allowCriticalOfferStatusTransitions,
       false,
     ),
     allowDirectPublishWithoutSeo: readBooleanEnv(
-      "SKYVAN_ALLOW_DIRECT_PUBLISH_WITHOUT_SEO",
+      GOVERNANCE_ENV.allowDirectPublishWithoutSeo,
       false,
     ),
     allowManualAiReadyStatus: readBooleanEnv(
-      "SKYVAN_ALLOW_MANUAL_AI_READY_STATUS",
+      GOVERNANCE_ENV.allowManualAiReadyStatus,
       false,
     ),
   };
 }
 
 export function isCriticalOfferStatus(status: OfferStatus) {
-  return status === "accepted" || status === "rejected" || status === "expired";
+  return CRITICAL_OFFER_STATUSES.has(status);
 }
 
-export function getOfferMutationBlocker(status: OfferStatus) {
+export function getOfferMutationBlocker(input: {
+  previousStatus?: OfferStatus | null;
+  nextStatus: OfferStatus;
+}) {
   const runtime = getGovernanceRuntime();
+  const previousStatus = input.previousStatus ?? null;
+  const touchesCriticalStatus =
+    previousStatus !== input.nextStatus &&
+    (isCriticalOfferStatus(input.nextStatus) ||
+      (previousStatus !== null && isCriticalOfferStatus(previousStatus)));
 
-  if (isCriticalOfferStatus(status) && !runtime.allowCriticalOfferStatusTransitions) {
+  if (touchesCriticalStatus && !runtime.allowCriticalOfferStatusTransitions) {
     return (
-      "Kritik teklif durumları (accepted / rejected / expired) governance kilidi altındadır. " +
+      "Kritik teklif durum geçişleri (accepted / rejected / expired) governance kilidi altındadır. " +
       "Bu geçiş için SKYVAN_ALLOW_CRITICAL_OFFER_STATUS_CHANGE=true gerekir."
     );
   }
@@ -106,6 +128,21 @@ export function getPagePublishBlockers(input: {
   return blockers;
 }
 
+export function getPagePublishTransition(input: {
+  previousIsPublished: boolean;
+  nextIsPublished: boolean;
+}): PagePublishTransition | null {
+  if (!input.previousIsPublished && input.nextIsPublished) {
+    return "publish";
+  }
+
+  if (input.previousIsPublished && !input.nextIsPublished) {
+    return "rollback";
+  }
+
+  return null;
+}
+
 export function getMediaGuardrailBlockers(input: {
   imageUrl: string;
   fileName: string;
@@ -135,19 +172,25 @@ export function getDatasheetGuardrailBlockers(input: {
   productId: string;
   docType: string;
   parsingStatus: DatasheetParsingStatus;
+  previousParsingStatus?: DatasheetParsingStatus | null;
   s3Key: string;
 }) {
   const blockers: string[] = [];
   const runtime = getGovernanceRuntime();
+  const previousParsingStatus = input.previousParsingStatus ?? null;
+  const touchesCompletedBoundary =
+    previousParsingStatus !== input.parsingStatus &&
+    (input.parsingStatus === COMPLETED_DATASET_STATUS ||
+      previousParsingStatus === COMPLETED_DATASET_STATUS);
 
-  if (input.parsingStatus === "completed") {
-    if (!runtime.allowManualAiReadyStatus) {
-      blockers.push(
-        "Belgeyi doğrudan completed durumuna almak governance kilidi altındadır. " +
-          "Bu geçiş için SKYVAN_ALLOW_MANUAL_AI_READY_STATUS=true gerekir.",
-      );
-    }
+  if (touchesCompletedBoundary && !runtime.allowManualAiReadyStatus) {
+    blockers.push(
+      "Completed state sınırına dokunan belge geçişleri governance kilidi altındadır. " +
+        "Bu geçiş için SKYVAN_ALLOW_MANUAL_AI_READY_STATUS=true gerekir.",
+    );
+  }
 
+  if (input.parsingStatus === COMPLETED_DATASET_STATUS) {
     if (!input.title.trim()) {
       blockers.push("Completed olacak belge için başlık zorunludur.");
     }
@@ -167,6 +210,8 @@ export function getDatasheetGuardrailBlockers(input: {
 }
 
 export function getAiKnowledgeReadiness(input: {
+  docType?: string;
+  productId?: string | null;
   parsingStatus: DatasheetParsingStatus;
   title: string;
   s3Key: string;
@@ -174,7 +219,7 @@ export function getAiKnowledgeReadiness(input: {
 }) {
   const blockers: string[] = [];
 
-  if (input.parsingStatus !== "completed") {
+  if (input.parsingStatus !== COMPLETED_DATASET_STATUS) {
     blockers.push("Belge henüz completed seviyesinde değil.");
   }
 
@@ -184,6 +229,10 @@ export function getAiKnowledgeReadiness(input: {
 
   if (!input.s3Key.trim()) {
     blockers.push("Belge storage anahtarı eksik.");
+  }
+
+  if (input.docType && input.docType !== "rulebook" && !String(input.productId ?? "").trim()) {
+    blockers.push("Rulebook dışındaki bilgi kayıtları bir ürüne bağlanmalıdır.");
   }
 
   if (input.chunkCount <= 0) {

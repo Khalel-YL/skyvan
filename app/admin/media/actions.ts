@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
@@ -16,11 +16,14 @@ type MediaContentJson = {
 };
 
 function normalizeTags(value: string) {
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 12);
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 12);
 }
 
 export async function saveMedia(formData: FormData) {
@@ -104,21 +107,35 @@ export async function deleteMedia(id: string) {
         contentJson: localizedContent.contentJson,
       })
       .from(localizedContent)
-      .where(eq(localizedContent.id, normalizedId))
+      .where(
+        and(
+          eq(localizedContent.entityType, "media"),
+          eq(localizedContent.id, normalizedId),
+        ),
+      )
       .limit(1);
 
     const existingMedia = rows[0] ?? null;
 
-    await db.delete(localizedContent).where(eq(localizedContent.id, normalizedId));
-
-    if (existingMedia) {
-      await writeAuditLog({
-        entityType: "media",
-        entityId: existingMedia.id,
-        action: "delete",
-        previousState: existingMedia,
-      });
+    if (!existingMedia) {
+      throw new Error("Silinecek medya kaydı bulunamadı.");
     }
+
+    await db
+      .delete(localizedContent)
+      .where(
+        and(
+          eq(localizedContent.entityType, "media"),
+          eq(localizedContent.id, normalizedId),
+        ),
+      );
+
+    await writeAuditLog({
+      entityType: "media",
+      entityId: existingMedia.id,
+      action: "delete",
+      previousState: existingMedia,
+    });
 
     revalidatePath("/admin/media");
   } catch (error) {

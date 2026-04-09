@@ -7,7 +7,10 @@ import { v4 as uuidv4 } from "uuid";
 import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { createPublishRevision, writeAuditLog } from "@/app/lib/admin/audit";
-import { getPagePublishBlockers } from "@/app/lib/admin/governance";
+import {
+  getPagePublishBlockers,
+  getPagePublishTransition,
+} from "@/app/lib/admin/governance";
 
 export type PageFormState = {
   ok: boolean;
@@ -292,6 +295,33 @@ function normalizeContentJson(params: {
   };
 }
 
+function isPagePublishedContent(value: unknown) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      (value as { isPublished?: boolean }).isPublished === true,
+  );
+}
+
+function buildPageRevisionName(params: {
+  locale: string;
+  slug: string;
+  transition: "publish" | "rollback";
+}) {
+  return `page:${params.locale}/${params.slug}:${params.transition}:${new Date().toISOString()}`;
+}
+
+function revalidatePagePath(slug: string | null | undefined) {
+  const normalizedSlug = normalizeSlug(String(slug ?? ""));
+
+  if (!normalizedSlug) {
+    return;
+  }
+
+  revalidatePath(`/pages/${normalizedSlug}`);
+}
+
 async function findPageBySlugAndLocale(params: {
   slug: string;
   locale: string;
@@ -452,6 +482,19 @@ export async function savePage(
 
   try {
     const previousPage = id ? await findPageById(id) : null;
+    const previousIsPublished = isPagePublishedContent(previousPage?.contentJson);
+    const previousSlug = previousPage?.slug ?? "";
+
+    if (id && !previousPage) {
+      return {
+        ok: false,
+        message: "Güncellenecek page kaydı bulunamadı.",
+        values,
+        errors: {
+          form: "Page kaydı artık mevcut değil. Listeyi yenileyip tekrar dene.",
+        },
+      };
+    }
 
     if (id) {
       await db
@@ -484,18 +527,19 @@ export async function savePage(
         },
       });
 
-      const wasPublished = Boolean(
-        previousPage &&
-          typeof previousPage.contentJson === "object" &&
-          previousPage.contentJson !== null &&
-          !Array.isArray(previousPage.contentJson) &&
-          (previousPage.contentJson as { isPublished?: boolean }).isPublished === true,
-      );
+      const publishTransition = getPagePublishTransition({
+        previousIsPublished,
+        nextIsPublished: isPublished,
+      });
 
-      if (!wasPublished && isPublished) {
+      if (publishTransition) {
         await createPublishRevision({
-          revisionName: `page:${locale}/${slug}:${new Date().toISOString()}`,
-          status: "published",
+          revisionName: buildPageRevisionName({
+            locale,
+            slug,
+            transition: publishTransition,
+          }),
+          status: publishTransition === "publish" ? "published" : "rolled_back",
         });
       }
     } else {
@@ -541,14 +585,22 @@ export async function savePage(
 
       if (isPublished) {
         await createPublishRevision({
-          revisionName: `page:${locale}/${slug}:${new Date().toISOString()}`,
+          revisionName: buildPageRevisionName({
+            locale,
+            slug,
+            transition: "publish",
+          }),
           status: "published",
         });
       }
     }
 
     revalidatePath("/admin/pages");
-    revalidatePath(`/pages/${slug}`);
+    revalidatePagePath(slug);
+
+    if (previousSlug && normalizeSlug(previousSlug) !== slug) {
+      revalidatePagePath(previousSlug);
+    }
   } catch (error) {
     console.error("savePage error", error);
 
@@ -569,9 +621,10 @@ export async function savePage(
   };
 }
 
-export async function deletePage(id: string, _formData: FormData) {
+export async function deletePage(id: string, formData: FormData) {
   const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
+  void formData;
 
   if (!normalizedId) {
     throw new Error("Silinecek sayfa kimliği bulunamadı.");
@@ -579,30 +632,51 @@ export async function deletePage(id: string, _formData: FormData) {
 
   const page = await findPageById(normalizedId);
 
-  await db.delete(localizedContent).where(eq(localizedContent.id, normalizedId));
+  if (!page) {
+    throw new Error("Silinecek page kaydı bulunamadı.");
+  }
 
-  if (page) {
-    await writeAuditLog({
-      entityType: "page",
-      entityId: page.id,
-      action: "delete",
-      previousState: page,
+  const wasPublished = isPagePublishedContent(page.contentJson);
+
+  await db
+    .delete(localizedContent)
+    .where(
+      and(
+        eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+        eq(localizedContent.id, normalizedId),
+      ),
+    );
+
+  await writeAuditLog({
+    entityType: "page",
+    entityId: page.id,
+    action: "delete",
+    previousState: page,
+  });
+
+  if (wasPublished) {
+    await createPublishRevision({
+      revisionName: buildPageRevisionName({
+        locale: page.locale,
+        slug: page.slug ?? page.title,
+        transition: "rollback",
+      }),
+      status: "rolled_back",
     });
   }
 
   revalidatePath("/admin/pages");
-
-  if (page?.slug) {
-    revalidatePath(`/pages/${normalizeSlug(page.slug)}`);
-  }
+  revalidatePagePath(page.slug);
 }
 
 export async function repairPageSlug(
   id: string,
-  _currentSlug: string | undefined,
-  _formData: FormData,
+  currentSlug: string | undefined,
+  formData: FormData,
 ) {
   const normalizedId = String(id ?? "").trim();
+  void currentSlug;
+  void formData;
 
   if (!normalizedId) {
     throw new Error("Slug onarımı için sayfa kimliği bulunamadı.");
@@ -649,5 +723,6 @@ export async function repairPageSlug(
   });
 
   revalidatePath("/admin/pages");
-  revalidatePath(`/pages/${nextSlug}`);
+  revalidatePagePath(page.slug);
+  revalidatePagePath(nextSlug);
 }
