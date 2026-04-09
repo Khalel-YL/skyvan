@@ -59,6 +59,18 @@ type PageContentJson = {
   blocks: PageBlock[];
 };
 
+type PageRecord = {
+  id: string;
+  entityId: string;
+  title: string;
+  slug: string | null;
+  locale: string;
+  description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  contentJson: unknown;
+};
+
 const PAGE_ENTITY_TYPE = "page";
 
 const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
@@ -263,7 +275,7 @@ function normalizeContentJson(params: {
   description: string;
   locale: string;
   isPublished: boolean;
-}): { contentJson: PageContentJson; error?: string } {
+}): { contentJson: PageContentJson; hasUserBlocks: boolean; error?: string } {
   const parsed = safeJsonParse(params.rawValue);
 
   if (params.rawValue.trim() && !parsed) {
@@ -272,6 +284,7 @@ function normalizeContentJson(params: {
         isPublished: params.isPublished,
         blocks: createDefaultBlocks(params.title, params.description, params.locale),
       },
+      hasUserBlocks: false,
       error: "İçerik JSON alanı geçerli bir JSON değil.",
     };
   }
@@ -283,15 +296,16 @@ function normalizeContentJson(params: {
 
   const rawBlocks = Array.isArray(rawObject.blocks) ? rawObject.blocks : [];
   const blocks = rawBlocks.map(sanitizeBlock).filter(Boolean) as PageBlock[];
+  const hasUserBlocks = blocks.length > 0;
 
   return {
     contentJson: {
       isPublished: params.isPublished,
-      blocks:
-        blocks.length > 0
-          ? blocks
-          : createDefaultBlocks(params.title, params.description, params.locale),
+      blocks: hasUserBlocks
+        ? blocks
+        : createDefaultBlocks(params.title, params.description, params.locale),
     },
+    hasUserBlocks,
   };
 }
 
@@ -305,11 +319,13 @@ function isPagePublishedContent(value: unknown) {
 }
 
 function buildPageRevisionName(params: {
-  locale: string;
+  title: string;
   slug: string;
+  locale: string;
   transition: "publish" | "rollback";
 }) {
-  return `page:${params.locale}/${params.slug}:${params.transition}:${new Date().toISOString()}`;
+  const baseName = normalizeSlug(params.title) || normalizeSlug(params.slug) || "page";
+  return `${baseName}:${params.locale}:${params.transition}:${new Date().toISOString()}`;
 }
 
 function revalidatePagePath(slug: string | null | undefined) {
@@ -320,6 +336,23 @@ function revalidatePagePath(slug: string | null | undefined) {
   }
 
   revalidatePath(`/pages/${normalizedSlug}`);
+}
+
+function buildPageAuditState(
+  page: PageRecord,
+  meta?: {
+    publishTransition?: "publish" | "rollback" | null;
+    revisionName?: string | null;
+  },
+) {
+  return {
+    ...page,
+    __meta: {
+      publishState: isPagePublishedContent(page.contentJson) ? "published" : "draft",
+      ...(meta?.publishTransition ? { publishTransition: meta.publishTransition } : {}),
+      ...(meta?.revisionName ? { revisionName: meta.revisionName } : {}),
+    },
+  };
 }
 
 async function findPageBySlugAndLocale(params: {
@@ -350,7 +383,7 @@ async function findPageBySlugAndLocale(params: {
   return rows[0] ?? null;
 }
 
-async function findPageById(id: string) {
+async function findPageById(id: string): Promise<PageRecord | null> {
   const db = getDbOrThrow();
 
   const rows = await db
@@ -377,6 +410,63 @@ async function findPageById(id: string) {
   return rows[0] ?? null;
 }
 
+async function writePageAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: "page",
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("page audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("page audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+  }
+}
+
+async function writePageRevision(input: {
+  revisionName: string;
+  status: "published" | "rolled_back";
+}) {
+  try {
+    const result = await createPublishRevision({
+      revisionName: input.revisionName,
+      status: input.status,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("page revision skipped:", {
+        revisionName: input.revisionName,
+        status: input.status,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("page revision warning:", {
+      revisionName: input.revisionName,
+      status: input.status,
+      error,
+    });
+  }
+}
+
 export async function savePage(
   _prevState: PageFormState,
   formData: FormData,
@@ -393,6 +483,7 @@ export async function savePage(
   const seoDescription = getTrimmed(formData, "seoDescription");
   const content = String(formData.get("content") ?? "");
   const isPublished = formData.get("isPublished") === "on";
+  const previousPage = id ? await findPageById(id) : null;
 
   const values = {
     id,
@@ -408,6 +499,17 @@ export async function savePage(
   };
 
   const errors: NonNullable<PageFormState["errors"]> = {};
+
+  if (id && !previousPage) {
+    return {
+      ok: false,
+      message: "Güncellenecek page kaydı bulunamadı.",
+      values,
+      errors: {
+        form: "Page kaydı artık mevcut değil. Listeyi yenileyip tekrar dene.",
+      },
+    };
+  }
 
   if (!locale) {
     errors.locale = "Locale zorunludur.";
@@ -441,17 +543,27 @@ export async function savePage(
     errors.content = normalizedContent.error;
   }
 
-  const publishBlockers = getPagePublishBlockers({
-    title,
-    slug,
-    seoTitle,
-    seoDescription,
-    hasBlocks: normalizedContent.contentJson.blocks.length > 0,
-    isPublished,
-  });
+  if (isPublished) {
+    const publishBlockers = getPagePublishBlockers({
+      title,
+      slug,
+      seoTitle,
+      seoDescription,
+      hasBlocks: normalizedContent.hasUserBlocks,
+      isPublished: true,
+    });
 
-  if (publishBlockers.length > 0) {
-    errors.form = publishBlockers.join(" ");
+    if (publishBlockers.length > 0) {
+      return {
+        ok: false,
+        message: "Publish blocker nedeniyle sayfa kaydedilemedi.",
+        values,
+        errors: {
+          ...errors,
+          form: publishBlockers.join(" "),
+        },
+      };
+    }
   }
 
   if (Object.keys(errors).length > 0) {
@@ -481,23 +593,11 @@ export async function savePage(
   }
 
   try {
-    const previousPage = id ? await findPageById(id) : null;
     const previousIsPublished = isPagePublishedContent(previousPage?.contentJson);
     const previousSlug = previousPage?.slug ?? "";
 
-    if (id && !previousPage) {
-      return {
-        ok: false,
-        message: "Güncellenecek page kaydı bulunamadı.",
-        values,
-        errors: {
-          form: "Page kaydı artık mevcut değil. Listeyi yenileyip tekrar dene.",
-        },
-      };
-    }
-
-    if (id) {
-      await db
+    if (id && previousPage) {
+      const updatedRows = await db
         .update(localizedContent)
         .set({
           locale,
@@ -508,39 +608,73 @@ export async function savePage(
           seoDescription: seoDescription || null,
           contentJson: normalizedContent.contentJson,
         })
-        .where(eq(localizedContent.id, id));
+        .where(
+          and(
+            eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+            eq(localizedContent.id, id),
+          ),
+        )
+        .returning({
+          id: localizedContent.id,
+          entityId: localizedContent.entityId,
+          title: localizedContent.title,
+          slug: localizedContent.slug,
+          locale: localizedContent.locale,
+          description: localizedContent.description,
+          seoTitle: localizedContent.seoTitle,
+          seoDescription: localizedContent.seoDescription,
+          contentJson: localizedContent.contentJson,
+        });
 
-      await writeAuditLog({
-        entityType: "page",
-        entityId: id,
-        action: "update",
-        previousState: previousPage,
-        newState: {
-          entityId: previousPage?.entityId ?? entityIdInput,
-          locale,
-          title,
-          slug,
-          description: description || null,
-          seoTitle: seoTitle || null,
-          seoDescription: seoDescription || null,
-          contentJson: normalizedContent.contentJson,
-        },
-      });
+      const updatedPage = updatedRows[0] ?? null;
 
+      if (!updatedPage) {
+        return {
+          ok: false,
+          message: "Sayfa güncellenemedi.",
+          values,
+          errors: {
+            form: "Page kaydı işlem sırasında bulunamadı. Listeyi yenileyip tekrar dene.",
+          },
+        };
+      }
+
+      const nextIsPublished = isPagePublishedContent(updatedPage.contentJson);
       const publishTransition = getPagePublishTransition({
         previousIsPublished,
-        nextIsPublished: isPublished,
+        nextIsPublished,
+      });
+      const revisionName = publishTransition
+        ? buildPageRevisionName({
+            title: updatedPage.title,
+            slug: updatedPage.slug ?? slug,
+            locale: updatedPage.locale,
+            transition: publishTransition,
+          })
+        : null;
+
+      await writePageAudit({
+        entityId: updatedPage.id,
+        action: "update",
+        previousState: buildPageAuditState(previousPage),
+        newState: buildPageAuditState(updatedPage, {
+          publishTransition,
+          revisionName,
+        }),
       });
 
-      if (publishTransition) {
-        await createPublishRevision({
-          revisionName: buildPageRevisionName({
-            locale,
-            slug,
-            transition: publishTransition,
-          }),
+      if (publishTransition && revisionName) {
+        await writePageRevision({
+          revisionName,
           status: publishTransition === "publish" ? "published" : "rolled_back",
         });
+      }
+
+      revalidatePath("/admin/pages");
+      revalidatePagePath(updatedPage.slug);
+
+      if (previousSlug && normalizeSlug(previousSlug) !== normalizeSlug(updatedPage.slug ?? "")) {
+        revalidatePagePath(previousSlug);
       }
     } else {
       const insertedRows = await db
@@ -560,46 +694,59 @@ export async function savePage(
         .returning({
           id: localizedContent.id,
           entityId: localizedContent.entityId,
+          title: localizedContent.title,
+          slug: localizedContent.slug,
+          locale: localizedContent.locale,
+          description: localizedContent.description,
+          seoTitle: localizedContent.seoTitle,
+          seoDescription: localizedContent.seoDescription,
+          contentJson: localizedContent.contentJson,
         });
 
-      const insertedId = insertedRows[0]?.id ?? "";
-      const insertedEntityId = insertedRows[0]?.entityId ?? "";
+      const insertedPage = insertedRows[0] ?? null;
 
-      if (insertedId) {
-        await writeAuditLog({
-          entityType: "page",
-          entityId: insertedId,
-          action: "create",
-          newState: {
-            entityId: insertedEntityId,
-            locale,
-            title,
-            slug,
-            description: description || null,
-            seoTitle: seoTitle || null,
-            seoDescription: seoDescription || null,
-            contentJson: normalizedContent.contentJson,
+      if (!insertedPage) {
+        return {
+          ok: false,
+          message: "Sayfa oluşturulamadı.",
+          values,
+          errors: {
+            form: "Page kaydı oluşturulurken beklenmeyen bir hata oluştu.",
           },
-        });
+        };
       }
 
-      if (isPublished) {
-        await createPublishRevision({
-          revisionName: buildPageRevisionName({
-            locale,
-            slug,
-            transition: "publish",
-          }),
+      const publishTransition = getPagePublishTransition({
+        previousIsPublished: false,
+        nextIsPublished: isPagePublishedContent(insertedPage.contentJson),
+      });
+      const revisionName = publishTransition
+        ? buildPageRevisionName({
+            title: insertedPage.title,
+            slug: insertedPage.slug ?? slug,
+            locale: insertedPage.locale,
+            transition: publishTransition,
+          })
+        : null;
+
+      await writePageAudit({
+        entityId: insertedPage.id,
+        action: "create",
+        newState: buildPageAuditState(insertedPage, {
+          publishTransition,
+          revisionName,
+        }),
+      });
+
+      if (publishTransition && revisionName) {
+        await writePageRevision({
+          revisionName,
           status: "published",
         });
       }
-    }
 
-    revalidatePath("/admin/pages");
-    revalidatePagePath(slug);
-
-    if (previousSlug && normalizeSlug(previousSlug) !== slug) {
-      revalidatePagePath(previousSlug);
+      revalidatePath("/admin/pages");
+      revalidatePagePath(insertedPage.slug);
     }
   } catch (error) {
     console.error("savePage error", error);
@@ -636,34 +783,33 @@ export async function deletePage(id: string, formData: FormData) {
     throw new Error("Silinecek page kaydı bulunamadı.");
   }
 
-  const wasPublished = isPagePublishedContent(page.contentJson);
+  if (isPagePublishedContent(page.contentJson)) {
+    throw new Error(
+      "Yayındaki page doğrudan silinemez. Önce taslağa alıp kontrollü rollback uygula.",
+    );
+  }
 
-  await db
+  const deletedRows = await db
     .delete(localizedContent)
     .where(
       and(
         eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
         eq(localizedContent.id, normalizedId),
       ),
-    );
+    )
+    .returning({
+      id: localizedContent.id,
+    });
 
-  await writeAuditLog({
-    entityType: "page",
+  if (deletedRows.length === 0) {
+    throw new Error("Silinecek page kaydı işlem sırasında bulunamadı.");
+  }
+
+  await writePageAudit({
     entityId: page.id,
     action: "delete",
-    previousState: page,
+    previousState: buildPageAuditState(page),
   });
-
-  if (wasPublished) {
-    await createPublishRevision({
-      revisionName: buildPageRevisionName({
-        locale: page.locale,
-        slug: page.slug ?? page.title,
-        transition: "rollback",
-      }),
-      status: "rolled_back",
-    });
-  }
 
   revalidatePath("/admin/pages");
   revalidatePagePath(page.slug);
@@ -704,25 +850,43 @@ export async function repairPageSlug(
     throw new Error("Üretilen slug aynı locale içinde zaten kullanılıyor.");
   }
 
-  await getDbOrThrow()
+  const updatedRows = await getDbOrThrow()
     .update(localizedContent)
     .set({
       slug: nextSlug,
     })
-    .where(eq(localizedContent.id, page.id));
+    .where(
+      and(
+        eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+        eq(localizedContent.id, page.id),
+      ),
+    )
+    .returning({
+      id: localizedContent.id,
+      entityId: localizedContent.entityId,
+      title: localizedContent.title,
+      slug: localizedContent.slug,
+      locale: localizedContent.locale,
+      description: localizedContent.description,
+      seoTitle: localizedContent.seoTitle,
+      seoDescription: localizedContent.seoDescription,
+      contentJson: localizedContent.contentJson,
+    });
 
-  await writeAuditLog({
-    entityType: "page",
-    entityId: page.id,
+  const updatedPage = updatedRows[0] ?? null;
+
+  if (!updatedPage) {
+    throw new Error("Slug onarımı işlem sırasında tamamlanamadı.");
+  }
+
+  await writePageAudit({
+    entityId: updatedPage.id,
     action: "update",
-    previousState: page,
-    newState: {
-      ...page,
-      slug: nextSlug,
-    },
+    previousState: buildPageAuditState(page),
+    newState: buildPageAuditState(updatedPage),
   });
 
   revalidatePath("/admin/pages");
   revalidatePagePath(page.slug);
-  revalidatePagePath(nextSlug);
+  revalidatePagePath(updatedPage.slug);
 }

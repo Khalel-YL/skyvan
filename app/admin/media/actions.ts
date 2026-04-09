@@ -15,6 +15,16 @@ type MediaContentJson = {
   uploadDate: string;
 };
 
+type MediaRecord = {
+  id: string;
+  entityType: string;
+  locale: string;
+  title: string | null;
+  contentJson: unknown;
+};
+
+const MEDIA_ENTITY_TYPE = "media";
+
 function normalizeTags(value: string) {
   return Array.from(
     new Set(
@@ -24,6 +34,57 @@ function normalizeTags(value: string) {
         .filter(Boolean),
     ),
   ).slice(0, 12);
+}
+
+async function getMediaById(id: string): Promise<MediaRecord | null> {
+  if (!db) {
+    return null;
+  }
+
+  const rows = await db
+    .select({
+      id: localizedContent.id,
+      entityType: localizedContent.entityType,
+      locale: localizedContent.locale,
+      title: localizedContent.title,
+      contentJson: localizedContent.contentJson,
+    })
+    .from(localizedContent)
+    .where(eq(localizedContent.id, id))
+    .limit(1);
+
+  return (rows[0] as MediaRecord | undefined) ?? null;
+}
+
+async function writeMediaAudit(input: {
+  entityId: string;
+  action: "create" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: MEDIA_ENTITY_TYPE,
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("media audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("media audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+  }
 }
 
 export async function saveMedia(formData: FormData) {
@@ -58,28 +119,30 @@ export async function saveMedia(formData: FormData) {
       .values({
         id: uuidv4(),
         entityId: uuidv4(),
-        entityType: "media",
+        entityType: MEDIA_ENTITY_TYPE,
         locale: "tr",
         title: fileName,
         contentJson,
       })
       .returning({
         id: localizedContent.id,
+        entityType: localizedContent.entityType,
+        locale: localizedContent.locale,
+        title: localizedContent.title,
+        contentJson: localizedContent.contentJson,
       });
 
-    const insertedId = insertedRows[0]?.id ?? "";
+    const insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
 
-    if (insertedId) {
-      await writeAuditLog({
-        entityType: "media",
-        entityId: insertedId,
-        action: "create",
-        newState: {
-          title: fileName,
-          contentJson,
-        },
-      });
+    if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
+      throw new Error("Medya kaydı güvenli şekilde oluşturulamadı.");
     }
+
+    await writeMediaAudit({
+      entityId: insertedMedia.id,
+      action: "create",
+      newState: insertedMedia,
+    });
 
     revalidatePath("/admin/media");
   } catch (error) {
@@ -100,38 +163,33 @@ export async function deleteMedia(id: string) {
   }
 
   try {
-    const rows = await db
-      .select({
-        id: localizedContent.id,
-        title: localizedContent.title,
-        contentJson: localizedContent.contentJson,
-      })
-      .from(localizedContent)
-      .where(
-        and(
-          eq(localizedContent.entityType, "media"),
-          eq(localizedContent.id, normalizedId),
-        ),
-      )
-      .limit(1);
-
-    const existingMedia = rows[0] ?? null;
+    const existingMedia = await getMediaById(normalizedId);
 
     if (!existingMedia) {
-      throw new Error("Silinecek medya kaydı bulunamadı.");
+      return;
     }
 
-    await db
+    if (existingMedia.entityType !== MEDIA_ENTITY_TYPE) {
+      throw new Error("Silinecek kayıt media entity türünde değil.");
+    }
+
+    const deletedRows = await db
       .delete(localizedContent)
       .where(
         and(
-          eq(localizedContent.entityType, "media"),
           eq(localizedContent.id, normalizedId),
+          eq(localizedContent.entityType, MEDIA_ENTITY_TYPE),
         ),
-      );
+      )
+      .returning({
+        id: localizedContent.id,
+      });
 
-    await writeAuditLog({
-      entityType: "media",
+    if (deletedRows.length === 0) {
+      return;
+    }
+
+    await writeMediaAudit({
       entityId: existingMedia.id,
       action: "delete",
       previousState: existingMedia,

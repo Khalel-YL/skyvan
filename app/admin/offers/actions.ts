@@ -269,7 +269,7 @@ export async function saveOffer(
 
   try {
     if (id && existingOffer) {
-      await db
+      const updatedRows = await db
         .update(offers)
         .set({
           leadId,
@@ -278,7 +278,21 @@ export async function saveOffer(
           totalAmount: parsedTotalAmount as string,
           status,
         })
-        .where(eq(offers.id, id));
+        .where(eq(offers.id, id))
+        .returning({
+          id: offers.id,
+        });
+
+      if (updatedRows.length === 0) {
+        return {
+          ok: false,
+          message: "Teklif güncellenemedi.",
+          values,
+          errors: {
+            form: "Teklif kaydı işlem sırasında bulunamadı. Listeyi yenileyip tekrar dene.",
+          },
+        };
+      }
 
       await writeAuditLog({
         entityType: "offer",
@@ -378,14 +392,43 @@ export async function deleteOffer(id: string) {
 
   const existingOffer = existingRows[0] ?? null;
 
+  if (!existingOffer) {
+    return;
+  }
+
+  const deleteBlocker = getOfferMutationBlocker({
+    previousStatus: existingOffer.status,
+    nextStatus: "draft",
+  });
+
+  if (deleteBlocker) {
+    throw new Error(
+      `Kritik statüdeki teklif doğrudan silinemez. ${existingOffer.offerReference} için önce kontrollü durum geçişi uygulanmalı. ${deleteBlocker}`,
+    );
+  }
+
   await db.delete(offers).where(eq(offers.id, normalizedId));
 
-  if (existingOffer) {
-    await writeAuditLog({
+  try {
+    const auditResult = await writeAuditLog({
       entityType: "offer",
       entityId: existingOffer.id,
       action: "delete",
       previousState: existingOffer,
+    });
+
+    if (!auditResult.ok || auditResult.skipped) {
+      console.warn("deleteOffer audit skipped:", {
+        offerId: existingOffer.id,
+        offerReference: existingOffer.offerReference,
+        reason: auditResult.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("deleteOffer audit warning:", {
+      offerId: existingOffer.id,
+      offerReference: existingOffer.offerReference,
+      error,
     });
   }
 
