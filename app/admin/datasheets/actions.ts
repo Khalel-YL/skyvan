@@ -4,7 +4,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { aiKnowledgeDocuments } from "@/db/schema";
 import {
   hasBlockedScheme,
@@ -230,9 +230,7 @@ function buildDatasheetState(input: {
 }
 
 async function getDatasheetById(id: string): Promise<DatasheetRecord | null> {
-  if (!db) {
-    return null;
-  }
+  const db = getDbOrThrow();
 
   const rows = await db
     .select({
@@ -252,9 +250,7 @@ async function getDatasheetById(id: string): Promise<DatasheetRecord | null> {
 }
 
 async function hasDuplicateStorageKey(id: string, s3Key: string) {
-  if (!db) {
-    return false;
-  }
+  const db = getDbOrThrow();
 
   const rows = await db
     .select({ id: aiKnowledgeDocuments.id })
@@ -304,13 +300,7 @@ export async function saveDatasheet(
   _prevState: DatasheetActionState,
   formData: FormData,
 ): Promise<DatasheetActionState> {
-  if (!db) {
-    return {
-      status: "error",
-      message: "Veritabanı yapılandırılmadığı için kayıt işlemi şu anda pasif durumda.",
-      fieldErrors: {},
-    };
-  }
+  const db = getDbOrThrow();
 
   const id = getTrimmed(formData, "id");
   const productId = getTrimmed(formData, "productId");
@@ -496,12 +486,10 @@ export async function saveDatasheet(
 }
 
 export async function deleteDatasheet(id: string) {
+  const db = getDbOrThrow();
+
   if (!id) {
     redirect("/admin/datasheets?docAction=error&docCode=invalid-id");
-  }
-
-  if (!db) {
-    redirect("/admin/datasheets?docAction=error&docCode=db-offline");
   }
 
   const normalizedId = String(id ?? "").trim();

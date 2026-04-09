@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { writeAuditLog } from "@/app/lib/admin/audit";
 import { getMediaGuardrailBlockers } from "@/app/lib/admin/governance";
@@ -37,9 +37,7 @@ function normalizeTags(value: string) {
 }
 
 async function getMediaById(id: string): Promise<MediaRecord | null> {
-  if (!db) {
-    return null;
-  }
+  const db = getDbOrThrow();
 
   const rows = await db
     .select({
@@ -88,9 +86,7 @@ async function writeMediaAudit(input: {
 }
 
 export async function saveMedia(formData: FormData) {
-  if (!db) {
-    throw new Error("Veritabanı yapılandırılmadığı için medya kaydı pasif.");
-  }
+  const db = getDbOrThrow();
 
   const imageUrl = String(formData.get("imageUrl") ?? "").trim();
   const fileName = String(formData.get("fileName") ?? "").trim();
@@ -152,9 +148,7 @@ export async function saveMedia(formData: FormData) {
 }
 
 export async function deleteMedia(id: string) {
-  if (!db) {
-    throw new Error("Veritabanı yapılandırılmadığı için medya silme pasif.");
-  }
+  const db = getDbOrThrow();
 
   const normalizedId = String(id ?? "").trim();
 

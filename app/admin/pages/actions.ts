@@ -820,6 +820,7 @@ export async function repairPageSlug(
   currentSlug: string | undefined,
   formData: FormData,
 ) {
+  const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
   void currentSlug;
   void formData;
@@ -850,7 +851,7 @@ export async function repairPageSlug(
     throw new Error("Üretilen slug aynı locale içinde zaten kullanılıyor.");
   }
 
-  const updatedRows = await getDbOrThrow()
+  const updatedRows = await db
     .update(localizedContent)
     .set({
       slug: nextSlug,
