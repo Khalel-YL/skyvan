@@ -13,11 +13,16 @@ type WriteAuditLogInput = {
   action: AuditAction;
   previousState?: unknown;
   newState?: unknown;
+  adminUserId?: string | null;
 };
 
 type PublishRevisionInput = {
   revisionName: string;
   status?: "draft" | "published" | "rolled_back";
+};
+
+type WriteAdminAuditInput = WriteAuditLogInput & {
+  logLabel?: string;
 };
 
 type AuditActorResolution = {
@@ -32,9 +37,9 @@ function isUuid(value: string) {
   );
 }
 
-function resolveAuditActor(): AuditActorResolution {
+function resolveAuditActor(adminUserId?: string | null): AuditActorResolution {
   const runtime = getGovernanceRuntime();
-  const actorId = runtime.auditActorId.trim();
+  const actorId = String(adminUserId ?? runtime.auditActorId).trim();
 
   if (!actorId) {
     return {
@@ -73,7 +78,7 @@ export function getAuditRuntimeSummary() {
 }
 
 export async function writeAuditLog(input: WriteAuditLogInput) {
-  const actor = resolveAuditActor();
+  const actor = resolveAuditActor(input.adminUserId);
 
   if (actor.status !== "configured") {
     return {
@@ -98,6 +103,37 @@ export async function writeAuditLog(input: WriteAuditLogInput) {
     ok: true as const,
     skipped: false as const,
   };
+}
+
+export async function writeAdminAudit(input: WriteAdminAuditInput) {
+  const { logLabel, ...auditInput } = input;
+  const label = (logLabel || input.entityType).trim() || "admin";
+
+  try {
+    const result = await writeAuditLog(auditInput);
+
+    if (!result.ok || result.skipped) {
+      console.warn(`${label} audit skipped:`, {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.warn(`${label} audit warning:`, {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+
+    return {
+      ok: false as const,
+      skipped: true as const,
+      reason: "Audit yazımı sırasında beklenmeyen bir hata oluştu.",
+    };
+  }
 }
 
 export async function createPublishRevision(input: PublishRevisionInput) {

@@ -14,6 +14,8 @@ type CategoriesPageProps = {
     deleted?: string;
     archived?: string;
     seeded?: string;
+    categoryAction?: string;
+    categoryCode?: string;
     q?: string;
     status?: string;
   }>;
@@ -159,6 +161,19 @@ export default async function CategoriesPage({
     }
   );
 
+  const categoryErrorMessage =
+    params.categoryAction === "error"
+      ? params.categoryCode === "invalid-id"
+        ? "Geçersiz kategori işlemi isteği alındı."
+        : params.categoryCode === "missing-category"
+          ? "Silinmek istenen kategori bulunamadı."
+        : params.categoryCode === "delete-failed"
+          ? "Kategori kaldırma işlemi tamamlanamadı."
+          : params.categoryCode === "seed-failed"
+            ? "Seed kategoriler eklenirken beklenmeyen bir hata oluştu."
+            : "Kategori işlemi sırasında beklenmeyen bir hata oluştu."
+      : null;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
@@ -216,6 +231,12 @@ export default async function CategoriesPage({
           {params.seeded === "0"
             ? "Seed kategoriler zaten mevcut."
             : `${params.seeded} adet çekirdek kategori eklendi.`}
+        </div>
+      ) : null}
+
+      {categoryErrorMessage ? (
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {categoryErrorMessage}
         </div>
       ) : null}
 

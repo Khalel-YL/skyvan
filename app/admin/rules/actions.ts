@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import {
   compatibilityRules,
   models,
@@ -14,11 +14,13 @@ import {
   ruleConditions,
   scenarioMappings,
 } from "@/db/schema";
+import { writeAuditLog } from "@/app/lib/admin/audit";
 import {
   initialRuleFormState,
   type RuleConditionType,
   type RuleFieldName,
   type RuleFormState,
+  type RuleScopeKind,
   type RuleSeverity,
   type RuleType,
 } from "./types";
@@ -26,6 +28,24 @@ import {
 type ParsedCondition = {
   conditionType: RuleConditionType;
   targetId: string;
+};
+
+type RuleRecord = {
+  id: string;
+  sourceProductId: string;
+  targetProductId: string;
+  ruleType: RuleType;
+  severity: RuleSeverity;
+  priority: number;
+  message: string | null;
+  createdAt: Date | string | null;
+};
+
+type RuleAuditState = RuleRecord & {
+  conditions: ParsedCondition[];
+  scopeKind: RuleScopeKind;
+  conditionCount: number;
+  conditionSignature: string;
 };
 
 type RuleConflict =
@@ -41,15 +61,11 @@ type RuleConflict =
       kind: "conditional_blocked_by_global";
       ruleId: string;
     }
+  | {
+      kind: "pair_rule_type_taken";
+      ruleId: string;
+    }
   | null;
-
-function getDatabase() {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
-
-  return db;
-}
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -90,6 +106,15 @@ function createGenericError(message: string): RuleFormState {
     status: "error",
     message,
   };
+}
+
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
 }
 
 function parseRuleType(value: string): RuleType | null {
@@ -204,8 +229,20 @@ function serializeConditions(conditions: ParsedCondition[]) {
     .join("|");
 }
 
+function normalizeConditionsForAudit(conditions: ParsedCondition[]) {
+  return [...conditions].sort((left, right) => {
+    const typeCompare = left.conditionType.localeCompare(right.conditionType, "tr");
+
+    if (typeCompare !== 0) {
+      return typeCompare;
+    }
+
+    return left.targetId.localeCompare(right.targetId, "tr");
+  });
+}
+
 async function ensureProductExists(productId: string) {
-  const database = getDatabase();
+  const database = getDbOrThrow();
   const rows = await database
     .select({
       id: products.id,
@@ -217,24 +254,11 @@ async function ensureProductExists(productId: string) {
   return rows.length > 0;
 }
 
-async function ensureRuleExists(id: string) {
-  const database = getDatabase();
-  const rows = await database
-    .select({
-      id: compatibilityRules.id,
-    })
-    .from(compatibilityRules)
-    .where(eq(compatibilityRules.id, id))
-    .limit(1);
-
-  return rows.length > 0;
-}
-
 async function ensureConditionTargetExists(
   conditionType: RuleConditionType,
   targetId: string,
 ) {
-  const database = getDatabase();
+  const database = getDbOrThrow();
 
   switch (conditionType) {
     case "model": {
@@ -278,6 +302,85 @@ async function ensureConditionTargetExists(
   }
 }
 
+async function getRuleStateById(id: string): Promise<RuleAuditState | null> {
+  const database = getDbOrThrow();
+
+  const ruleRows = await database
+    .select({
+      id: compatibilityRules.id,
+      sourceProductId: compatibilityRules.sourceProductId,
+      targetProductId: compatibilityRules.targetProductId,
+      ruleType: compatibilityRules.ruleType,
+      severity: compatibilityRules.severity,
+      priority: compatibilityRules.priority,
+      message: compatibilityRules.message,
+      createdAt: compatibilityRules.createdAt,
+    })
+    .from(compatibilityRules)
+    .where(eq(compatibilityRules.id, id))
+    .limit(1);
+
+  const rule = (ruleRows[0] as RuleRecord | undefined) ?? null;
+
+  if (!rule) {
+    return null;
+  }
+
+  const conditionRows = await database
+    .select({
+      conditionType: ruleConditions.conditionType,
+      targetId: ruleConditions.targetId,
+    })
+    .from(ruleConditions)
+    .where(eq(ruleConditions.ruleId, id));
+
+  const conditions = normalizeConditionsForAudit(
+    conditionRows.map((row) => ({
+      conditionType: row.conditionType as RuleConditionType,
+      targetId: row.targetId,
+    })),
+  );
+
+  return {
+    ...rule,
+    conditions,
+    scopeKind: conditions.length > 0 ? "conditional" : "global",
+    conditionCount: conditions.length,
+    conditionSignature: serializeConditions(conditions),
+  };
+}
+
+async function writeRuleAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: "rule",
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("rule audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("rule audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+  }
+}
+
 async function findRuleConflict(
   sourceProductId: string,
   targetProductId: string,
@@ -285,7 +388,7 @@ async function findRuleConflict(
   conditions: ParsedCondition[],
   excludeId?: string,
 ): Promise<RuleConflict> {
-  const database = getDatabase();
+  const database = getDbOrThrow();
 
   const filters = [
     eq(compatibilityRules.sourceProductId, sourceProductId),
@@ -309,7 +412,6 @@ async function findRuleConflict(
   }
 
   const candidateIds = candidateRules.map((item) => item.id);
-
   const candidateConditionRows =
     candidateIds.length > 0
       ? await database
@@ -364,7 +466,10 @@ async function findRuleConflict(
     }
   }
 
-  return null;
+  return {
+    kind: "pair_rule_type_taken",
+    ruleId: candidateRules[0].id,
+  };
 }
 
 export async function saveRule(
@@ -372,7 +477,7 @@ export async function saveRule(
   formData: FormData,
 ): Promise<RuleFormState> {
   try {
-    const database = getDatabase();
+    const database = getDbOrThrow();
     const id = getTrimmed(formData, "id");
     const sourceProductId = getTrimmed(formData, "sourceProductId");
     const targetProductId = getTrimmed(formData, "targetProductId");
@@ -381,6 +486,7 @@ export async function saveRule(
     const priority = parsePriority(getTrimmed(formData, "priority"));
     const message = getTrimmed(formData, "message");
     const parsedConditions = parseConditions(formData);
+    const existingRule = id ? await getRuleStateById(id) : null;
 
     if ("status" in parsedConditions) {
       return parsedConditions;
@@ -394,11 +500,16 @@ export async function saveRule(
       return createFieldError("targetProductId", "Hedef ürün zorunludur.");
     }
 
-    if (!(await ensureProductExists(sourceProductId))) {
+    const [sourceExists, targetExists] = await Promise.all([
+      ensureProductExists(sourceProductId),
+      ensureProductExists(targetProductId),
+    ]);
+
+    if (!sourceExists) {
       return createFieldError("sourceProductId", "Kaynak ürün bulunamadı.");
     }
 
-    if (!(await ensureProductExists(targetProductId))) {
+    if (!targetExists) {
       return createFieldError("targetProductId", "Hedef ürün bulunamadı.");
     }
 
@@ -435,17 +546,17 @@ export async function saveRule(
       );
     }
 
-    if (id && !(await ensureRuleExists(id))) {
+    if (id && !existingRule) {
       return createGenericError("Düzenlenecek kural kaydı bulunamadı.");
     }
 
     for (const condition of parsedConditions) {
-      const targetExists = await ensureConditionTargetExists(
+      const targetExistsForCondition = await ensureConditionTargetExists(
         condition.conditionType,
         condition.targetId,
       );
 
-      if (!targetExists) {
+      if (!targetExistsForCondition) {
         return createFieldError(
           "conditions",
           `${condition.conditionType} koşulu için seçilen kayıt bulunamadı.`,
@@ -482,11 +593,19 @@ export async function saveRule(
       );
     }
 
-    await database.transaction(async (tx) => {
-      const ruleId = id || uuidv4();
+    if (conflict?.kind === "pair_rule_type_taken") {
+      return createFieldError(
+        "conditions",
+        "Bu ürün çifti ve kural tipi için tek bir kayıt tutulabilir. Mevcut kaydı düzenle veya kaldır.",
+      );
+    }
 
+    const ruleId = id || uuidv4();
+    let mutationError: RuleFormState | null = null;
+
+    await database.transaction(async (tx) => {
       if (id) {
-        await tx
+        const updatedRows = await tx
           .update(compatibilityRules)
           .set({
             sourceProductId,
@@ -496,19 +615,39 @@ export async function saveRule(
             priority,
             message: message || null,
           })
-          .where(eq(compatibilityRules.id, ruleId));
+          .where(eq(compatibilityRules.id, ruleId))
+          .returning({
+            id: compatibilityRules.id,
+          });
+
+        if (updatedRows.length === 0) {
+          mutationError = createGenericError(
+            "Kural kaydı işlem sırasında güncellenemedi.",
+          );
+          return;
+        }
 
         await tx.delete(ruleConditions).where(eq(ruleConditions.ruleId, ruleId));
       } else {
-        await tx.insert(compatibilityRules).values({
-          id: ruleId,
-          sourceProductId,
-          targetProductId,
-          ruleType,
-          severity,
-          priority,
-          message: message || null,
-        });
+        const insertedRows = await tx
+          .insert(compatibilityRules)
+          .values({
+            id: ruleId,
+            sourceProductId,
+            targetProductId,
+            ruleType,
+            severity,
+            priority,
+            message: message || null,
+          })
+          .returning({
+            id: compatibilityRules.id,
+          });
+
+        if (insertedRows.length === 0) {
+          mutationError = createGenericError("Kural kaydı oluşturulamadı.");
+          return;
+        }
       }
 
       if (parsedConditions.length > 0) {
@@ -523,6 +662,23 @@ export async function saveRule(
       }
     });
 
+    if (mutationError) {
+      return mutationError;
+    }
+
+    const savedRule = await getRuleStateById(ruleId);
+
+    if (!savedRule) {
+      return createGenericError("Kural kaydı işlem sonrası doğrulanamadı.");
+    }
+
+    await writeRuleAudit({
+      entityId: savedRule.id,
+      action: id ? "update" : "create",
+      previousState: existingRule ?? undefined,
+      newState: savedRule,
+    });
+
     revalidatePath("/admin");
     revalidatePath("/admin/rules");
 
@@ -533,6 +689,10 @@ export async function saveRule(
       }),
     );
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     if (
       typeof error === "object" &&
       error !== null &&
@@ -549,7 +709,7 @@ export async function saveRule(
 }
 
 export async function deleteRule(formData: FormData) {
-  const database = getDatabase();
+  const database = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
   if (!id) {
@@ -561,11 +721,47 @@ export async function deleteRule(formData: FormData) {
     );
   }
 
+  const existingRule = await getRuleStateById(id);
+
+  if (!existingRule) {
+    redirect(
+      buildRulesRedirectUrl({
+        ruleAction: "error",
+        ruleCode: "invalid-id",
+      }),
+    );
+  }
+
   try {
-    await database.delete(compatibilityRules).where(eq(compatibilityRules.id, id));
+    const deletedRows = await database
+      .delete(compatibilityRules)
+      .where(eq(compatibilityRules.id, id))
+      .returning({
+        id: compatibilityRules.id,
+      });
+
+    if (deletedRows.length === 0) {
+      redirect(
+        buildRulesRedirectUrl({
+          ruleAction: "error",
+          ruleCode: "delete-failed",
+        }),
+      );
+    }
+
+    await writeRuleAudit({
+      entityId: existingRule.id,
+      action: "delete",
+      previousState: existingRule,
+    });
+
     revalidatePath("/admin");
     revalidatePath("/admin/rules");
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error("deleteRule error:", error);
 
     redirect(

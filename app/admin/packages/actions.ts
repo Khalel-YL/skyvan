@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { buildVersions, models, packages } from "@/db/schema";
-import { writeAuditLog } from "@/app/lib/admin/audit";
+import { writeAdminAudit } from "@/app/lib/admin/audit";
 
 import { normalizePackageSlug, splitPackageSlugCounter } from "./package-slug";
 import {
@@ -182,29 +182,14 @@ async function writePackageAudit(input: {
   previousState?: unknown;
   newState?: unknown;
 }) {
-  try {
-    const result = await writeAuditLog({
-      entityType: "package",
-      entityId: input.entityId,
-      action: input.action,
-      previousState: input.previousState,
-      newState: input.newState,
-    });
-
-    if (!result.ok || result.skipped) {
-      console.warn("package audit skipped:", {
-        entityId: input.entityId,
-        action: input.action,
-        reason: result.reason,
-      });
-    }
-  } catch (error) {
-    console.warn("package audit warning:", {
-      entityId: input.entityId,
-      action: input.action,
-      error,
-    });
-  }
+  await writeAdminAudit({
+    entityType: "package",
+    logLabel: "package",
+    entityId: input.entityId,
+    action: input.action,
+    previousState: input.previousState,
+    newState: input.newState,
+  });
 }
 
 export async function savePackage(

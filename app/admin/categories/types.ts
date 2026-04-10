@@ -8,3 +8,22 @@ export type CategoryListItem = {
   status: CategoryStatus;
   sortOrder: number;
 };
+
+export type CategoryFieldName =
+  | "name"
+  | "slug"
+  | "icon"
+  | "status"
+  | "sortOrder";
+
+export type CategoryFormState = {
+  status: "idle" | "error";
+  message: string | null;
+  fieldErrors: Partial<Record<CategoryFieldName, string>>;
+};
+
+export const initialCategoryFormState: CategoryFormState = {
+  status: "idle",
+  message: null,
+  fieldErrors: {},
+};

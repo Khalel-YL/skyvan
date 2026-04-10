@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDbOrThrow } from "@/db/db";
 import { categories, products } from "@/db/schema";
+import { writeAdminAudit } from "@/app/lib/admin/audit";
 
 import {
   createProductSchema,
@@ -22,10 +23,79 @@ import type {
   ProductActionState,
   ProductFilters,
   ProductListItem,
+  ProductStatus,
 } from "./types";
 
 function db() {
   return getDbOrThrow();
+}
+
+type ProductAuditState = {
+  id: string;
+  categoryId: string;
+  materialId: string | null;
+  name: string;
+  slug: string;
+  sku: string;
+  shortDescription: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  datasheetUrl: string | null;
+  basePrice: string | number | null;
+  weightKg: string | number | null;
+  powerDrawWatts: string | number | null;
+  powerSupplyWatts: string | number | null;
+  status: ProductStatus;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const productAuditSelection = {
+  id: products.id,
+  categoryId: products.categoryId,
+  materialId: products.materialId,
+  name: products.name,
+  slug: products.slug,
+  sku: products.sku,
+  shortDescription: products.shortDescription,
+  description: products.description,
+  imageUrl: products.imageUrl,
+  datasheetUrl: products.datasheetUrl,
+  basePrice: products.basePrice,
+  weightKg: products.weightKg,
+  powerDrawWatts: products.powerDrawWatts,
+  powerSupplyWatts: products.powerSupplyWatts,
+  status: products.status,
+  createdAt: products.createdAt,
+  updatedAt: products.updatedAt,
+};
+
+async function getProductAuditStateById(
+  productId: string
+): Promise<ProductAuditState | null> {
+  const [row] = await db()
+    .select(productAuditSelection)
+    .from(products)
+    .where(eq(products.id, productId))
+    .limit(1);
+
+  return (row as ProductAuditState | undefined) ?? null;
+}
+
+async function writeProductAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  await writeAdminAudit({
+    entityType: "product",
+    logLabel: "product",
+    entityId: input.entityId,
+    action: input.action,
+    previousState: input.previousState,
+    newState: input.newState,
+  });
 }
 
 export async function getProductCategories(): Promise<CategoryOption[]> {
@@ -181,22 +251,40 @@ export async function createProduct(
     };
   }
 
-  await db().insert(products).values({
-    name: data.name.trim(),
-    slug: normalizedSlug,
-    sku: normalizedSku,
-    categoryId: data.categoryId,
-    materialId: null,
-    shortDescription: emptyToNull(data.shortDescription),
-    description: emptyToNull(data.description),
-    imageUrl: emptyToNull(data.imageUrl),
-    datasheetUrl: emptyToNull(data.datasheetUrl),
-    basePrice: stringNumberToDbNumeric(data.basePrice) ?? "0.00",
-    weightKg: stringNumberToDbNumeric(data.weightKg) ?? "0.000",
-    powerDrawWatts: stringNumberToDbNumeric(data.powerDrawWatts) ?? "0.00",
-    powerSupplyWatts: stringNumberToDbNumeric(data.powerSupplyWatts) ?? "0.00",
-    status: data.status,
-    updatedAt: new Date(),
+  const createdRows = await db()
+    .insert(products)
+    .values({
+      name: data.name.trim(),
+      slug: normalizedSlug,
+      sku: normalizedSku,
+      categoryId: data.categoryId,
+      materialId: null,
+      shortDescription: emptyToNull(data.shortDescription),
+      description: emptyToNull(data.description),
+      imageUrl: emptyToNull(data.imageUrl),
+      datasheetUrl: emptyToNull(data.datasheetUrl),
+      basePrice: stringNumberToDbNumeric(data.basePrice) ?? "0.00",
+      weightKg: stringNumberToDbNumeric(data.weightKg) ?? "0.000",
+      powerDrawWatts: stringNumberToDbNumeric(data.powerDrawWatts) ?? "0.00",
+      powerSupplyWatts: stringNumberToDbNumeric(data.powerSupplyWatts) ?? "0.00",
+      status: data.status,
+      updatedAt: new Date(),
+    })
+    .returning(productAuditSelection);
+
+  const createdProduct = (createdRows[0] as ProductAuditState | undefined) ?? null;
+
+  if (!createdProduct) {
+    return {
+      ok: false,
+      message: "Ürün oluşturulurken beklenmeyen bir hata oluştu.",
+    };
+  }
+
+  await writeProductAudit({
+    entityId: createdProduct.id,
+    action: "create",
+    newState: createdProduct,
   });
 
   revalidatePath("/admin/products");
@@ -240,11 +328,7 @@ export async function updateProduct(
   const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
   const normalizedSku = normalizeSku(data.sku.trim());
 
-  const [current] = await db()
-    .select({ id: products.id })
-    .from(products)
-    .where(eq(products.id, data.id))
-    .limit(1);
+  const current = await getProductAuditStateById(data.id);
 
   if (!current) {
     return {
@@ -304,7 +388,7 @@ export async function updateProduct(
     };
   }
 
-  await db()
+  const updatedRows = await db()
     .update(products)
     .set({
       name: data.name.trim(),
@@ -322,7 +406,24 @@ export async function updateProduct(
       status: data.status,
       updatedAt: new Date(),
     })
-    .where(eq(products.id, data.id));
+    .where(eq(products.id, data.id))
+    .returning(productAuditSelection);
+
+  const updatedProduct = (updatedRows[0] as ProductAuditState | undefined) ?? null;
+
+  if (!updatedProduct) {
+    return {
+      ok: false,
+      message: "Ürün güncellenirken beklenmeyen bir hata oluştu.",
+    };
+  }
+
+  await writeProductAudit({
+    entityId: updatedProduct.id,
+    action: "update",
+    previousState: current,
+    newState: updatedProduct,
+  });
 
   revalidatePath("/admin/products");
 
@@ -333,14 +434,7 @@ export async function updateProduct(
 }
 
 export async function archiveProduct(productId: string): Promise<ProductActionState> {
-  const [current] = await db()
-    .select({
-      id: products.id,
-      status: products.status,
-    })
-    .from(products)
-    .where(eq(products.id, productId))
-    .limit(1);
+  const current = await getProductAuditStateById(productId);
 
   if (!current) {
     return {
@@ -356,13 +450,30 @@ export async function archiveProduct(productId: string): Promise<ProductActionSt
     };
   }
 
-  await db()
+  const archivedRows = await db()
     .update(products)
     .set({
       status: "archived",
       updatedAt: new Date(),
     })
-    .where(eq(products.id, productId));
+    .where(eq(products.id, productId))
+    .returning(productAuditSelection);
+
+  const archivedProduct = (archivedRows[0] as ProductAuditState | undefined) ?? null;
+
+  if (!archivedProduct) {
+    return {
+      ok: false,
+      message: "Ürün arşivlenirken beklenmeyen bir hata oluştu.",
+    };
+  }
+
+  await writeProductAudit({
+    entityId: archivedProduct.id,
+    action: "update",
+    previousState: current,
+    newState: archivedProduct,
+  });
 
   revalidatePath("/admin/products");
 

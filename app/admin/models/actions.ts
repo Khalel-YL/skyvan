@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { models } from "@/db/schema";
-import { writeAuditLog } from "@/app/lib/admin/audit";
+import { writeAdminAudit } from "@/app/lib/admin/audit";
 
 import { normalizeModelSlug, splitModelSlugCounter } from "./slug";
 import {
@@ -240,29 +240,14 @@ async function writeModelAudit(input: {
   previousState?: unknown;
   newState?: unknown;
 }) {
-  try {
-    const result = await writeAuditLog({
-      entityType: "model",
-      entityId: input.entityId,
-      action: input.action,
-      previousState: input.previousState,
-      newState: input.newState,
-    });
-
-    if (!result.ok || result.skipped) {
-      console.warn("model audit skipped:", {
-        entityId: input.entityId,
-        action: input.action,
-        reason: result.reason,
-      });
-    }
-  } catch (error) {
-    console.warn("model audit warning:", {
-      entityId: input.entityId,
-      action: input.action,
-      error,
-    });
-  }
+  await writeAdminAudit({
+    entityType: "model",
+    logLabel: "model",
+    entityId: input.entityId,
+    action: input.action,
+    previousState: input.previousState,
+    newState: input.newState,
+  });
 }
 
 export async function saveModel(
