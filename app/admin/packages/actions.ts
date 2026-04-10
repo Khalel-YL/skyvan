@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
-import { buildVersions, packages } from "@/db/schema";
+import { getDbOrThrow } from "@/db/db";
+import { buildVersions, models, packages } from "@/db/schema";
+import { writeAuditLog } from "@/app/lib/admin/audit";
 
 import { normalizePackageSlug, splitPackageSlugCounter } from "./package-slug";
 import {
@@ -15,13 +16,15 @@ import {
   type PackageFormState,
 } from "./types";
 
-function getDatabase() {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
-
-  return db;
-}
+type PackageRecord = {
+  id: string;
+  modelId: string | null;
+  name: string;
+  slug: string;
+  tierLevel: number | null;
+  isDefault: boolean;
+  createdAt: Date | string | null;
+};
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -76,9 +79,9 @@ function buildPackagesRedirectUrl(
 }
 
 async function findPackageBySlug(slug: string) {
-  const database = getDatabase();
+  const db = getDbOrThrow();
 
-  const rows = await database
+  const rows = await db
     .select({
       id: packages.id,
       slug: packages.slug,
@@ -88,6 +91,38 @@ async function findPackageBySlug(slug: string) {
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+async function findPackageById(id: string): Promise<PackageRecord | null> {
+  const db = getDbOrThrow();
+
+  const rows = await db
+    .select({
+      id: packages.id,
+      modelId: packages.modelId,
+      name: packages.name,
+      slug: packages.slug,
+      tierLevel: packages.tierLevel,
+      isDefault: packages.isDefault,
+      createdAt: packages.createdAt,
+    })
+    .from(packages)
+    .where(eq(packages.id, id))
+    .limit(1);
+
+  return (rows[0] as PackageRecord | undefined) ?? null;
+}
+
+async function modelExists(id: string) {
+  const db = getDbOrThrow();
+
+  const rows = await db
+    .select({ id: models.id })
+    .from(models)
+    .where(eq(models.id, id))
+    .limit(1);
+
+  return rows.length > 0;
 }
 
 async function getNextAvailableSlug(requestedSlug: string) {
@@ -132,12 +167,43 @@ function requireTierLevel(value: string) {
   return parsed;
 }
 
+async function writePackageAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: "package",
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("package audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("package audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+  }
+}
+
 export async function savePackage(
   _previousState: PackageFormState,
   formData: FormData,
 ): Promise<PackageFormState> {
   try {
-    const database = getDatabase();
+    const db = getDbOrThrow();
 
     const id = getTrimmed(formData, "id");
     const modelId = getTrimmed(formData, "modelId") || null;
@@ -146,6 +212,11 @@ export async function savePackage(
     const slug = normalizePackageSlug(requestedSlug);
     const tierLevel = requireTierLevel(getTrimmed(formData, "tierLevel"));
     const isDefault = parseBoolean(getTrimmed(formData, "isDefault"));
+    const existingPackage = id ? await findPackageById(id) : null;
+
+    if (id && !existingPackage) {
+      return createGenericError("Güncellenecek paket kaydı bulunamadı.");
+    }
 
     if (!name) {
       return createFieldError("name", "Paket adı zorunludur.");
@@ -171,10 +242,14 @@ export async function savePackage(
       return createFieldError("slug", "Paket kodu en fazla 120 karakter olabilir.");
     }
 
+    if (modelId && !(await modelExists(modelId))) {
+      return createFieldError("modelId", "Seçilen model bulunamadı.");
+    }
+
     const existing = await findPackageBySlug(slug);
     let savedSlug = slug;
 
-    if (id) {
+    if (id && existingPackage) {
       if (existing && existing.id !== id) {
         const suggestedSlug = await getNextAvailableSlug(slug);
 
@@ -185,7 +260,7 @@ export async function savePackage(
         );
       }
 
-      await database
+      const updatedRows = await db
         .update(packages)
         .set({
           modelId,
@@ -194,22 +269,67 @@ export async function savePackage(
           tierLevel,
           isDefault,
         })
-        .where(eq(packages.id, id));
+        .where(eq(packages.id, id))
+        .returning({
+          id: packages.id,
+          modelId: packages.modelId,
+          name: packages.name,
+          slug: packages.slug,
+          tierLevel: packages.tierLevel,
+          isDefault: packages.isDefault,
+          createdAt: packages.createdAt,
+        });
 
-      savedSlug = slug;
+      const updatedPackage = (updatedRows[0] as PackageRecord | undefined) ?? null;
+
+      if (!updatedPackage) {
+        return createGenericError("Paket kaydı işlem sırasında güncellenemedi.");
+      }
+
+      await writePackageAudit({
+        entityId: updatedPackage.id,
+        action: "update",
+        previousState: existingPackage,
+        newState: updatedPackage,
+      });
+
+      savedSlug = updatedPackage.slug;
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
 
-      await database.insert(packages).values({
-        id: uuidv4(),
-        modelId,
-        name,
-        slug: resolvedSlug,
-        tierLevel,
-        isDefault,
+      const insertedRows = await db
+        .insert(packages)
+        .values({
+          id: uuidv4(),
+          modelId,
+          name,
+          slug: resolvedSlug,
+          tierLevel,
+          isDefault,
+        })
+        .returning({
+          id: packages.id,
+          modelId: packages.modelId,
+          name: packages.name,
+          slug: packages.slug,
+          tierLevel: packages.tierLevel,
+          isDefault: packages.isDefault,
+          createdAt: packages.createdAt,
+        });
+
+      const insertedPackage = (insertedRows[0] as PackageRecord | undefined) ?? null;
+
+      if (!insertedPackage) {
+        return createGenericError("Paket kaydı oluşturulamadı.");
+      }
+
+      await writePackageAudit({
+        entityId: insertedPackage.id,
+        action: "create",
+        newState: insertedPackage,
       });
 
-      savedSlug = resolvedSlug;
+      savedSlug = insertedPackage.slug;
     }
 
     revalidatePath("/admin");
@@ -238,7 +358,7 @@ export async function savePackage(
 }
 
 export async function deletePackage(formData: FormData) {
-  const database = getDatabase();
+  const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
   if (!id) {
@@ -250,8 +370,19 @@ export async function deletePackage(formData: FormData) {
     );
   }
 
+  const existingPackage = await findPackageById(id);
+
+  if (!existingPackage) {
+    redirect(
+      buildPackagesRedirectUrl({
+        packageAction: "error",
+        packageCode: "invalid-id",
+      }),
+    );
+  }
+
   try {
-    const usage = await database
+    const usage = await db
       .select({
         packageId: buildVersions.packageId,
       })
@@ -268,7 +399,27 @@ export async function deletePackage(formData: FormData) {
       );
     }
 
-    await database.delete(packages).where(eq(packages.id, id));
+    const deletedRows = await db
+      .delete(packages)
+      .where(eq(packages.id, id))
+      .returning({
+        id: packages.id,
+      });
+
+    if (deletedRows.length === 0) {
+      redirect(
+        buildPackagesRedirectUrl({
+          packageAction: "error",
+          packageCode: "invalid-id",
+        }),
+      );
+    }
+
+    await writePackageAudit({
+      entityId: existingPackage.id,
+      action: "delete",
+      previousState: existingPackage,
+    });
 
     revalidatePath("/admin");
     revalidatePath("/admin/packages");

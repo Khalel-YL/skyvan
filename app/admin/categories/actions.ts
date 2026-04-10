@@ -5,8 +5,20 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { categories } from "@/db/schema";
+import { writeAuditLog } from "@/app/lib/admin/audit";
+
+type CategoryRecord = {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  status: "draft" | "active" | "archived";
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -50,10 +62,60 @@ const seedCategories = [
   { name: "Sleeping", slug: "sleeping", icon: "bed", sortOrder: 80 },
 ];
 
-export async function saveCategory(formData: FormData) {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
+async function getCategoryById(id: string): Promise<CategoryRecord | null> {
+  const db = getDbOrThrow();
+
+  const rows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      slug: categories.slug,
+      icon: categories.icon,
+      status: categories.status,
+      sortOrder: categories.sortOrder,
+      createdAt: categories.createdAt,
+      updatedAt: categories.updatedAt,
+    })
+    .from(categories)
+    .where(eq(categories.id, id))
+    .limit(1);
+
+  return (rows[0] as CategoryRecord | undefined) ?? null;
+}
+
+async function writeCategoryAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: "category",
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("category audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("category audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
   }
+}
+
+export async function saveCategory(formData: FormData) {
+  const db = getDbOrThrow();
 
   const id = getTrimmed(formData, "id");
   const name = getTrimmed(formData, "name");
@@ -61,6 +123,7 @@ export async function saveCategory(formData: FormData) {
   const icon = getTrimmed(formData, "icon") || "folder";
   const status = normalizeStatus(getTrimmed(formData, "status"));
   const sortOrder = parseInteger(getTrimmed(formData, "sortOrder"), 0);
+  const existingCategory = id ? await getCategoryById(id) : null;
 
   if (!name) {
     throw new Error("Kategori adı zorunludur.");
@@ -74,6 +137,10 @@ export async function saveCategory(formData: FormData) {
     throw new Error("Kategori slug değeri en az 2 karakter olmalıdır.");
   }
 
+  if (id && !existingCategory) {
+    throw new Error("Güncellenecek kategori kaydı bulunamadı.");
+  }
+
   const existing = await db
     .select({ id: categories.id })
     .from(categories)
@@ -84,8 +151,8 @@ export async function saveCategory(formData: FormData) {
     throw new Error("Bu kategori slug değeri zaten kullanılıyor.");
   }
 
-  if (id) {
-    await db
+  if (id && existingCategory) {
+    const updatedRows = await db
       .update(categories)
       .set({
         name,
@@ -95,17 +162,64 @@ export async function saveCategory(formData: FormData) {
         sortOrder,
         updatedAt: new Date(),
       })
-      .where(eq(categories.id, id));
+      .where(eq(categories.id, id))
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        icon: categories.icon,
+        status: categories.status,
+        sortOrder: categories.sortOrder,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    const updatedCategory = (updatedRows[0] as CategoryRecord | undefined) ?? null;
+
+    if (!updatedCategory) {
+      throw new Error("Kategori kaydı işlem sırasında güncellenemedi.");
+    }
+
+    await writeCategoryAudit({
+      entityId: updatedCategory.id,
+      action: "update",
+      previousState: existingCategory,
+      newState: updatedCategory,
+    });
   } else {
-    await db.insert(categories).values({
-      id: uuidv4(),
-      name,
-      slug,
-      icon,
-      status,
-      sortOrder,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    const insertedRows = await db
+      .insert(categories)
+      .values({
+        id: uuidv4(),
+        name,
+        slug,
+        icon,
+        status,
+        sortOrder,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        icon: categories.icon,
+        status: categories.status,
+        sortOrder: categories.sortOrder,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    const insertedCategory = (insertedRows[0] as CategoryRecord | undefined) ?? null;
+
+    if (!insertedCategory) {
+      throw new Error("Kategori kaydı oluşturulamadı.");
+    }
+
+    await writeCategoryAudit({
+      entityId: insertedCategory.id,
+      action: "create",
+      newState: insertedCategory,
     });
   }
 
@@ -114,38 +228,82 @@ export async function saveCategory(formData: FormData) {
 }
 
 export async function deleteCategory(id: string) {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
+  const db = getDbOrThrow();
 
   if (!id) {
     throw new Error("Geçersiz kategori kimliği.");
   }
 
+  const existingCategory = await getCategoryById(id);
+
+  if (!existingCategory) {
+    revalidateCategories();
+    redirect("/admin/categories?deleted=1");
+  }
+
   try {
-    await db.delete(categories).where(eq(categories.id, id));
+    const deletedRows = await db
+      .delete(categories)
+      .where(eq(categories.id, id))
+      .returning({
+        id: categories.id,
+      });
+
+    if (deletedRows.length === 0) {
+      revalidateCategories();
+      redirect("/admin/categories?deleted=1");
+    }
+
+    await writeCategoryAudit({
+      entityId: existingCategory.id,
+      action: "delete",
+      previousState: existingCategory,
+    });
+
     revalidateCategories();
     redirect("/admin/categories?deleted=1");
   } catch (error) {
     console.error("Category hard delete failed, archive fallback applied:", error);
 
-    await db
+    const archivedRows = await db
       .update(categories)
       .set({
         status: "archived",
         updatedAt: new Date(),
       })
-      .where(eq(categories.id, id));
+      .where(eq(categories.id, id))
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        icon: categories.icon,
+        status: categories.status,
+        sortOrder: categories.sortOrder,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
+
+    const archivedCategory = (archivedRows[0] as CategoryRecord | undefined) ?? null;
+
+    if (archivedCategory) {
+      await writeCategoryAudit({
+        entityId: archivedCategory.id,
+        action: "update",
+        previousState: existingCategory,
+        newState: archivedCategory,
+      });
+
+      revalidateCategories();
+      redirect("/admin/categories?archived=1");
+    }
 
     revalidateCategories();
-    redirect("/admin/categories?archived=1");
+    redirect("/admin/categories?deleted=1");
   }
 }
 
 export async function createCategorySeeds() {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
+  const db = getDbOrThrow();
 
   const existing = await db
     .select({

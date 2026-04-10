@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { models } from "@/db/schema";
+import { writeAuditLog } from "@/app/lib/admin/audit";
 
 import { normalizeModelSlug, splitModelSlugCounter } from "./slug";
 import {
@@ -15,13 +16,17 @@ import {
   type ModelFormState,
 } from "./types";
 
-function getDatabase() {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
-
-  return db;
-}
+type ModelRecord = {
+  id: string;
+  slug: string;
+  baseWeightKg: string | number;
+  maxPayloadKg: string | number;
+  wheelbaseMm: number;
+  roofLengthMm: number | null;
+  roofWidthMm: number | null;
+  status: "draft" | "active" | "archived";
+  updatedAt: Date | string | null;
+};
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -143,9 +148,9 @@ function optionalInteger(
 }
 
 async function findModelBySlug(slug: string) {
-  const database = getDatabase();
+  const db = getDbOrThrow();
 
-  const rows = await database
+  const rows = await db
     .select({
       id: models.id,
       slug: models.slug,
@@ -155,6 +160,28 @@ async function findModelBySlug(slug: string) {
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+async function findModelById(id: string): Promise<ModelRecord | null> {
+  const db = getDbOrThrow();
+
+  const rows = await db
+    .select({
+      id: models.id,
+      slug: models.slug,
+      baseWeightKg: models.baseWeightKg,
+      maxPayloadKg: models.maxPayloadKg,
+      wheelbaseMm: models.wheelbaseMm,
+      roofLengthMm: models.roofLengthMm,
+      roofWidthMm: models.roofWidthMm,
+      status: models.status,
+      updatedAt: models.updatedAt,
+    })
+    .from(models)
+    .where(eq(models.id, id))
+    .limit(1);
+
+  return (rows[0] as ModelRecord | undefined) ?? null;
 }
 
 async function getNextAvailableSlug(requestedSlug: string) {
@@ -198,17 +225,53 @@ function buildModelsRedirectUrl(params: Record<string, string | number | undefin
   return query ? `/admin/models?${query}` : "/admin/models";
 }
 
+async function writeModelAudit(input: {
+  entityId: string;
+  action: "create" | "update" | "delete";
+  previousState?: unknown;
+  newState?: unknown;
+}) {
+  try {
+    const result = await writeAuditLog({
+      entityType: "model",
+      entityId: input.entityId,
+      action: input.action,
+      previousState: input.previousState,
+      newState: input.newState,
+    });
+
+    if (!result.ok || result.skipped) {
+      console.warn("model audit skipped:", {
+        entityId: input.entityId,
+        action: input.action,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.warn("model audit warning:", {
+      entityId: input.entityId,
+      action: input.action,
+      error,
+    });
+  }
+}
+
 export async function saveModel(
   _previousState: ModelFormState,
   formData: FormData,
 ): Promise<ModelFormState> {
   try {
-    const database = getDatabase();
+    const db = getDbOrThrow();
 
     const id = getTrimmed(formData, "id");
     const requestedSlug = getTrimmed(formData, "slug");
     const slug = normalizeModelSlug(requestedSlug);
     const status = normalizeStatus(getTrimmed(formData, "status"));
+    const existingModel = id ? await findModelById(id) : null;
+
+    if (id && !existingModel) {
+      return createGenericError("Güncellenecek model kaydı bulunamadı.");
+    }
 
     if (!slug) {
       return createFieldError("slug", "Model kodu zorunludur.");
@@ -271,10 +334,9 @@ export async function saveModel(
     }
 
     const existing = await findModelBySlug(slug);
-
     let savedSlug = slug;
 
-    if (id) {
+    if (id && existingModel) {
       if (existing && existing.id !== id) {
         const suggestedSlug = await getNextAvailableSlug(slug);
 
@@ -285,7 +347,7 @@ export async function saveModel(
         );
       }
 
-      await database
+      const updatedRows = await db
         .update(models)
         .set({
           slug,
@@ -297,24 +359,73 @@ export async function saveModel(
           status,
           updatedAt: new Date(),
         })
-        .where(eq(models.id, id));
+        .where(eq(models.id, id))
+        .returning({
+          id: models.id,
+          slug: models.slug,
+          baseWeightKg: models.baseWeightKg,
+          maxPayloadKg: models.maxPayloadKg,
+          wheelbaseMm: models.wheelbaseMm,
+          roofLengthMm: models.roofLengthMm,
+          roofWidthMm: models.roofWidthMm,
+          status: models.status,
+          updatedAt: models.updatedAt,
+        });
 
-      savedSlug = slug;
+      const updatedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
+
+      if (!updatedModel) {
+        return createGenericError("Model kaydı işlem sırasında güncellenemedi.");
+      }
+
+      await writeModelAudit({
+        entityId: updatedModel.id,
+        action: "update",
+        previousState: existingModel,
+        newState: updatedModel,
+      });
+
+      savedSlug = updatedModel.slug;
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
 
-      await database.insert(models).values({
-        id: uuidv4(),
-        slug: resolvedSlug,
-        baseWeightKg: baseWeightKg.toFixed(2),
-        maxPayloadKg: maxPayloadKg.toFixed(2),
-        wheelbaseMm,
-        roofLengthMm,
-        roofWidthMm,
-        status,
+      const insertedRows = await db
+        .insert(models)
+        .values({
+          id: uuidv4(),
+          slug: resolvedSlug,
+          baseWeightKg: baseWeightKg.toFixed(2),
+          maxPayloadKg: maxPayloadKg.toFixed(2),
+          wheelbaseMm,
+          roofLengthMm,
+          roofWidthMm,
+          status,
+        })
+        .returning({
+          id: models.id,
+          slug: models.slug,
+          baseWeightKg: models.baseWeightKg,
+          maxPayloadKg: models.maxPayloadKg,
+          wheelbaseMm: models.wheelbaseMm,
+          roofLengthMm: models.roofLengthMm,
+          roofWidthMm: models.roofWidthMm,
+          status: models.status,
+          updatedAt: models.updatedAt,
+        });
+
+      const insertedModel = (insertedRows[0] as ModelRecord | undefined) ?? null;
+
+      if (!insertedModel) {
+        return createGenericError("Model kaydı oluşturulamadı.");
+      }
+
+      await writeModelAudit({
+        entityId: insertedModel.id,
+        action: "create",
+        newState: insertedModel,
       });
 
-      savedSlug = resolvedSlug;
+      savedSlug = insertedModel.slug;
     }
 
     revalidatePath("/admin");
@@ -341,7 +452,7 @@ export async function saveModel(
 }
 
 export async function archiveModel(formData: FormData) {
-  const database = getDatabase();
+  const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
   if (!id) {
@@ -353,14 +464,54 @@ export async function archiveModel(formData: FormData) {
     );
   }
 
+  const existingModel = await findModelById(id);
+
+  if (!existingModel) {
+    redirect(
+      buildModelsRedirectUrl({
+        modelAction: "error",
+        modelCode: "invalid-id",
+      }),
+    );
+  }
+
   try {
-    await database
+    const updatedRows = await db
       .update(models)
       .set({
         status: "archived",
         updatedAt: new Date(),
       })
-      .where(eq(models.id, id));
+      .where(eq(models.id, id))
+      .returning({
+        id: models.id,
+        slug: models.slug,
+        baseWeightKg: models.baseWeightKg,
+        maxPayloadKg: models.maxPayloadKg,
+        wheelbaseMm: models.wheelbaseMm,
+        roofLengthMm: models.roofLengthMm,
+        roofWidthMm: models.roofWidthMm,
+        status: models.status,
+        updatedAt: models.updatedAt,
+      });
+
+    const archivedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
+
+    if (!archivedModel) {
+      redirect(
+        buildModelsRedirectUrl({
+          modelAction: "error",
+          modelCode: "invalid-id",
+        }),
+      );
+    }
+
+    await writeModelAudit({
+      entityId: archivedModel.id,
+      action: "update",
+      previousState: existingModel,
+      newState: archivedModel,
+    });
 
     revalidatePath("/admin");
     revalidatePath("/admin/models");
@@ -383,7 +534,7 @@ export async function archiveModel(formData: FormData) {
 }
 
 export async function restoreModel(formData: FormData) {
-  const database = getDatabase();
+  const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
   if (!id) {
@@ -395,14 +546,54 @@ export async function restoreModel(formData: FormData) {
     );
   }
 
+  const existingModel = await findModelById(id);
+
+  if (!existingModel) {
+    redirect(
+      buildModelsRedirectUrl({
+        modelAction: "error",
+        modelCode: "invalid-id",
+      }),
+    );
+  }
+
   try {
-    await database
+    const updatedRows = await db
       .update(models)
       .set({
         status: "active",
         updatedAt: new Date(),
       })
-      .where(eq(models.id, id));
+      .where(eq(models.id, id))
+      .returning({
+        id: models.id,
+        slug: models.slug,
+        baseWeightKg: models.baseWeightKg,
+        maxPayloadKg: models.maxPayloadKg,
+        wheelbaseMm: models.wheelbaseMm,
+        roofLengthMm: models.roofLengthMm,
+        roofWidthMm: models.roofWidthMm,
+        status: models.status,
+        updatedAt: models.updatedAt,
+      });
+
+    const restoredModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
+
+    if (!restoredModel) {
+      redirect(
+        buildModelsRedirectUrl({
+          modelAction: "error",
+          modelCode: "invalid-id",
+        }),
+      );
+    }
+
+    await writeModelAudit({
+      entityId: restoredModel.id,
+      action: "update",
+      previousState: existingModel,
+      newState: restoredModel,
+    });
 
     revalidatePath("/admin");
     revalidatePath("/admin/models");

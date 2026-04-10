@@ -5,21 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { models } from "@/db/schema";
 
 import {
   getOfficialVehicleSeedsForBatch,
   type OfficialVehicleImportBatchKey,
 } from "./official-vehicle-catalog";
-
-function getDatabase() {
-  if (!db) {
-    throw new Error("DATABASE_URL tanımlı değil.");
-  }
-
-  return db;
-}
 
 function parseBatchKey(formData: FormData): OfficialVehicleImportBatchKey | null {
   const raw = String(formData.get("batchKey") ?? "").trim();
@@ -52,6 +44,7 @@ function buildModelsRedirectUrl(params: Record<string, string | number | undefin
 }
 
 export async function importOfficialVehicleSeeds(formData: FormData) {
+  const db = getDbOrThrow();
   const batchKey = parseBatchKey(formData);
 
   if (!batchKey) {
@@ -67,7 +60,6 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
   let skippedCount = 0;
 
   try {
-    const database = getDatabase();
     const seeds = getOfficialVehicleSeedsForBatch(batchKey);
 
     if (seeds.length === 0) {
@@ -82,7 +74,7 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
 
     const slugs = seeds.map((item) => item.slug);
 
-    const existingRows = await database
+    const existingRows = await db
       .select({
         slug: models.slug,
       })
@@ -95,7 +87,7 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
     const skipped = seeds.filter((item) => existingSlugSet.has(item.slug));
 
     if (toInsert.length > 0) {
-      await database.insert(models).values(
+      await db.insert(models).values(
         toInsert.map((item) => ({
           id: uuidv4(),
           slug: item.slug,
