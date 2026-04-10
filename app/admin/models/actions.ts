@@ -75,6 +75,15 @@ function createGenericError(message: string): ModelFormState {
   };
 }
 
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
 function requireDecimal(
   value: string,
   label: string,
@@ -437,6 +446,10 @@ export async function saveModel(
 
     redirect(query);
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     if (
       typeof error === "object" &&
       error !== null &&
@@ -516,6 +529,10 @@ export async function archiveModel(formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/admin/models");
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error("archiveModel error:", error);
 
     redirect(
@@ -598,6 +615,10 @@ export async function restoreModel(formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/admin/models");
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error("restoreModel error:", error);
 
     redirect(

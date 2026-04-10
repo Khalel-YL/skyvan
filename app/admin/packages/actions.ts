@@ -63,6 +63,15 @@ function createGenericError(message: string): PackageFormState {
   };
 }
 
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
 function buildPackagesRedirectUrl(
   params: Record<string, string | number | undefined>,
 ) {
@@ -343,6 +352,10 @@ export async function savePackage(
       ),
     );
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     if (
       typeof error === "object" &&
       error !== null &&
@@ -424,6 +437,10 @@ export async function deletePackage(formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/admin/packages");
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error("deletePackage error:", error);
 
     redirect(
