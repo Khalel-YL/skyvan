@@ -1,138 +1,343 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Image as ImageIcon, Sparkles, Globe, Bot, Clock, PenTool } from "lucide-react";
-import { saveBlogPost } from "./actions";
+import { useMemo, useState } from "react";
+import {
+  FileText,
+  Globe,
+  Image as ImageIcon,
+  PenTool,
+  ShieldAlert,
+  WandSparkles,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 
-export default function AddBlogDrawer({ initialData }: { initialData?: any }) {
-  const isEdit = !!initialData;
-  const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  
-  const parsedContent = initialData?.contentJson || {};
+import { saveBlogPost } from "./actions";
 
+type BlogContentJson = {
+  slug?: string;
+  coverImage?: string;
+  content?: string;
+  isPublished?: boolean;
+};
+
+type BlogEditorItem = {
+  id: string;
+  title: string;
+  slug: string | null;
+  contentJson: unknown;
+};
+
+function normalizeSlug(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function parseContentJson(value: unknown): BlogContentJson {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const raw = value as Record<string, unknown>;
+
+  return {
+    slug: typeof raw.slug === "string" ? raw.slug : "",
+    coverImage: typeof raw.coverImage === "string" ? raw.coverImage : "",
+    content: typeof raw.content === "string" ? raw.content : "",
+    isPublished: raw.isPublished === true,
+  };
+}
+
+function createDraftTemplate(title: string) {
+  const safeTitle = title.trim() || "Yeni Skyvan İçeriği";
+
+  return [
+    `# ${safeTitle}`,
+    "",
+    "## Giriş",
+    "Bu bölümde konunun neden önemli olduğunu ve kullanıcıya ne fayda sağladığını kısa ve net anlat.",
+    "",
+    "## Teknik Çerçeve",
+    "- Kullanılan sistem veya ürün grubu",
+    "- Dikkat edilmesi gereken teknik sınırlar",
+    "- Uyum veya entegrasyon notları",
+    "",
+    "## Operasyonel Notlar",
+    "Gerçek kullanım senaryosu, bakım konusu veya karar verirken önemli olan noktaları ekle.",
+    "",
+    "## Sonuç",
+    "Okuyucuyu net bir sonuç ve sonraki adımla bırak.",
+  ].join("\n");
+}
+
+export default function AddBlogDrawer({
+  initialData,
+  errorMessage,
+  disabled = false,
+}: {
+  initialData?: BlogEditorItem | null;
+  errorMessage?: string | null;
+  disabled?: boolean;
+}) {
+  const isEdit = Boolean(initialData);
+  const parsedContent = useMemo(
+    () => parseContentJson(initialData?.contentJson),
+    [initialData],
+  );
+  const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(initialData?.title || "");
-  const [slug, setSlug] = useState(parsedContent.slug || "");
+  const [slug, setSlug] = useState(parsedContent.slug || initialData?.slug || "");
   const [coverImage, setCoverImage] = useState(parsedContent.coverImage || "");
   const [content, setContent] = useState(parsedContent.content || "");
-  const [isPublished, setIsPublished] = useState(isEdit ? parsedContent.isPublished : true);
-
-  useEffect(() => {
-    if (!isEdit && title) {
-      const generatedSlug = title.toLowerCase().replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-      setSlug(generatedSlug);
-    }
-  }, [title, isEdit]);
-
-  // AKILLI VE UZUN AI GHOSTWRITER
-  const generateAIArticle = () => {
-    if (!title) return alert("Başlık atmadan makale yazamam Başmimar!");
-    setAiLoading(true);
-    
-    setTimeout(() => {
-      const keyword = title.toLowerCase();
-      let dynamicTech = "premium karavan donanımları";
-      
-      // Sen Renogy yazarsan Renogy, Victron yazarsan Victron anlatan akıllı algoritma
-      if(keyword.includes("renogy")) dynamicTech = "Renogy akıllı enerji yönetimi ve lityum akü sistemleri";
-      else if(keyword.includes("victron")) dynamicTech = "Victron Energy invertör ve güneş paneli altyapısı";
-      else if(keyword.includes("kış") || keyword.includes("soğuk")) dynamicTech = "Aqua Hot ısıtma sistemleri ve poliüretan yalıtım teknolojisi";
-
-      const aiText = `## ${title}\n\nKaravan dünyasına adım atmak, özgürlüğe açılan en büyük kapıdır. Bu yazımızda, karavan severlerin en çok merak ettiği **${title}** konusunu tüm mühendislik detaylarıyla ele alıyoruz.\n\n### 1. Neden Bu Konu Kritik?\nDoğada tam bağımsız kalabilmek ve ev konforundan ödün vermemek için doğru donanıma sahip olmak şart. SkyVan mühendisleri olarak, tam da bu noktada devreye giriyoruz. Amacımız sadece bir araç değil, yaşanabilir bir habitat üretmek.\n\n> "İyi bir karavan, medeniyetten uzaklaştığınızda bile medeniyetin konforunu size sunabilendir."\n\n### 2. Mühendislik ve Teknoloji Farkımız\nÜretim bandımızda kullandığımız **${dynamicTech}** sayesinde sistemleriniz asla yarı yolda kalmaz. Geleneksel karavanların aksine, sistemlerimiz birbiriyle entegre ve dijital ekranlardan takip edilebilir şekilde tasarlanır.\n\n* **Kesintisiz Kullanım:** Uzun süreli kamp deneyimleri için optimize edilmiştir.\n* **Güvenlik:** Tüm elektrik ve su tesisatımız yanmaz marin standartlarındadır.\n* **Akıllı Kontrol:** Ekran üzerinden her şeyi anlık görebilirsiniz.\n\n### Sonuç Olarak\nSkyVan kalitesiyle üretilmiş bir araçta sınırları sadece siz çizersiniz. Daha detaylı bilgi almak veya Atölye'deki tasarım süreçlerimizi incelemek için bizimle iletişime geçmekten çekinmeyin!`;
-      
-      setContent(aiText);
-      setAiLoading(false);
-    }, 2500);
-  };
+  const [isPublished, setIsPublished] = useState(
+    isEdit ? parsedContent.isPublished === true : false,
+  );
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  const readTime = Math.ceil(wordCount / 200) || 1;
+  const readTime = Math.max(Math.ceil(wordCount / 200), 1);
+  const readinessIssues = [
+    !title.trim() ? "Başlık eksik" : null,
+    !slug.trim() ? "Slug eksik" : null,
+    content.trim().length < 120 ? "İçerik kısa" : null,
+    !coverImage.trim() ? "Kapak görseli yok" : null,
+  ].filter(Boolean) as string[];
+
+  function insertTemplate() {
+    setContent((current) => current || createDraftTemplate(title));
+  }
+
+  function handleTitleChange(value: string) {
+    setTitle(value);
+
+    if (!isEdit) {
+      setSlug(normalizeSlug(value));
+    }
+  }
 
   return (
-    <div className="p-8 bg-[#0a0a0a] text-white h-full overflow-y-auto custom-scrollbar flex flex-col relative">
-      <div className="flex items-center justify-between mb-8 border-b border-zinc-800 pb-6">
-        <h2 className="text-xl font-light tracking-tight flex items-center gap-3">
-          <PenTool className="h-5 w-5 text-amber-500" /> {isEdit ? "Makaleyi Düzenle" : "Yeni İçerik Üret"}
-        </h2>
-        <Link href="/admin/blog" className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-          <X className="h-4 w-4 text-zinc-400" />
+    <div className="flex h-full flex-col bg-[#0a0a0a] text-white">
+      <div className="flex items-center justify-between border-b border-zinc-800 px-8 py-6">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+            Blog / Editör
+          </p>
+          <h2 className="mt-2 flex items-center gap-3 text-xl font-semibold">
+            <PenTool className="h-5 w-5 text-amber-500" />
+            {isEdit ? "Makaleyi Düzenle" : "Yeni İçerik"}
+          </h2>
+        </div>
+
+        <Link
+          href="/admin/blog"
+          className="rounded-full border border-zinc-800 p-2 text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+        >
+          <X className="h-4 w-4" />
         </Link>
       </div>
 
-      {/* onClick yerine onSubmit kullanmıyoruz, native form submiti Next.js'e bırakıyoruz ki redirect çalışsın */}
-      <form action={saveBlogPost} onSubmit={() => setLoading(true)} className="space-y-6 flex-1 flex flex-col">
-        {isEdit && <input type="hidden" name="id" value={initialData.id} />}
-
-        <input 
-          name="title" value={title} onChange={(e) => setTitle(e.target.value)} required 
-          placeholder="Etkileyici Bir Başlık At..." 
-          className="w-full bg-transparent border-none text-3xl font-black outline-none placeholder:text-zinc-700 focus:ring-0" 
-        />
-        
-        <div className="flex gap-4">
-          <input 
-            name="slug" value={slug} onChange={(e) => setSlug(e.target.value)} required 
-            placeholder="url-kismi" className="flex-1 bg-zinc-900/50 border border-zinc-800 p-3 rounded-xl text-xs outline-none focus:border-blue-500 font-mono text-zinc-500" 
-          />
-          <div className="flex items-center gap-2 bg-zinc-900/50 border border-zinc-800 px-4 rounded-xl text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            <Clock className="h-3 w-3 text-amber-500" /> {readTime} Dk Okuma
+      <div className="flex-1 overflow-y-auto px-8 py-6">
+        {errorMessage ? (
+          <div className="mb-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">
+            {errorMessage}
           </div>
-        </div>
+        ) : null}
 
-        {/* YENİ GÖRSEL ÖNİZLEME ALANI */}
-        <div className="space-y-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 ml-1">Kapak Görseli</span>
-          {coverImage && (
-            <div className="w-full h-32 rounded-xl overflow-hidden border border-zinc-800 relative group">
-              <img src={coverImage} alt="Kapak" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                <span className="text-xs font-bold">Medya CDN'den Bağlandı</span>
-              </div>
-            </div>
-          )}
-          <div className="relative">
-            <ImageIcon className="absolute left-4 top-4 h-4 w-4 text-zinc-500" />
-            <input 
-              name="coverImage" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} 
-              placeholder="Medya Kütüphanesinden Kopyaladığın Linki Yapıştır..." 
-              className="w-full bg-[#111] border border-zinc-800 p-4 pl-12 rounded-xl text-sm outline-none focus:border-amber-500 text-zinc-300" 
+        {disabled ? (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+            Blog kayıt işlemi için veritabanı bağlantısı gerekir. Admin şu an sadece
+            görünür modda çalışıyor.
+          </div>
+        ) : null}
+
+        <form
+          action={saveBlogPost}
+          onSubmit={() => setLoading(true)}
+          className="space-y-6"
+        >
+          {isEdit ? <input type="hidden" name="id" value={initialData?.id} /> : null}
+
+          <div className="space-y-3">
+            <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+              Başlık
+            </label>
+            <input
+              name="title"
+              value={title}
+              onChange={(event) => handleTitleChange(event.target.value)}
+              disabled={disabled || loading}
+              placeholder="Örn. Karavanda Kış Kullanımı İçin Teknik Hazırlık"
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-3xl font-black text-white outline-none transition placeholder:text-zinc-700 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
-        </div>
 
-        <div className="flex-1 flex flex-col border border-zinc-800 rounded-2xl overflow-hidden bg-[#050505]">
-          <div className="flex items-center justify-between bg-[#111] border-b border-zinc-800 p-3">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-2">İçerik Editörü (Markdown)</span>
-             <button 
-               type="button" onClick={generateAIArticle} disabled={aiLoading}
-               className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
-             >
-               {aiLoading ? <Bot className="h-3 w-3 animate-bounce" /> : <Sparkles className="h-3 w-3" />}
-               {aiLoading ? "AI Makale Yazıyor..." : "AI Hayalet Yazar"}
-             </button>
-          </div>
-          <textarea 
-            name="content" value={content} onChange={(e) => setContent(e.target.value)} required 
-            placeholder="Makaleni buraya yaz veya AI Hayalet Yazar'a devret..." 
-            className="w-full h-full min-h-[250px] bg-transparent p-6 text-sm outline-none resize-none leading-relaxed text-zinc-300 custom-scrollbar"
-          />
-        </div>
-
-        <div className="flex items-center justify-between pt-4 pb-12">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <div className={`p-2 rounded-lg transition-colors ${isPublished ? 'bg-blue-500/20 text-blue-500' : 'bg-zinc-800 text-zinc-500'}`}>
-              <Globe className="h-4 w-4" />
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_160px]">
+            <div className="space-y-3">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                Slug
+              </label>
+              <input
+                name="slug"
+                value={slug}
+                onChange={(event) => setSlug(event.target.value)}
+                disabled={disabled || loading}
+                placeholder="karavanda-kis-kullanimi"
+                className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-mono text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+              />
             </div>
-            <span className="text-xs font-bold text-zinc-300 group-hover:text-white transition-colors">Yayına Al</span>
-            <input type="checkbox" name="isPublished" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} className="hidden" />
-          </label>
 
-          <button type="submit" disabled={loading} className="px-8 py-4 bg-white text-black rounded-xl font-black tracking-[0.2em] text-[10px] uppercase transition-all hover:bg-zinc-200 shadow-xl">
-            {loading ? "Mühürleniyor..." : isEdit ? "Değişiklikleri Kaydet" : "Makaleyi Yayınla"}
-          </button>
-        </div>
-      </form>
+            <div className="space-y-3">
+              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                Okuma
+              </label>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+                {readTime} dk / {wordCount} kelime
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+              Kapak Görseli
+            </label>
+
+            {coverImage ? (
+              <div className="overflow-hidden rounded-2xl border border-zinc-800">
+                <img
+                  src={coverImage}
+                  alt="Kapak görseli"
+                  className="h-40 w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 text-zinc-600">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <ImageIcon className="h-7 w-7" />
+                  <span className="text-xs uppercase tracking-[0.2em]">
+                    Kapak görseli eklenmedi
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <input
+              name="coverImage"
+              value={coverImage}
+              onChange={(event) => setCoverImage(event.target.value)}
+              disabled={disabled || loading}
+              placeholder="https://... veya medya kütüphanesinden URL"
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  İçerik Editörü
+                </p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Bu fazda AI yazar kapalı. İçerik doğrudan editoryal olarak girilir.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={insertTemplate}
+                disabled={disabled || loading}
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300 transition hover:border-zinc-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <WandSparkles className="h-3.5 w-3.5 text-amber-500" />
+                Şablon Ekle
+              </button>
+            </div>
+
+            <textarea
+              name="content"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              disabled={disabled || loading}
+              placeholder="Makale gövdesini Markdown formatında yaz..."
+              className="min-h-[320px] w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-zinc-200 outline-none placeholder:text-zinc-600 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                  Yayın Hazırlığı
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {readinessIssues.length === 0 ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200">
+                      <FileText className="h-3.5 w-3.5" />
+                      İçerik yapısı dengeli görünüyor
+                    </span>
+                  ) : (
+                    readinessIssues.map((issue) => (
+                      <span
+                        key={issue}
+                        className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200"
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        {issue}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPublished((current) => !current)}
+                disabled={disabled || loading}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isPublished
+                    ? "border-sky-500/20 bg-sky-500/10 text-sky-200"
+                    : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:text-white"
+                }`}
+              >
+                <Globe className="h-4 w-4" />
+                {isPublished ? "Yayına alınacak" : "Taslak kalacak"}
+              </button>
+            </div>
+
+            <input type="hidden" name="isPublished" value={String(isPublished)} />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+            <Link
+              href="/admin/blog"
+              className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-white"
+            >
+              Vazgeç
+            </Link>
+
+            <button
+              type="submit"
+              disabled={disabled || loading}
+              className="rounded-full border border-zinc-200 bg-zinc-100 px-5 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Kaydediliyor..."
+                : isEdit
+                  ? "Makaleyi Güncelle"
+                  : "Makaleyi Kaydet"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,115 +1,186 @@
 "use client";
 
-import { useState } from "react";
-import { X, Image as ImageIcon, Sparkles, UploadCloud, ScanEye, Link as LinkIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  Image as ImageIcon,
+  Link as LinkIcon,
+  ShieldAlert,
+  Tag,
+  UploadCloud,
+} from "lucide-react";
+
 import { saveMedia } from "./actions";
 
-export default function AddMediaDrawer() {
+function normalizePreviewTags(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 12);
+}
+
+function toneClasses(tone: "success" | "error" | "info") {
+  if (tone === "success") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+  }
+
+  if (tone === "error") {
+    return "border-rose-500/20 bg-rose-500/10 text-rose-100";
+  }
+
+  return "border-zinc-800 bg-zinc-950 text-zinc-300";
+}
+
+export default function AddMediaDrawer({
+  disabled = false,
+  noticeMessage,
+  noticeTone = "info",
+}: {
+  disabled?: boolean;
+  noticeMessage?: string | null;
+  noticeTone?: "success" | "error" | "info";
+}) {
   const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [fileName, setFileName] = useState("");
   const [tags, setTags] = useState("");
-
-  // SÜRPRİZ 1: VİSİON AI SİMÜLASYONU
-  const simulateVisionAI = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!imageUrl) return alert("Önce bir görsel URL'si girin Başmimar!");
-    
-    setScanning(true);
-    
-    // İsme göre zekice etiket uydurma
-    setTimeout(() => {
-      let generatedTags = "Karavan, Lüks, SkyVan";
-      const lowerName = fileName.toLowerCase() || imageUrl.toLowerCase();
-      
-      if (lowerName.includes("mutfak")) generatedTags = "Mutfak, Tezgah, İç Mekan";
-      else if (lowerName.includes("dis") || lowerName.includes("kamp")) generatedTags = "Dış Çekim, Doğa, Kamp, 4x4";
-      else if (lowerName.includes("panel") || lowerName.includes("enerji")) generatedTags = "Güneş Paneli, Enerji, Victron";
-      
-      setTags(generatedTags);
-      setScanning(false);
-    }, 2000);
-  };
+  const previewTags = useMemo(() => normalizePreviewTags(tags), [tags]);
 
   return (
-    <div className="p-8 bg-[#0a0a0a] text-white border-l border-white/5 h-full overflow-y-auto custom-scrollbar min-w-[500px] relative">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-          Yeni Görsel Yükle <UploadCloud className="h-5 w-5 text-blue-500" />
+    <div className="h-screen min-w-[420px] overflow-y-auto border-l border-white/5 bg-[#0a0a0a] p-8 text-white">
+      <div className="mb-8">
+        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          Yeni Görsel Yükle
+          <UploadCloud className="h-5 w-5 text-blue-500" />
         </h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          Medya kayıtları gerçek URL, dosya adı ve etiketlerle yönetilir. Bu fazda
+          otomatik Vision/AI etiketleme yoktur.
+        </p>
       </div>
 
-      <form action={saveMedia} onSubmit={() => setLoading(true)} className="space-y-8">
-        
-        {/* Görsel Önizleme & URL */}
-        <div className="space-y-4">
-           {imageUrl ? (
-             <div className="w-full h-48 rounded-2xl border border-white/10 overflow-hidden relative group">
-                <img src={imageUrl} alt="Önizleme" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                   <ImageIcon className="h-8 w-8 text-white/50" />
-                </div>
-             </div>
-           ) : (
-             <div className="w-full h-48 rounded-2xl border-2 border-dashed border-zinc-800 bg-[#050505] flex flex-col items-center justify-center text-zinc-600 gap-3">
-               <ImageIcon className="h-8 w-8 opacity-50" />
-               <span className="text-xs font-bold uppercase tracking-widest">Görsel URL'si Bekleniyor</span>
-             </div>
-           )}
+      {noticeMessage ? (
+        <div className={`mb-6 rounded-2xl border p-4 text-sm ${toneClasses(noticeTone)}`}>
+          {noticeMessage}
+        </div>
+      ) : null}
 
-           <div className="relative">
-              <LinkIcon className="absolute left-4 top-4 h-4 w-4 text-blue-500" />
-              <input 
-                name="imageUrl" 
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                required 
-                placeholder="Resim Bağlantısı (https://...)" 
-                className="w-full bg-white/5 border border-white/10 p-4 pl-12 rounded-xl text-sm outline-none focus:border-blue-500 font-mono text-blue-400" 
+      {disabled ? (
+        <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+          Medya kaydı oluşturmak için veritabanı bağlantısı gerekir.
+        </div>
+      ) : null}
+
+      <form action={saveMedia} onSubmit={() => setLoading(true)} className="space-y-6">
+        <div className="space-y-3">
+          <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            Önizleme
+          </label>
+
+          {imageUrl ? (
+            <div className="overflow-hidden rounded-2xl border border-zinc-800">
+              <img
+                src={imageUrl}
+                alt="Medya önizleme"
+                className="h-52 w-full object-cover"
               />
-           </div>
+            </div>
+          ) : (
+            <div className="flex h-52 items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-[#050505] text-zinc-600">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <ImageIcon className="h-8 w-8 opacity-60" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em]">
+                  URL girildiğinde önizleme görünür
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="space-y-4">
-          <input 
-            name="fileName" 
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            required 
-            placeholder="Dosya Adı (Örn: Mutfak Tasarımı V1)" 
-            className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm outline-none focus:border-white/30 font-bold" 
-          />
-        </div>
+        <div className="space-y-3">
+          <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            Görsel URL
+          </label>
 
-        {/* VİSİON AI BÖLÜMÜ */}
-        <div className="space-y-4 p-5 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[10px] font-bold tracking-[0.2em] text-blue-400 uppercase flex items-center gap-2">
-              <Sparkles className="h-3 w-3" /> Akıllı Etiketler
-            </h3>
-            <button 
-              type="button" 
-              onClick={simulateVisionAI}
-              disabled={scanning}
-              className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-blue-400 transition-all flex items-center gap-1.5"
-            >
-              {scanning ? <ScanEye className="h-3 w-3 animate-spin" /> : <ScanEye className="h-3 w-3" />}
-              {scanning ? "Fotoğraf Taranıyor..." : "AI Taraması Yap"}
-            </button>
+          <div className="relative">
+            <LinkIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              name="imageUrl"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              disabled={disabled || loading}
+              required
+              placeholder="https://..."
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 py-3 pl-12 pr-4 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+            />
           </div>
-          <input 
-            name="aiTags" 
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            required 
-            placeholder="Etiketler (Virgülle ayırın)" 
-            className="w-full bg-black/50 border border-white/5 p-4 rounded-xl text-sm outline-none focus:border-blue-500 font-mono text-zinc-300" 
+        </div>
+
+        <div className="space-y-3">
+          <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+            Dosya Adı
+          </label>
+          <input
+            name="fileName"
+            value={fileName}
+            onChange={(event) => setFileName(event.target.value)}
+            disabled={disabled || loading}
+            required
+            placeholder="Örn. Mutfak Modülü Ön Görünüm"
+            className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
-        <button type="submit" disabled={loading || scanning} className="w-full py-5 bg-white text-black rounded-xl font-bold tracking-[0.2em] text-[10px] uppercase transition-all hover:bg-zinc-200">
-          {loading ? "Arşive Ekleniyor..." : "Kütüphaneye Mühürle"}
+        <div className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-zinc-900 p-2 text-amber-400">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Etiketleme notu</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-400">
+                Etiketler en az bir adet olmalı ve editoryal olarak açık, tekrar
+                kullanılabilir ifadeler içermeli.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative mt-3">
+            <Tag className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              name="aiTags"
+              value={tags}
+              onChange={(event) => setTags(event.target.value)}
+              disabled={disabled || loading}
+              required
+              placeholder="Örn. mutfak, ic-mekan, premium"
+              className="w-full rounded-2xl border border-zinc-800 bg-black/40 py-3 pl-12 pr-4 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
+
+          {previewTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {previewTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <button
+          type="submit"
+          disabled={disabled || loading}
+          className="w-full rounded-2xl border border-zinc-200 bg-zinc-100 px-5 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Kaydediliyor..." : "Medya Kaydını Oluştur"}
         </button>
       </form>
     </div>

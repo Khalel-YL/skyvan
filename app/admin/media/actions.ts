@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
@@ -34,6 +35,28 @@ function normalizeTags(value: string) {
         .filter(Boolean),
     ),
   ).slice(0, 12);
+}
+
+function buildMediaRedirectUrl(params: Record<string, string | undefined>) {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  const query = searchParams.toString();
+  return query ? `/admin/media?${query}` : "/admin/media";
+}
+
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
 }
 
 async function getMediaById(id: string): Promise<MediaRecord | null> {
@@ -100,7 +123,12 @@ export async function saveMedia(formData: FormData) {
   });
 
   if (blockers.length > 0) {
-    throw new Error(blockers.join(" "));
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "error",
+        mediaMessage: blockers.join(" "),
+      }),
+    );
   }
 
   const contentJson: MediaContentJson = {
@@ -131,7 +159,12 @@ export async function saveMedia(formData: FormData) {
     const insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
 
     if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
-      throw new Error("Medya kaydı güvenli şekilde oluşturulamadı.");
+      redirect(
+        buildMediaRedirectUrl({
+          mediaAction: "error",
+          mediaMessage: "Medya kaydı güvenli şekilde oluşturulamadı.",
+        }),
+      );
     }
 
     await writeMediaAudit({
@@ -139,34 +172,62 @@ export async function saveMedia(formData: FormData) {
       action: "create",
       newState: insertedMedia,
     });
-
-    revalidatePath("/admin/media");
   } catch (error) {
-    console.error("Medya kayıt hatası:", error);
-    throw new Error("Görsel mühürlenemedi.");
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
+    console.error("saveMedia error:", error);
+
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "error",
+        mediaMessage: "Medya kaydı sırasında beklenmeyen bir hata oluştu.",
+      }),
+    );
   }
+
+  revalidatePath("/admin/media");
+  redirect(
+    buildMediaRedirectUrl({
+      mediaAction: "saved",
+    }),
+  );
 }
 
 export async function deleteMedia(id: string) {
   const db = getDbOrThrow();
-
   const normalizedId = String(id ?? "").trim();
 
   if (!normalizedId) {
-    throw new Error("Silinecek medya kimliği bulunamadı.");
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "error",
+        mediaMessage: "Silinecek medya kimliği bulunamadı.",
+      }),
+    );
+  }
+
+  const existingMedia = await getMediaById(normalizedId);
+
+  if (!existingMedia) {
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "deleted",
+      }),
+    );
+  }
+
+  if (existingMedia.entityType !== MEDIA_ENTITY_TYPE) {
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "error",
+        mediaMessage: "Silinecek kayıt media entity türünde değil.",
+      }),
+    );
   }
 
   try {
-    const existingMedia = await getMediaById(normalizedId);
-
-    if (!existingMedia) {
-      return;
-    }
-
-    if (existingMedia.entityType !== MEDIA_ENTITY_TYPE) {
-      throw new Error("Silinecek kayıt media entity türünde değil.");
-    }
-
     const deletedRows = await db
       .delete(localizedContent)
       .where(
@@ -180,7 +241,12 @@ export async function deleteMedia(id: string) {
       });
 
     if (deletedRows.length === 0) {
-      return;
+      redirect(
+        buildMediaRedirectUrl({
+          mediaAction: "error",
+          mediaMessage: "Medya kaydı işlem sırasında silinemedi.",
+        }),
+      );
     }
 
     await writeMediaAudit({
@@ -188,10 +254,25 @@ export async function deleteMedia(id: string) {
       action: "delete",
       previousState: existingMedia,
     });
-
-    revalidatePath("/admin/media");
   } catch (error) {
-    console.error("Medya silme hatası:", error);
-    throw new Error("Görsel silinemedi.");
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
+    console.error("deleteMedia error:", error);
+
+    redirect(
+      buildMediaRedirectUrl({
+        mediaAction: "error",
+        mediaMessage: "Medya kaydı silinirken beklenmeyen bir hata oluştu.",
+      }),
+    );
   }
+
+  revalidatePath("/admin/media");
+  redirect(
+    buildMediaRedirectUrl({
+      mediaAction: "deleted",
+    }),
+  );
 }
