@@ -5,7 +5,7 @@ import { db, getDatabaseHealth } from "@/db/db";
 import { users } from "@/db/schema";
 import { PageHeader } from "../_components/page-header";
 import { StatCard } from "../_components/stat-card";
-import { getAuditRuntimeSummary } from "@/app/lib/admin/audit";
+import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 import { updateUserRole } from "./actions";
 
 type UserSearchParams = Promise<{
@@ -146,7 +146,7 @@ export default async function UsersAdminPage({
 }) {
   const params = await searchParams;
   const databaseHealth = getDatabaseHealth();
-  const auditRuntime = getAuditRuntimeSummary();
+  const auditRuntime = await getAuditRuntimeValidation();
   const query = String(params.q ?? "").trim();
   const roleFilter = normalizeRoleFilter(String(params.role ?? "all"));
   const notice = getRoleNotice(params);
@@ -223,9 +223,18 @@ export default async function UsersAdminPage({
         </div>
       ) : null}
 
-      {!auditRuntime.enabled ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
-          Audit actor yapılandırılmadığı için rol değişimleri gerçekleşse bile audit yazımı safe-degrade modda no-op kalabilir.
+      {auditRuntime.closureState !== "ready" ? (
+        <div
+          className={`rounded-3xl border p-5 text-sm ${
+            auditRuntime.closureState === "blocked"
+              ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
+              : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+          }`}
+        >
+          {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
+          Rol değişimi uygulanabilir, ancak bu değişim governance closure açısından tam
+          güvenilir iz bırakmayabilir. Actor: {auditRuntime.actorPreview}
+          {auditRuntime.actorRole ? ` · rol ${auditRuntime.actorRole}` : ""}.
         </div>
       ) : null}
 
@@ -446,7 +455,7 @@ export default async function UsersAdminPage({
 
       <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
         <div className="flex items-start gap-3">
-          {auditRuntime.enabled ? (
+          {auditRuntime.closureState === "ready" ? (
             <ShieldCheck className="mt-0.5 h-5 w-5 text-zinc-300" />
           ) : (
             <ShieldAlert className="mt-0.5 h-5 w-5 text-zinc-300" />
@@ -456,7 +465,8 @@ export default async function UsersAdminPage({
             <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
               Bu ekran yalnızca mevcut `users` tablosundaki kayıtları ve `role`
               alanını yönetir. Yeni permission tablosu, yeni auth akışı veya kullanıcı
-              oluşturma akışı eklenmedi; minimum gerçek yönetim yüzeyi burada tamamlandı.
+              oluşturma akışı eklenmedi. Audit actor doğrulanmadıysa rol değişimi işlem
+              olarak başarılı görünse bile closure seviyesinde eksik kabul edilmelidir.
             </p>
           </div>
         </div>

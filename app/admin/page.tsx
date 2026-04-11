@@ -14,11 +14,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { count, eq } from "drizzle-orm";
+import { type AnyPgColumn, type AnyPgTable } from "drizzle-orm/pg-core";
 
 import { PageHeader } from "./_components/page-header";
 import { StatCard } from "./_components/stat-card";
 
-import { db } from "@/db/db";
+import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
+import { getGovernanceRuntime } from "@/app/lib/admin/governance";
+import { db, getDatabaseHealth } from "@/db/db";
 import {
   aiDocumentChunks,
   aiKnowledgeDocuments,
@@ -105,7 +108,7 @@ const quickLinks: QuickLink[] = [
   },
 ];
 
-async function countTable(table: any) {
+async function countTable(table: AnyPgTable) {
   if (!db) {
     return 0;
   }
@@ -114,7 +117,7 @@ async function countTable(table: any) {
   return Number(rows[0]?.value ?? 0);
 }
 
-async function countWhere(table: any, column: any, value: string) {
+async function countWhere(table: AnyPgTable, column: AnyPgColumn, value: string) {
   if (!db) {
     return 0;
   }
@@ -260,6 +263,18 @@ function getToneClasses(tone: RadarItem["tone"]) {
 
 export default async function AdminDashboardPage() {
   const metrics = await getDashboardMetrics();
+  const databaseHealth = getDatabaseHealth();
+  const auditRuntime = await getAuditRuntimeValidation();
+  const governanceRuntime = getGovernanceRuntime();
+  const openOverrideCount = [
+    governanceRuntime.allowDirectPublishWithoutSeo,
+    governanceRuntime.allowCriticalOfferStatusTransitions,
+    governanceRuntime.allowManualAiReadyStatus,
+  ].filter(Boolean).length;
+  const governanceReady =
+    databaseHealth.status === "online" &&
+    auditRuntime.closureState === "ready" &&
+    openOverrideCount === 0;
 
   const statCards = metrics
     ? [
@@ -491,6 +506,105 @@ export default async function AdminDashboardPage() {
           </Link>
         }
       />
+
+      <section
+        className={`rounded-3xl border p-5 ${
+          governanceReady
+            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+            : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+        }`}
+      >
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl bg-black/20 p-2">
+              {governanceReady ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold">
+                {governanceReady
+                  ? "Governance runtime doğrulandı"
+                  : "Governance runtime closure için henüz hazır değil"}
+              </p>
+              <p className="mt-1 text-xs leading-5 opacity-90">
+                Audit log ve publish revision yazımı aynı actor runtime bağına dayanır.
+                Override açık durumları ise korumaların manuel gevşetildiğini gösterir.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
+              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+                Database
+              </div>
+              <div className="mt-2 text-sm font-semibold">
+                {databaseHealth.status === "online" ? "Hazır" : "Güvenli mod"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
+              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+                Audit actor
+              </div>
+              <div className="mt-2 text-sm font-semibold">
+                {auditRuntime.actorRecordStatus === "resolved"
+                  ? auditRuntime.roleAligned
+                    ? "Doğrulandı"
+                    : "Role dikkat"
+                  : "Doğrulanmadı"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
+              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+                Audit / revision
+              </div>
+              <div className="mt-2 text-sm font-semibold">
+                {auditRuntime.writeActive && auditRuntime.publishWriteActive
+                  ? "Yazım aktif"
+                  : "Safe-degrade"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
+              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+                Açık override
+              </div>
+              <div className="mt-2 text-sm font-semibold">{openOverrideCount}</div>
+            </div>
+          </div>
+        </div>
+
+        {auditRuntime.closureState !== "ready" || openOverrideCount > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/admin/audit"
+              className="rounded-2xl border border-black/10 bg-black/10 px-4 py-2 text-xs font-medium transition hover:bg-black/15"
+            >
+              Audit & Publish yüzeyini aç
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="rounded-2xl border border-black/10 bg-black/10 px-4 py-2 text-xs font-medium transition hover:bg-black/15"
+            >
+              SEO & Ayarlar yüzeyini aç
+            </Link>
+          </div>
+        ) : null}
+
+        {!governanceReady ? (
+          <div className="mt-4 rounded-2xl border border-black/10 bg-black/10 p-4 text-xs leading-5 opacity-90">
+            {auditRuntime.blocker
+              ? `${auditRuntime.blocker} ${auditRuntime.reason}`
+              : auditRuntime.reason}
+          </div>
+        ) : null}
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {statCards.map((item) => (

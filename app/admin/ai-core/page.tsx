@@ -17,7 +17,7 @@ import {
   getAiKnowledgeReadiness,
   getGovernanceRuntime,
 } from "@/app/lib/admin/governance";
-import { getAuditRuntimeSummary } from "@/app/lib/admin/audit";
+import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 
 type RuntimeTone = "success" | "warning" | "danger" | "neutral";
 
@@ -69,23 +69,38 @@ function toneClasses(tone: RuntimeTone) {
 }
 
 function getRuntimeItems(params: {
-  audit: ReturnType<typeof getAuditRuntimeSummary>;
+  audit: Awaited<ReturnType<typeof getAuditRuntimeValidation>>;
   governance: ReturnType<typeof getGovernanceRuntime>;
 }): RuntimeItem[] {
   return [
     {
       title: "Audit yazımı",
-      value: params.audit.enabled ? "Aktif" : "Pasif",
+      value: params.audit.writeActive ? "Aktif" : "Safe-degrade",
       description: params.audit.reason,
-      tone: params.audit.enabled ? "success" : "warning",
+      tone: params.audit.writeActive
+        ? params.audit.closureState === "warning"
+          ? "warning"
+          : "success"
+        : "danger",
     },
     {
       title: "Audit actor",
-      value: params.governance.hasAuditActor ? "Var" : "Yok",
-      description: params.governance.hasAuditActor
-        ? "Audit helper actor bilgisiyle çalışabilir."
-        : "Actor env eksikse audit safe-degrade modda no-op kalır.",
-      tone: params.governance.hasAuditActor ? "success" : "warning",
+      value:
+        params.audit.actorRecordStatus === "resolved"
+          ? params.audit.roleAligned
+            ? "Doğrulandı"
+            : "Role dikkat"
+          : "Blocker",
+      description:
+        params.audit.actorRecordStatus === "resolved"
+          ? `${params.audit.actorPreview} · rol ${params.audit.actorRole}`
+          : params.audit.reason,
+      tone:
+        params.audit.actorRecordStatus === "resolved"
+          ? params.audit.roleAligned
+            ? "success"
+            : "warning"
+          : "danger",
     },
     {
       title: "Critical offer override",
@@ -224,7 +239,7 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
 
 export default async function AICoreAdminPage() {
   const governance = getGovernanceRuntime();
-  const audit = getAuditRuntimeSummary();
+  const audit = await getAuditRuntimeValidation();
   const runtimeItems = getRuntimeItems({ audit, governance });
   const knowledgeState = await getKnowledgeState();
 
@@ -359,7 +374,11 @@ export default async function AICoreAdminPage() {
                 Audit actor durumu
               </div>
               <div className="mt-2 text-lg font-semibold text-white">
-                {governance.hasAuditActor ? "Yapılandırılmış" : "Eksik"}
+                {audit.actorRecordStatus === "resolved"
+                  ? audit.roleAligned
+                    ? "Doğrulandı"
+                    : "Role dikkat"
+                  : "Closure blocker"}
               </div>
               <div className="mt-2 text-sm text-zinc-400">{audit.reason}</div>
             </div>

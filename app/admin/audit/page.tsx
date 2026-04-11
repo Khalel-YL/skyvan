@@ -4,6 +4,7 @@ import {
   ExternalLink,
   FileClock,
   History,
+  ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 
@@ -11,7 +12,7 @@ import { db, getDatabaseHealth } from "@/db/db";
 import { auditLogs, publishRevisions, users } from "@/db/schema";
 import { PageHeader } from "../_components/page-header";
 import { StatCard } from "../_components/stat-card";
-import { getAuditRuntimeSummary } from "@/app/lib/admin/audit";
+import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 
 type AuditSearchParams = Promise<{
   q?: string;
@@ -48,6 +49,8 @@ type ActorRecord = {
   email: string | null;
   role: "user" | "admin";
 };
+
+type AuditRuntimeValidation = Awaited<ReturnType<typeof getAuditRuntimeValidation>>;
 
 function normalizeActionFilter(value: string): AuditActionFilter {
   if (value === "create" || value === "update" || value === "delete") {
@@ -107,6 +110,88 @@ function getActorLabel(actorId: string, actorMap: Map<string, ActorRecord>) {
   }
 
   return shortenId(actorId);
+}
+
+function getRuntimeCardClass(tone: "ready" | "warning" | "blocked") {
+  if (tone === "ready") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+  }
+
+  return "border-rose-500/20 bg-rose-500/10 text-rose-200";
+}
+
+function getClosureTone(runtime: AuditRuntimeValidation) {
+  if (runtime.closureState === "ready") {
+    return "ready" as const;
+  }
+
+  if (runtime.closureState === "warning") {
+    return "warning" as const;
+  }
+
+  return "blocked" as const;
+}
+
+function getBindingTone(runtime: AuditRuntimeValidation) {
+  if (runtime.actorRecordStatus === "resolved" && runtime.roleAligned) {
+    return "ready" as const;
+  }
+
+  if (runtime.actorRecordStatus === "resolved") {
+    return "warning" as const;
+  }
+
+  return "blocked" as const;
+}
+
+function getWriteTone(enabled: boolean) {
+  return enabled
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+    : "border-amber-500/20 bg-amber-500/10 text-amber-200";
+}
+
+function getClosureLabel(runtime: AuditRuntimeValidation) {
+  if (runtime.closureState === "ready") {
+    return "Runtime doğrulandı";
+  }
+
+  if (runtime.closureState === "warning") {
+    return "Dikkat gerekli";
+  }
+
+  return "Closure blocker";
+}
+
+function getAuditRuntimeLabel(runtime: AuditRuntimeValidation) {
+  return runtime.writeActive ? "Yazım aktif" : "Safe-degrade";
+}
+
+function getPublishRuntimeLabel(runtime: AuditRuntimeValidation) {
+  return runtime.publishWriteActive ? "Yazım aktif" : "Safe-degrade";
+}
+
+function getActorBindingLabel(runtime: AuditRuntimeValidation) {
+  if (runtime.actorRecordStatus === "resolved") {
+    return runtime.roleAligned ? "Actor doğrulandı" : "Role dikkat";
+  }
+
+  if (runtime.actorRecordStatus === "not_found") {
+    return "Actor bağlanmamış";
+  }
+
+  return runtime.actorStatus === "invalid" ? "Actor geçersiz" : "Actor eksik";
+}
+
+function getActorRoleLabel(runtime: AuditRuntimeValidation) {
+  if (!runtime.actorRole) {
+    return "Rol doğrulanamadı";
+  }
+
+  return runtime.actorRole === "admin" ? "Rol: admin" : "Rol: user";
 }
 
 function asObject(value: unknown) {
@@ -230,7 +315,7 @@ export default async function AuditVisibilityPage({
 }) {
   const params = await searchParams;
   const databaseHealth = getDatabaseHealth();
-  const auditRuntime = getAuditRuntimeSummary();
+  const auditRuntime = await getAuditRuntimeValidation();
   const query = String(params.q ?? "").trim().toLowerCase();
   const actionFilter = normalizeActionFilter(String(params.action ?? "all"));
   const entityTypeFilter = String(params.entityType ?? "").trim().toLowerCase();
@@ -385,9 +470,25 @@ export default async function AuditVisibilityPage({
         </div>
       ) : null}
 
-      {!auditRuntime.enabled ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
-          Audit actor yapılandırılmadığı için yeni audit ve publish revision yazımları safe-degrade modda no-op kalabilir. Mevcut görünürlük yüzeyi yine de okunabilir.
+      {auditRuntime.closureState !== "ready" ? (
+        <div
+          className={`rounded-3xl border p-5 text-sm ${
+            auditRuntime.closureState === "blocked"
+              ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
+              : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-medium">{getClosureLabel(auditRuntime)}</p>
+              <p className="mt-2 leading-6">
+                {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
+                {auditRuntime.reason} Bu nedenle boş audit veya revision listesi tek başına
+                “işlem yapılmadı” anlamına gelmez; işlem yapılmış ama iz bırakmamış olabilir.
+              </p>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -419,6 +520,67 @@ export default async function AuditVisibilityPage({
           hint="Published ve rollback revision görünürlüğü"
         />
       </div>
+
+      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+        <div className="flex items-center gap-3">
+          {auditRuntime.closureState === "ready" ? (
+            <ShieldCheck className="h-5 w-5 text-zinc-300" />
+          ) : (
+            <ShieldAlert className="h-5 w-5 text-zinc-300" />
+          )}
+          <h2 className="text-lg font-semibold text-white">Runtime durumu</h2>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className={`rounded-2xl border p-4 ${getRuntimeCardClass(getClosureTone(auditRuntime))}`}>
+            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+              Closure validation
+            </div>
+            <div className="mt-2 text-lg font-semibold">{getClosureLabel(auditRuntime)}</div>
+            <div className="mt-2 text-xs leading-5 opacity-90">
+              {auditRuntime.blocker ?? "Governance runtime temel doğrulamaları geçti."}
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${getRuntimeCardClass(getBindingTone(auditRuntime))}`}>
+            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+              Audit actor
+            </div>
+            <div className="mt-2 text-lg font-semibold">{auditRuntime.actorPreview}</div>
+            <div className="mt-2 text-xs leading-5 opacity-90">
+              {getActorBindingLabel(auditRuntime)} · {getActorRoleLabel(auditRuntime)}
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${getWriteTone(auditRuntime.writeActive)}`}>
+            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+              Audit yazımı
+            </div>
+            <div className="mt-2 text-lg font-semibold">
+              {getAuditRuntimeLabel(auditRuntime)}
+            </div>
+            <div className="mt-2 text-xs leading-5 opacity-90">
+              `audit_logs` yazımı `SKYVAN_ADMIN_AUDIT_USER_ID` bağına dayanır.
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${getWriteTone(auditRuntime.publishWriteActive)}`}>
+            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+              Publish revision
+            </div>
+            <div className="mt-2 text-lg font-semibold">
+              {getPublishRuntimeLabel(auditRuntime)}
+            </div>
+            <div className="mt-2 text-xs leading-5 opacity-90">
+              `publish_revisions` helper’ı aynı actor runtime bağıyla çalışır.
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+          {auditRuntime.reason}
+        </div>
+      </section>
 
       <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -494,7 +656,9 @@ export default async function AuditVisibilityPage({
 
           {filteredAuditRows.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
-              Audit filtresine uyan kayıt bulunamadı.
+              {auditRuntime.writeActive
+                ? "Audit filtresine uyan kayıt bulunamadı."
+                : "Audit filtresine uyan kayıt bulunamadı. Runtime safe-degrade olduğu için yeni audit satırı oluşmamış olabilir."}
             </div>
           ) : (
             <div className="mt-5 space-y-3">
@@ -593,7 +757,9 @@ export default async function AuditVisibilityPage({
 
           {filteredRevisionRows.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
-              Publish revision kaydı bulunamadı.
+              {auditRuntime.publishWriteActive
+                ? "Publish revision kaydı bulunamadı."
+                : "Publish revision kaydı bulunamadı. Pages publish veya rollback akışı çalışmış olsa bile runtime safe-degrade nedeniyle kayıt üretilmemiş olabilir."}
             </div>
           ) : (
             <div className="mt-5 space-y-3">

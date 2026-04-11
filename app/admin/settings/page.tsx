@@ -11,7 +11,7 @@ import { db, getDatabaseHealth } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { PageHeader } from "../_components/page-header";
 import { StatCard } from "../_components/stat-card";
-import { getAuditRuntimeSummary } from "@/app/lib/admin/audit";
+import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 import { getGovernanceRuntime } from "@/app/lib/admin/governance";
 
 type SettingsSearchParams = Promise<{
@@ -45,6 +45,15 @@ type SeoRecord = {
   seoDescription: string | null;
   isPublished: boolean;
   missingFields: string[];
+};
+
+type RuntimeCard = {
+  title: string;
+  value: string;
+  enabled: boolean;
+  tone?: "ready" | "warning" | "blocked";
+  envName?: string;
+  description: string;
 };
 
 function normalizeEntityTypeFilter(value: string): EntityTypeFilter {
@@ -105,6 +114,18 @@ function runtimeCardClass(enabled: boolean) {
     : "border-amber-500/20 bg-amber-500/10 text-amber-200";
 }
 
+function runtimeToneClass(tone: RuntimeCard["tone"], enabled: boolean) {
+  if (tone === "blocked") {
+    return "border-rose-500/20 bg-rose-500/10 text-rose-200";
+  }
+
+  if (tone === "warning") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+  }
+
+  return runtimeCardClass(enabled);
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -113,9 +134,77 @@ export default async function SettingsPage({
   const params = await searchParams;
   const databaseHealth = getDatabaseHealth();
   const governanceRuntime = getGovernanceRuntime();
-  const auditRuntime = getAuditRuntimeSummary();
+  const auditRuntime = await getAuditRuntimeValidation();
   const entityTypeFilter = normalizeEntityTypeFilter(String(params.entityType ?? "all"));
   const seoFilter = normalizeSeoFilter(String(params.seo ?? "all"));
+  const runtimeCards: RuntimeCard[] = [
+    {
+      title: "Database",
+      value: databaseHealth.status === "online" ? "Hazır" : "Güvenli mod",
+      enabled: databaseHealth.status === "online",
+      description: databaseHealth.note,
+    },
+    {
+      title: "Audit actor",
+      value: auditRuntime.actorRecordStatus === "resolved"
+        ? auditRuntime.roleAligned
+          ? "Doğrulandı"
+          : "Role dikkat"
+        : auditRuntime.actorStatus === "invalid"
+          ? "Geçersiz"
+          : auditRuntime.actorRecordStatus === "not_found"
+            ? "Bağlanmamış"
+            : "Eksik",
+      enabled: auditRuntime.actorRecordStatus === "resolved",
+      tone:
+        auditRuntime.actorRecordStatus === "resolved"
+          ? auditRuntime.roleAligned
+            ? "ready"
+            : "warning"
+          : "blocked",
+      envName: "SKYVAN_ADMIN_AUDIT_USER_ID",
+      description: `${auditRuntime.actorPreview} · ${
+        auditRuntime.actorRole ? `rol ${auditRuntime.actorRole}` : "rol doğrulanamadı"
+      }`,
+    },
+    {
+      title: "Publish revision",
+      value: auditRuntime.publishWriteActive ? "Yazım aktif" : "Safe-degrade",
+      enabled: auditRuntime.publishWriteActive,
+      tone: auditRuntime.publishWriteActive ? "ready" : "blocked",
+      envName: "SKYVAN_ADMIN_AUDIT_USER_ID",
+      description: auditRuntime.publishWriteActive
+        ? "Pages publish / rollback geçişleri revision izi bırakabilir."
+        : "Pages publish / rollback akışı çalışsa bile `publish_revisions` yeni kayıt üretmeyebilir.",
+    },
+    {
+      title: "SEO publish kilidi",
+      value: governanceRuntime.allowDirectPublishWithoutSeo
+        ? "Override açık"
+        : "Koruma açık",
+      enabled: !governanceRuntime.allowDirectPublishWithoutSeo,
+      envName: "SKYVAN_ALLOW_DIRECT_PUBLISH_WITHOUT_SEO",
+      description: "SEO başlığı ve açıklaması eksik page publish davranışını etkiler.",
+    },
+    {
+      title: "Offer governance",
+      value: governanceRuntime.allowCriticalOfferStatusTransitions
+        ? "Override açık"
+        : "Koruma açık",
+      enabled: !governanceRuntime.allowCriticalOfferStatusTransitions,
+      envName: "SKYVAN_ALLOW_CRITICAL_OFFER_STATUS_CHANGE",
+      description: "accepted / rejected / expired geçişlerinin kilit durumunu belirler.",
+    },
+    {
+      title: "AI-ready kilidi",
+      value: governanceRuntime.allowManualAiReadyStatus
+        ? "Override açık"
+        : "Koruma açık",
+      enabled: !governanceRuntime.allowManualAiReadyStatus,
+      envName: "SKYVAN_ALLOW_MANUAL_AI_READY_STATUS",
+      description: "Completed sınırına dokunan manuel belge geçişlerini etkiler.",
+    },
+  ];
 
   let seoRecords: SeoRecord[] = [];
   let loadWarning: string | null = null;
@@ -213,6 +302,20 @@ export default async function SettingsPage({
         </div>
       ) : null}
 
+      {auditRuntime.closureState !== "ready" ? (
+        <div
+          className={`rounded-3xl border p-5 text-sm ${
+            auditRuntime.closureState === "blocked"
+              ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
+              : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+          }`}
+        >
+          {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
+          {auditRuntime.reason} Bu nedenle içerik işlemleri ilerlese bile audit ve publish
+          izi closure açısından tam doğrulanmış sayılmaz.
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Page Kayıtları"
@@ -242,78 +345,30 @@ export default async function SettingsPage({
           <h2 className="text-lg font-semibold text-white">Runtime ayarlar</h2>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className={`rounded-2xl border p-4 ${runtimeCardClass(databaseHealth.status === "online")}`}>
-            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Database
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {runtimeCards.map((item) => (
+            <div
+              key={item.title}
+              className={`rounded-2xl border p-4 ${runtimeToneClass(item.tone, item.enabled)}`}
+            >
+              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
+                {item.title}
+              </div>
+              <div className="mt-2 text-lg font-semibold">{item.value}</div>
+              {item.envName ? (
+                <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] opacity-80">
+                  {item.envName}
+                </div>
+              ) : null}
+              <div className="mt-2 text-xs leading-5 opacity-90">{item.description}</div>
             </div>
-            <div className="mt-2 text-lg font-semibold">
-              {databaseHealth.status === "online" ? "Hazır" : "Güvenli mod"}
-            </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">{databaseHealth.note}</div>
-          </div>
+          ))}
+        </div>
 
-          <div className={`rounded-2xl border p-4 ${runtimeCardClass(auditRuntime.enabled)}`}>
-            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Audit actor
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {auditRuntime.enabled ? "Aktif" : "Eksik"}
-            </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">{auditRuntime.reason}</div>
-          </div>
-
-          <div
-            className={`rounded-2xl border p-4 ${runtimeCardClass(
-              !governanceRuntime.allowDirectPublishWithoutSeo,
-            )}`}
-          >
-            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              SEO publish kilidi
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {governanceRuntime.allowDirectPublishWithoutSeo ? "Override açık" : "Koruma açık"}
-            </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              SEO’suz direct publish davranışını kontrol eder.
-            </div>
-          </div>
-
-          <div
-            className={`rounded-2xl border p-4 ${runtimeCardClass(
-              !governanceRuntime.allowCriticalOfferStatusTransitions,
-            )}`}
-          >
-            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Offer governance
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {governanceRuntime.allowCriticalOfferStatusTransitions
-                ? "Override açık"
-                : "Koruma açık"}
-            </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              accepted / rejected / expired geçişlerinin kilit durumunu gösterir.
-            </div>
-          </div>
-
-          <div
-            className={`rounded-2xl border p-4 ${runtimeCardClass(
-              !governanceRuntime.allowManualAiReadyStatus,
-            )}`}
-          >
-            <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              AI-ready kilidi
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {governanceRuntime.allowManualAiReadyStatus
-                ? "Override açık"
-                : "Koruma açık"}
-            </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              Completed sınırına dokunan manuel geçişleri gösterir.
-            </div>
-          </div>
+        <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+          Koruma açık durumu varsayılan güvenli davranıştır. Override açık durumu ise
+          ilgili governance kilidinin manuel olarak gevşetildiğini gösterir. Audit actor
+          tarafında blocker varsa publish revision da hazır kabul edilmemelidir.
         </div>
       </section>
 
