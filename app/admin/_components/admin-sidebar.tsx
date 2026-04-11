@@ -2,20 +2,10 @@ import Link from "next/link";
 
 import { adminNavItems } from "@/app/lib/admin/admin-nav";
 
-const stableRoutes = [
-  "/admin",
-  "/admin/models",
-  "/admin/packages",
-  "/admin/build-versions",
-  "/admin/leads",
-  "/admin/offers",
-  "/admin/products",
-  "/admin/rules",
-];
-
-const pipelineRoutes = ["/admin/ai-core", "/admin/workshop", "/admin/categories"];
-
 export function AdminSidebar() {
+  const stableItems = adminNavItems.filter((item) => item.section === "stable");
+  const pipelineItems = adminNavItems.filter((item) => item.section === "pipeline");
+
   return (
     <aside className="hidden w-80 shrink-0 border-r border-zinc-900 bg-black/30 xl:block">
       <div className="sticky top-0 flex h-screen flex-col">
@@ -32,15 +22,14 @@ export function AdminSidebar() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
-          <div>
-            <p className="px-3 text-xs uppercase tracking-[0.24em] text-zinc-600">
-              Genel
-            </p>
+          {stableItems.length > 0 ? (
+            <div>
+              <p className="px-3 text-xs uppercase tracking-[0.24em] text-zinc-600">
+                Genel
+              </p>
 
-            <div className="mt-3 space-y-2">
-              {adminNavItems
-                .filter((item) => stableRoutes.includes(item.href))
-                .map((item) => {
+              <div className="mt-3 space-y-2">
+                {stableItems.map((item) => {
                   const Icon = item.icon;
 
                   if (!item.enabled) {
@@ -105,18 +94,18 @@ export function AdminSidebar() {
                     </Link>
                   );
                 })}
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className="mt-8">
-            <p className="px-3 text-xs uppercase tracking-[0.24em] text-zinc-600">
-              Sonraki Fazlar
-            </p>
+          {pipelineItems.length > 0 ? (
+            <div className="mt-8">
+              <p className="px-3 text-xs uppercase tracking-[0.24em] text-zinc-600">
+                Sonraki Fazlar
+              </p>
 
-            <div className="mt-3 space-y-2">
-              {adminNavItems
-                .filter((item) => pipelineRoutes.includes(item.href))
-                .map((item) => {
+              <div className="mt-3 space-y-2">
+                {pipelineItems.map((item) => {
                   const Icon = item.icon;
 
                   return (
@@ -147,8 +136,9 @@ export function AdminSidebar() {
                     </div>
                   );
                 })}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </aside>
