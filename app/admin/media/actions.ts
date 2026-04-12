@@ -7,7 +7,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
-import { writeAuditLog } from "@/app/lib/admin/audit";
+import {
+  type AuditInsertDatabase,
+  AuditActorBindingError,
+  type StrictAuditActor,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 import { getMediaGuardrailBlockers } from "@/app/lib/admin/governance";
 
 type MediaContentJson = {
@@ -78,34 +84,21 @@ async function getMediaById(id: string): Promise<MediaRecord | null> {
 }
 
 async function writeMediaAudit(input: {
+  database: AuditInsertDatabase;
+  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "delete";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  try {
-    const result = await writeAuditLog({
-      entityType: MEDIA_ENTITY_TYPE,
-      entityId: input.entityId,
-      action: input.action,
-      previousState: input.previousState,
-      newState: input.newState,
-    });
-
-    if (!result.ok || result.skipped) {
-      console.warn("media audit skipped:", {
-        entityId: input.entityId,
-        action: input.action,
-        reason: result.reason,
-      });
-    }
-  } catch (error) {
-    console.warn("media audit warning:", {
-      entityId: input.entityId,
-      action: input.action,
-      error,
-    });
-  }
+  await writeStrictAuditLogInTransaction(input.database, {
+    entityType: MEDIA_ENTITY_TYPE,
+    entityId: input.entityId,
+    action: input.action,
+    previousState: input.previousState,
+    newState: input.newState,
+    actor: input.actor,
+  });
 }
 
 export async function saveMedia(formData: FormData) {
@@ -138,25 +131,42 @@ export async function saveMedia(formData: FormData) {
   };
 
   try {
-    const insertedRows = await db
-      .insert(localizedContent)
-      .values({
-        id: uuidv4(),
-        entityId: uuidv4(),
-        entityType: MEDIA_ENTITY_TYPE,
-        locale: "tr",
-        title: fileName,
-        contentJson,
-      })
-      .returning({
-        id: localizedContent.id,
-        entityType: localizedContent.entityType,
-        locale: localizedContent.locale,
-        title: localizedContent.title,
-        contentJson: localizedContent.contentJson,
-      });
+    const auditActor = await requireStrictAuditActor();
+    let insertedMedia: MediaRecord | null = null;
 
-    const insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
+    await db.transaction(async (tx) => {
+      const insertedRows = await tx
+        .insert(localizedContent)
+        .values({
+          id: uuidv4(),
+          entityId: uuidv4(),
+          entityType: MEDIA_ENTITY_TYPE,
+          locale: "tr",
+          title: fileName,
+          contentJson,
+        })
+        .returning({
+          id: localizedContent.id,
+          entityType: localizedContent.entityType,
+          locale: localizedContent.locale,
+          title: localizedContent.title,
+          contentJson: localizedContent.contentJson,
+        });
+
+      insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
+
+      if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
+        throw new Error("media-insert-invalid");
+      }
+
+      await writeMediaAudit({
+        database: tx,
+        actor: auditActor,
+        entityId: insertedMedia.id,
+        action: "create",
+        newState: insertedMedia,
+      });
+    });
 
     if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
       redirect(
@@ -166,15 +176,19 @@ export async function saveMedia(formData: FormData) {
         }),
       );
     }
-
-    await writeMediaAudit({
-      entityId: insertedMedia.id,
-      action: "create",
-      newState: insertedMedia,
-    });
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildMediaRedirectUrl({
+          mediaAction: "error",
+          mediaMessage:
+            "Session-bound audit actor çözülemediği için medya kaydı güvenli şekilde tamamlanamadı.",
+        }),
+      );
     }
 
     console.error("saveMedia error:", error);
@@ -228,19 +242,38 @@ export async function deleteMedia(id: string) {
   }
 
   try {
-    const deletedRows = await db
-      .delete(localizedContent)
-      .where(
-        and(
-          eq(localizedContent.id, normalizedId),
-          eq(localizedContent.entityType, MEDIA_ENTITY_TYPE),
-        ),
-      )
-      .returning({
-        id: localizedContent.id,
-      });
+    const auditActor = await requireStrictAuditActor();
+    let deletedCount = 0;
 
-    if (deletedRows.length === 0) {
+    await db.transaction(async (tx) => {
+      const deletedRows = await tx
+        .delete(localizedContent)
+        .where(
+          and(
+            eq(localizedContent.id, normalizedId),
+            eq(localizedContent.entityType, MEDIA_ENTITY_TYPE),
+          ),
+        )
+        .returning({
+          id: localizedContent.id,
+        });
+
+      deletedCount = deletedRows.length;
+
+      if (deletedCount === 0) {
+        return;
+      }
+
+      await writeMediaAudit({
+        database: tx,
+        actor: auditActor,
+        entityId: existingMedia.id,
+        action: "delete",
+        previousState: existingMedia,
+      });
+    });
+
+    if (deletedCount === 0) {
       redirect(
         buildMediaRedirectUrl({
           mediaAction: "error",
@@ -248,15 +281,19 @@ export async function deleteMedia(id: string) {
         }),
       );
     }
-
-    await writeMediaAudit({
-      entityId: existingMedia.id,
-      action: "delete",
-      previousState: existingMedia,
-    });
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildMediaRedirectUrl({
+          mediaAction: "error",
+          mediaMessage:
+            "Session-bound audit actor çözülemediği için medya kaydı güvenli şekilde silinemedi.",
+        }),
+      );
     }
 
     console.error("deleteMedia error:", error);

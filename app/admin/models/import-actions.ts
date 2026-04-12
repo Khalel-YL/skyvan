@@ -7,6 +7,11 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { models } from "@/db/schema";
+import {
+  AuditActorBindingError,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 
 import {
   getOfficialVehicleSeedsForBatch,
@@ -60,6 +65,7 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
   let skippedCount = 0;
 
   try {
+    const auditActor = await requireStrictAuditActor();
     const seeds = getOfficialVehicleSeedsForBatch(batchKey);
 
     if (seeds.length === 0) {
@@ -86,27 +92,74 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
     const toInsert = seeds.filter((item) => !existingSlugSet.has(item.slug));
     const skipped = seeds.filter((item) => existingSlugSet.has(item.slug));
 
+    let insertedRows: Array<{
+      id: string;
+      slug: string;
+      baseWeightKg: string | number;
+      maxPayloadKg: string | number;
+      wheelbaseMm: number;
+      roofLengthMm: number | null;
+      roofWidthMm: number | null;
+      status: "draft" | "active" | "archived";
+      updatedAt: Date | string | null;
+    }> = [];
+
     if (toInsert.length > 0) {
-      await db.insert(models).values(
-        toInsert.map((item) => ({
-          id: uuidv4(),
-          slug: item.slug,
-          baseWeightKg: item.baseWeightKg.toFixed(2),
-          maxPayloadKg: item.maxPayloadKg.toFixed(2),
-          wheelbaseMm: item.wheelbaseMm,
-          roofLengthMm: item.roofLengthMm,
-          roofWidthMm: item.roofWidthMm,
-          status: item.status,
-        })),
-      );
+      await db.transaction(async (tx) => {
+        insertedRows = await tx
+          .insert(models)
+          .values(
+            toInsert.map((item) => ({
+              id: uuidv4(),
+              slug: item.slug,
+              baseWeightKg: item.baseWeightKg.toFixed(2),
+              maxPayloadKg: item.maxPayloadKg.toFixed(2),
+              wheelbaseMm: item.wheelbaseMm,
+              roofLengthMm: item.roofLengthMm,
+              roofWidthMm: item.roofWidthMm,
+              status: item.status,
+            })),
+          )
+          .returning({
+            id: models.id,
+            slug: models.slug,
+            baseWeightKg: models.baseWeightKg,
+            maxPayloadKg: models.maxPayloadKg,
+            wheelbaseMm: models.wheelbaseMm,
+            roofLengthMm: models.roofLengthMm,
+            roofWidthMm: models.roofWidthMm,
+            status: models.status,
+            updatedAt: models.updatedAt,
+          });
+
+        for (const insertedModel of insertedRows) {
+          await writeStrictAuditLogInTransaction(tx, {
+            entityType: "model",
+            entityId: insertedModel.id,
+            action: "create",
+            newState: insertedModel,
+            actor: auditActor,
+          });
+        }
+      });
     }
 
-    importedCount = toInsert.length;
+    importedCount = insertedRows.length;
     skippedCount = skipped.length;
 
     revalidatePath("/admin");
     revalidatePath("/admin/models");
   } catch (error) {
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildModelsRedirectUrl({
+          importStatus: "error",
+          importCode: "unexpected",
+          batch: batchKey,
+        }),
+      );
+    }
+
     console.error("importOfficialVehicleSeeds error:", error);
 
     redirect(

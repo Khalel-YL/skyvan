@@ -7,7 +7,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { categories } from "@/db/schema";
-import { writeAdminAudit } from "@/app/lib/admin/audit";
+import {
+  type AuditInsertDatabase,
+  AuditActorBindingError,
+  type StrictAuditActor,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 import {
   initialCategoryFormState,
   type CategoryFieldName,
@@ -146,18 +152,20 @@ async function getCategoryById(id: string): Promise<CategoryRecord | null> {
 }
 
 async function writeCategoryAudit(input: {
+  database: AuditInsertDatabase;
+  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "update" | "delete";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  await writeAdminAudit({
+  await writeStrictAuditLogInTransaction(input.database, {
     entityType: "category",
-    logLabel: "category",
     entityId: input.entityId,
     action: input.action,
     previousState: input.previousState,
     newState: input.newState,
+    actor: input.actor,
   });
 }
 
@@ -213,80 +221,109 @@ export async function saveCategory(
   }
 
   try {
-    if (id && existingCategory) {
-      const updatedRows = await db
-        .update(categories)
-        .set({
-          name,
-          slug,
-          icon,
-          status,
-          sortOrder,
-          updatedAt: new Date(),
-        })
-        .where(eq(categories.id, id))
-        .returning({
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-          icon: categories.icon,
-          status: categories.status,
-          sortOrder: categories.sortOrder,
-          createdAt: categories.createdAt,
-          updatedAt: categories.updatedAt,
-        });
+    const auditActor = await requireStrictAuditActor();
 
-      const updatedCategory = (updatedRows[0] as CategoryRecord | undefined) ?? null;
+    if (id && existingCategory) {
+      let updatedCategory: CategoryRecord | null = null;
+
+      await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(categories)
+          .set({
+            name,
+            slug,
+            icon,
+            status,
+            sortOrder,
+            updatedAt: new Date(),
+          })
+          .where(eq(categories.id, id))
+          .returning({
+            id: categories.id,
+            name: categories.name,
+            slug: categories.slug,
+            icon: categories.icon,
+            status: categories.status,
+            sortOrder: categories.sortOrder,
+            createdAt: categories.createdAt,
+            updatedAt: categories.updatedAt,
+          });
+
+        updatedCategory = (updatedRows[0] as CategoryRecord | undefined) ?? null;
+
+        if (!updatedCategory) {
+          return;
+        }
+
+        await writeCategoryAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: updatedCategory.id,
+          action: "update",
+          previousState: existingCategory,
+          newState: updatedCategory,
+        });
+      });
 
       if (!updatedCategory) {
         return createGenericError("Kategori kaydı işlem sırasında güncellenemedi.");
       }
-
-      await writeCategoryAudit({
-        entityId: updatedCategory.id,
-        action: "update",
-        previousState: existingCategory,
-        newState: updatedCategory,
-      });
     } else {
-      const insertedRows = await db
-        .insert(categories)
-        .values({
-          id: uuidv4(),
-          name,
-          slug,
-          icon,
-          status,
-          sortOrder,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning({
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-          icon: categories.icon,
-          status: categories.status,
-          sortOrder: categories.sortOrder,
-          createdAt: categories.createdAt,
-          updatedAt: categories.updatedAt,
-        });
+      let insertedCategory: CategoryRecord | null = null;
+      const now = new Date();
 
-      const insertedCategory = (insertedRows[0] as CategoryRecord | undefined) ?? null;
+      await db.transaction(async (tx) => {
+        const insertedRows = await tx
+          .insert(categories)
+          .values({
+            id: uuidv4(),
+            name,
+            slug,
+            icon,
+            status,
+            sortOrder,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .returning({
+            id: categories.id,
+            name: categories.name,
+            slug: categories.slug,
+            icon: categories.icon,
+            status: categories.status,
+            sortOrder: categories.sortOrder,
+            createdAt: categories.createdAt,
+            updatedAt: categories.updatedAt,
+          });
+
+        insertedCategory = (insertedRows[0] as CategoryRecord | undefined) ?? null;
+
+        if (!insertedCategory) {
+          return;
+        }
+
+        await writeCategoryAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: insertedCategory.id,
+          action: "create",
+          newState: insertedCategory,
+        });
+      });
 
       if (!insertedCategory) {
         return createGenericError("Kategori kaydı oluşturulamadı.");
       }
-
-      await writeCategoryAudit({
-        entityId: insertedCategory.id,
-        action: "create",
-        newState: insertedCategory,
-      });
     }
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      return createGenericError(
+        "Session-bound audit actor çözülemediği için kategori kaydı güvenli şekilde tamamlanamadı.",
+      );
     }
 
     console.error("saveCategory error:", error);
@@ -324,15 +361,12 @@ export async function deleteCategory(id: string) {
     );
   }
 
-  try {
-    const deletedRows = await db
-      .delete(categories)
-      .where(eq(categories.id, normalizedId))
-      .returning({
-        id: categories.id,
-      });
+  let auditActor: StrictAuditActor;
 
-    if (deletedRows.length === 0) {
+  try {
+    auditActor = await requireStrictAuditActor();
+  } catch (error) {
+    if (error instanceof AuditActorBindingError) {
       revalidateCategories();
       redirect(
         buildCategoriesRedirectUrl({
@@ -342,11 +376,44 @@ export async function deleteCategory(id: string) {
       );
     }
 
-    await writeCategoryAudit({
-      entityId: existingCategory.id,
-      action: "delete",
-      previousState: existingCategory,
+    throw error;
+  }
+
+  try {
+    let deletedCount = 0;
+
+    await db.transaction(async (tx) => {
+      const deletedRows = await tx
+        .delete(categories)
+        .where(eq(categories.id, normalizedId))
+        .returning({
+          id: categories.id,
+        });
+
+      deletedCount = deletedRows.length;
+
+      if (deletedCount === 0) {
+        return;
+      }
+
+      await writeCategoryAudit({
+        database: tx,
+        actor: auditActor,
+        entityId: existingCategory.id,
+        action: "delete",
+        previousState: existingCategory,
+      });
     });
+
+    if (deletedCount === 0) {
+      revalidateCategories();
+      redirect(
+        buildCategoriesRedirectUrl({
+          categoryAction: "error",
+          categoryCode: "delete-failed",
+        }),
+      );
+    }
 
     revalidateCategories();
     redirect(buildCategoriesRedirectUrl({ deleted: 1 }));
@@ -359,34 +426,44 @@ export async function deleteCategory(id: string) {
   }
 
   try {
-    const archivedRows = await db
-      .update(categories)
-      .set({
-        status: "archived",
-        updatedAt: new Date(),
-      })
-      .where(eq(categories.id, normalizedId))
-      .returning({
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-        icon: categories.icon,
-        status: categories.status,
-        sortOrder: categories.sortOrder,
-        createdAt: categories.createdAt,
-        updatedAt: categories.updatedAt,
-      });
+    let archivedCategory: CategoryRecord | null = null;
 
-    const archivedCategory = (archivedRows[0] as CategoryRecord | undefined) ?? null;
+    await db.transaction(async (tx) => {
+      const archivedRows = await tx
+        .update(categories)
+        .set({
+          status: "archived",
+          updatedAt: new Date(),
+        })
+        .where(eq(categories.id, normalizedId))
+        .returning({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          icon: categories.icon,
+          status: categories.status,
+          sortOrder: categories.sortOrder,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        });
 
-    if (archivedCategory) {
+      archivedCategory = (archivedRows[0] as CategoryRecord | undefined) ?? null;
+
+      if (!archivedCategory) {
+        return;
+      }
+
       await writeCategoryAudit({
+        database: tx,
+        actor: auditActor,
         entityId: archivedCategory.id,
         action: "update",
         previousState: existingCategory,
         newState: archivedCategory,
       });
+    });
 
+    if (archivedCategory) {
       revalidateCategories();
       redirect(buildCategoriesRedirectUrl({ archived: 1 }));
     }
@@ -427,44 +504,60 @@ export async function createCategorySeeds() {
   const now = new Date();
 
   try {
-    const insertedRows = await db
-      .insert(categories)
-      .values(
-        missing.map((item) => ({
-          id: uuidv4(),
-          name: item.name,
-          slug: item.slug,
-          icon: item.icon,
-          status: "active" as const,
-          sortOrder: item.sortOrder,
-          createdAt: now,
-          updatedAt: now,
-        })),
-      )
-      .returning({
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-        icon: categories.icon,
-        status: categories.status,
-        sortOrder: categories.sortOrder,
-        createdAt: categories.createdAt,
-        updatedAt: categories.updatedAt,
-      });
+    const auditActor = await requireStrictAuditActor();
+    let insertedRows: CategoryRecord[] = [];
 
-    for (const insertedCategory of insertedRows) {
-      await writeCategoryAudit({
-        entityId: insertedCategory.id,
-        action: "create",
-        newState: insertedCategory,
-      });
-    }
+    await db.transaction(async (tx) => {
+      insertedRows = (await tx
+        .insert(categories)
+        .values(
+          missing.map((item) => ({
+            id: uuidv4(),
+            name: item.name,
+            slug: item.slug,
+            icon: item.icon,
+            status: "active" as const,
+            sortOrder: item.sortOrder,
+            createdAt: now,
+            updatedAt: now,
+          })),
+        )
+        .returning({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          icon: categories.icon,
+          status: categories.status,
+          sortOrder: categories.sortOrder,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        })) as CategoryRecord[];
+
+      for (const insertedCategory of insertedRows) {
+        await writeCategoryAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: insertedCategory.id,
+          action: "create",
+          newState: insertedCategory,
+        });
+      }
+    });
 
     revalidateCategories();
     redirect(buildCategoriesRedirectUrl({ seeded: insertedRows.length }));
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildCategoriesRedirectUrl({
+          categoryAction: "error",
+          categoryCode: "seed-failed",
+        }),
+      );
     }
 
     console.error("createCategorySeeds error:", error);

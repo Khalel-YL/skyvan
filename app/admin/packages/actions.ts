@@ -7,7 +7,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
 import { buildVersions, models, packages } from "@/db/schema";
-import { writeAdminAudit } from "@/app/lib/admin/audit";
+import {
+  type AuditInsertDatabase,
+  AuditActorBindingError,
+  type StrictAuditActor,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 
 import { normalizePackageSlug, splitPackageSlugCounter } from "./package-slug";
 import {
@@ -177,18 +183,20 @@ function requireTierLevel(value: string) {
 }
 
 async function writePackageAudit(input: {
+  database: AuditInsertDatabase;
+  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "update" | "delete";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  await writeAdminAudit({
+  await writeStrictAuditLogInTransaction(input.database, {
     entityType: "package",
-    logLabel: "package",
     entityId: input.entityId,
     action: input.action,
     previousState: input.previousState,
     newState: input.newState,
+    actor: input.actor,
   });
 }
 
@@ -242,6 +250,7 @@ export async function savePackage(
 
     const existing = await findPackageBySlug(slug);
     let savedSlug = slug;
+    const auditActor = await requireStrictAuditActor();
 
     if (id && existingPackage) {
       if (existing && existing.id !== id) {
@@ -254,74 +263,93 @@ export async function savePackage(
         );
       }
 
-      const updatedRows = await db
-        .update(packages)
-        .set({
-          modelId,
-          name,
-          slug,
-          tierLevel,
-          isDefault,
-        })
-        .where(eq(packages.id, id))
-        .returning({
-          id: packages.id,
-          modelId: packages.modelId,
-          name: packages.name,
-          slug: packages.slug,
-          tierLevel: packages.tierLevel,
-          isDefault: packages.isDefault,
-          createdAt: packages.createdAt,
-        });
+      let updatedPackage: PackageRecord | null = null;
 
-      const updatedPackage = (updatedRows[0] as PackageRecord | undefined) ?? null;
+      await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(packages)
+          .set({
+            modelId,
+            name,
+            slug,
+            tierLevel,
+            isDefault,
+          })
+          .where(eq(packages.id, id))
+          .returning({
+            id: packages.id,
+            modelId: packages.modelId,
+            name: packages.name,
+            slug: packages.slug,
+            tierLevel: packages.tierLevel,
+            isDefault: packages.isDefault,
+            createdAt: packages.createdAt,
+          });
+
+        updatedPackage = (updatedRows[0] as PackageRecord | undefined) ?? null;
+
+        if (!updatedPackage) {
+          return;
+        }
+
+        await writePackageAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: updatedPackage.id,
+          action: "update",
+          previousState: existingPackage,
+          newState: updatedPackage,
+        });
+      });
 
       if (!updatedPackage) {
         return createGenericError("Paket kaydı işlem sırasında güncellenemedi.");
       }
 
-      await writePackageAudit({
-        entityId: updatedPackage.id,
-        action: "update",
-        previousState: existingPackage,
-        newState: updatedPackage,
-      });
-
       savedSlug = updatedPackage.slug;
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
+      let insertedPackage: PackageRecord | null = null;
 
-      const insertedRows = await db
-        .insert(packages)
-        .values({
-          id: uuidv4(),
-          modelId,
-          name,
-          slug: resolvedSlug,
-          tierLevel,
-          isDefault,
-        })
-        .returning({
-          id: packages.id,
-          modelId: packages.modelId,
-          name: packages.name,
-          slug: packages.slug,
-          tierLevel: packages.tierLevel,
-          isDefault: packages.isDefault,
-          createdAt: packages.createdAt,
+      await db.transaction(async (tx) => {
+        const insertedRows = await tx
+          .insert(packages)
+          .values({
+            id: uuidv4(),
+            modelId,
+            name,
+            slug: resolvedSlug,
+            tierLevel,
+            isDefault,
+          })
+          .returning({
+            id: packages.id,
+            modelId: packages.modelId,
+            name: packages.name,
+            slug: packages.slug,
+            tierLevel: packages.tierLevel,
+            isDefault: packages.isDefault,
+            createdAt: packages.createdAt,
+          });
+
+        insertedPackage = (insertedRows[0] as PackageRecord | undefined) ?? null;
+
+        if (!insertedPackage) {
+          return;
+        }
+
+        await writePackageAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: insertedPackage.id,
+          action: "create",
+          newState: insertedPackage,
         });
-
-      const insertedPackage = (insertedRows[0] as PackageRecord | undefined) ?? null;
+      });
 
       if (!insertedPackage) {
         return createGenericError("Paket kaydı oluşturulamadı.");
       }
-
-      await writePackageAudit({
-        entityId: insertedPackage.id,
-        action: "create",
-        newState: insertedPackage,
-      });
 
       savedSlug = insertedPackage.slug;
     }
@@ -348,6 +376,12 @@ export async function savePackage(
       error.status === "error"
     ) {
       return error as PackageFormState;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      return createGenericError(
+        "Session-bound audit actor çözülemediği için paket kaydı güvenli şekilde tamamlanamadı.",
+      );
     }
 
     console.error("savePackage error:", error);
@@ -380,15 +414,45 @@ export async function deletePackage(formData: FormData) {
   }
 
   try {
-    const usage = await db
-      .select({
-        packageId: buildVersions.packageId,
-      })
-      .from(buildVersions)
-      .where(eq(buildVersions.packageId, id))
-      .limit(1);
+    const auditActor = await requireStrictAuditActor();
+    let mutationCode: "in-use" | "invalid-id" | null = null;
 
-    if (usage.length > 0) {
+    await db.transaction(async (tx) => {
+      const usage = await tx
+        .select({
+          packageId: buildVersions.packageId,
+        })
+        .from(buildVersions)
+        .where(eq(buildVersions.packageId, id))
+        .limit(1);
+
+      if (usage.length > 0) {
+        mutationCode = "in-use";
+        return;
+      }
+
+      const deletedRows = await tx
+        .delete(packages)
+        .where(eq(packages.id, id))
+        .returning({
+          id: packages.id,
+        });
+
+      if (deletedRows.length === 0) {
+        mutationCode = "invalid-id";
+        return;
+      }
+
+      await writePackageAudit({
+        database: tx,
+        actor: auditActor,
+        entityId: existingPackage.id,
+        action: "delete",
+        previousState: existingPackage,
+      });
+    });
+
+    if (mutationCode === "in-use") {
       redirect(
         buildPackagesRedirectUrl({
           packageAction: "error",
@@ -397,14 +461,7 @@ export async function deletePackage(formData: FormData) {
       );
     }
 
-    const deletedRows = await db
-      .delete(packages)
-      .where(eq(packages.id, id))
-      .returning({
-        id: packages.id,
-      });
-
-    if (deletedRows.length === 0) {
+    if (mutationCode === "invalid-id") {
       redirect(
         buildPackagesRedirectUrl({
           packageAction: "error",
@@ -413,17 +470,20 @@ export async function deletePackage(formData: FormData) {
       );
     }
 
-    await writePackageAudit({
-      entityId: existingPackage.id,
-      action: "delete",
-      previousState: existingPackage,
-    });
-
     revalidatePath("/admin");
     revalidatePath("/admin/packages");
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildPackagesRedirectUrl({
+          packageAction: "error",
+          packageCode: "delete-failed",
+        }),
+      );
     }
 
     console.error("deletePackage error:", error);
