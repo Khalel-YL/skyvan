@@ -10,7 +10,13 @@ import {
   hasBlockedScheme,
   normalizeWhitespace,
 } from "./validation";
-import { writeAuditLog } from "@/app/lib/admin/audit";
+import {
+  type AuditInsertDatabase,
+  AuditActorBindingError,
+  type StrictAuditActor,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 import { getDatasheetGuardrailBlockers } from "@/app/lib/admin/governance";
 
 type FieldName = "title" | "docType" | "parsingStatus" | "s3Key";
@@ -266,34 +272,21 @@ async function hasDuplicateStorageKey(id: string, s3Key: string) {
 }
 
 async function writeDatasheetAudit(input: {
+  database: AuditInsertDatabase;
+  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "update" | "delete";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  try {
-    const result = await writeAuditLog({
-      entityType: "datasheet",
-      entityId: input.entityId,
-      action: input.action,
-      previousState: input.previousState,
-      newState: input.newState,
-    });
-
-    if (!result.ok || result.skipped) {
-      console.warn("datasheet audit skipped:", {
-        entityId: input.entityId,
-        action: input.action,
-        reason: result.reason,
-      });
-    }
-  } catch (error) {
-    console.warn("datasheet audit warning:", {
-      entityId: input.entityId,
-      action: input.action,
-      error,
-    });
-  }
+  await writeStrictAuditLogInTransaction(input.database, {
+    entityType: "datasheet",
+    entityId: input.entityId,
+    action: input.action,
+    previousState: input.previousState,
+    newState: input.newState,
+    actor: input.actor,
+  });
 }
 
 export async function saveDatasheet(
@@ -389,29 +382,48 @@ export async function saveDatasheet(
   const now = new Date();
 
   try {
-    if (id && previousDocument) {
-      const updatedRows = await db
-        .update(aiKnowledgeDocuments)
-        .set({
-          productId: productId || null,
-          title,
-          docType: docType as DatasheetDocType,
-          parsingStatus: nextParsingStatus,
-          s3Key,
-          updatedAt: now,
-        })
-        .where(eq(aiKnowledgeDocuments.id, id))
-        .returning({
-          id: aiKnowledgeDocuments.id,
-          productId: aiKnowledgeDocuments.productId,
-          title: aiKnowledgeDocuments.title,
-          docType: aiKnowledgeDocuments.docType,
-          parsingStatus: aiKnowledgeDocuments.parsingStatus,
-          s3Key: aiKnowledgeDocuments.s3Key,
-          updatedAt: aiKnowledgeDocuments.updatedAt,
-        });
+    const auditActor = await requireStrictAuditActor();
 
-      const updatedDocument = (updatedRows[0] as DatasheetRecord | undefined) ?? null;
+    if (id && previousDocument) {
+      let updatedDocument: DatasheetRecord | null = null;
+
+      await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(aiKnowledgeDocuments)
+          .set({
+            productId: productId || null,
+            title,
+            docType: docType as DatasheetDocType,
+            parsingStatus: nextParsingStatus,
+            s3Key,
+            updatedAt: now,
+          })
+          .where(eq(aiKnowledgeDocuments.id, id))
+          .returning({
+            id: aiKnowledgeDocuments.id,
+            productId: aiKnowledgeDocuments.productId,
+            title: aiKnowledgeDocuments.title,
+            docType: aiKnowledgeDocuments.docType,
+            parsingStatus: aiKnowledgeDocuments.parsingStatus,
+            s3Key: aiKnowledgeDocuments.s3Key,
+            updatedAt: aiKnowledgeDocuments.updatedAt,
+          });
+
+        updatedDocument = (updatedRows[0] as DatasheetRecord | undefined) ?? null;
+
+        if (!updatedDocument) {
+          return;
+        }
+
+        await writeDatasheetAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: updatedDocument.id,
+          action: "update",
+          previousState: buildDatasheetState(previousDocument),
+          newState: buildDatasheetState(updatedDocument),
+        });
+      });
 
       if (!updatedDocument) {
         return {
@@ -420,35 +432,44 @@ export async function saveDatasheet(
           fieldErrors: {},
         };
       }
-
-      await writeDatasheetAudit({
-        entityId: updatedDocument.id,
-        action: "update",
-        previousState: buildDatasheetState(previousDocument),
-        newState: buildDatasheetState(updatedDocument),
-      });
     } else {
-      const insertedRows = await db
-        .insert(aiKnowledgeDocuments)
-        .values({
-          productId: productId || null,
-          title,
-          docType: docType as DatasheetDocType,
-          parsingStatus: nextParsingStatus,
-          s3Key,
-          updatedAt: now,
-        })
-        .returning({
-          id: aiKnowledgeDocuments.id,
-          productId: aiKnowledgeDocuments.productId,
-          title: aiKnowledgeDocuments.title,
-          docType: aiKnowledgeDocuments.docType,
-          parsingStatus: aiKnowledgeDocuments.parsingStatus,
-          s3Key: aiKnowledgeDocuments.s3Key,
-          updatedAt: aiKnowledgeDocuments.updatedAt,
-        });
+      let insertedDocument: DatasheetRecord | null = null;
 
-      const insertedDocument = (insertedRows[0] as DatasheetRecord | undefined) ?? null;
+      await db.transaction(async (tx) => {
+        const insertedRows = await tx
+          .insert(aiKnowledgeDocuments)
+          .values({
+            productId: productId || null,
+            title,
+            docType: docType as DatasheetDocType,
+            parsingStatus: nextParsingStatus,
+            s3Key,
+            updatedAt: now,
+          })
+          .returning({
+            id: aiKnowledgeDocuments.id,
+            productId: aiKnowledgeDocuments.productId,
+            title: aiKnowledgeDocuments.title,
+            docType: aiKnowledgeDocuments.docType,
+            parsingStatus: aiKnowledgeDocuments.parsingStatus,
+            s3Key: aiKnowledgeDocuments.s3Key,
+            updatedAt: aiKnowledgeDocuments.updatedAt,
+          });
+
+        insertedDocument = (insertedRows[0] as DatasheetRecord | undefined) ?? null;
+
+        if (!insertedDocument) {
+          return;
+        }
+
+        await writeDatasheetAudit({
+          database: tx,
+          actor: auditActor,
+          entityId: insertedDocument.id,
+          action: "create",
+          newState: buildDatasheetState(insertedDocument),
+        });
+      });
 
       if (!insertedDocument) {
         return {
@@ -457,14 +478,17 @@ export async function saveDatasheet(
           fieldErrors: {},
         };
       }
-
-      await writeDatasheetAudit({
-        entityId: insertedDocument.id,
-        action: "create",
-        newState: buildDatasheetState(insertedDocument),
-      });
     }
   } catch (error) {
+    if (error instanceof AuditActorBindingError) {
+      return {
+        status: "error",
+        message:
+          "Session-bound audit actor çözülemediği için datasheet işlemi güvenli şekilde tamamlanamadı.",
+        fieldErrors: {},
+      };
+    }
+
     console.error("Datasheet save error:", error);
 
     return {
@@ -508,23 +532,40 @@ export async function deleteDatasheet(id: string) {
       redirect(buildCompletedDeleteGuardRedirect());
     }
 
-    const deletedRows = await db
-      .delete(aiKnowledgeDocuments)
-      .where(eq(aiKnowledgeDocuments.id, normalizedId))
-      .returning({
-        id: aiKnowledgeDocuments.id,
-      });
+    const auditActor = await requireStrictAuditActor();
+    let deletedCount = 0;
 
-    if (deletedRows.length === 0) {
+    await db.transaction(async (tx) => {
+      const deletedRows = await tx
+        .delete(aiKnowledgeDocuments)
+        .where(eq(aiKnowledgeDocuments.id, normalizedId))
+        .returning({
+          id: aiKnowledgeDocuments.id,
+        });
+
+      deletedCount = deletedRows.length;
+
+      if (deletedCount === 0) {
+        return;
+      }
+
+      await writeDatasheetAudit({
+        database: tx,
+        actor: auditActor,
+        entityId: existingDocument.id,
+        action: "delete",
+        previousState: buildDatasheetState(existingDocument),
+      });
+    });
+
+    if (deletedCount === 0) {
       redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
     }
-
-    await writeDatasheetAudit({
-      entityId: existingDocument.id,
-      action: "delete",
-      previousState: buildDatasheetState(existingDocument),
-    });
   } catch (error) {
+    if (error instanceof AuditActorBindingError) {
+      redirect("/admin/datasheets?docAction=error&docCode=audit-actor-required");
+    }
+
     console.error("Datasheet delete error:", error);
     redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
   }

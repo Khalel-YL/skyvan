@@ -1,12 +1,16 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDbOrThrow } from "@/db/db";
 import { users } from "@/db/schema";
-import { writeAdminAudit } from "@/app/lib/admin/audit";
+import {
+  AuditActorBindingError,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 
 type UserRole = "user" | "admin";
 
@@ -21,6 +25,8 @@ type UserRecord = {
   updatedAt: Date;
   lastSignedIn: Date;
 };
+
+const ADMIN_ROLE_GUARD_LOCK_KEY = 842319552;
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -142,28 +148,132 @@ export async function updateUserRole(formData: FormData) {
   }
 
   try {
-    const updatedRows = await db
-      .update(users)
-      .set({
-        role: nextRole,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
-      .returning({
-        id: users.id,
-        openId: users.openId,
-        name: users.name,
-        email: users.email,
-        loginMethod: users.loginMethod,
-        role: users.role,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-        lastSignedIn: users.lastSignedIn,
+    const auditActor = await requireStrictAuditActor();
+    let previousUserForAudit: UserRecord | null = null;
+    let updatedUser: UserRecord | null = null;
+    let mutationCode: "missing-user" | "noop" | "last-admin-blocked" | "update-failed" | null =
+      null;
+
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${ADMIN_ROLE_GUARD_LOCK_KEY})`);
+
+      const currentRows = await tx
+        .select({
+          id: users.id,
+          openId: users.openId,
+          name: users.name,
+          email: users.email,
+          loginMethod: users.loginMethod,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastSignedIn: users.lastSignedIn,
+        })
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+
+      const currentUser = (currentRows[0] as UserRecord | undefined) ?? null;
+
+      if (!currentUser) {
+        mutationCode = "missing-user";
+        return;
+      }
+
+      previousUserForAudit = currentUser;
+
+      if (currentUser.role === nextRole) {
+        mutationCode = "noop";
+        return;
+      }
+
+      if (currentUser.role === "admin" && nextRole === "user") {
+        const adminCountRows = await tx
+          .select({
+            value: count(),
+          })
+          .from(users)
+          .where(eq(users.role, "admin"));
+
+        const adminCount = Number(adminCountRows[0]?.value ?? 0);
+
+        if (adminCount <= 1) {
+          mutationCode = "last-admin-blocked";
+          return;
+        }
+      }
+
+      const updatedRows = await tx
+        .update(users)
+        .set({
+          role: nextRole,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, id))
+        .returning({
+          id: users.id,
+          openId: users.openId,
+          name: users.name,
+          email: users.email,
+          loginMethod: users.loginMethod,
+          role: users.role,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          lastSignedIn: users.lastSignedIn,
+        });
+
+      updatedUser = (updatedRows[0] as UserRecord | undefined) ?? null;
+
+      if (!updatedUser) {
+        mutationCode = "update-failed";
+        return;
+      }
+
+      if (!updatedUser || !previousUserForAudit) {
+        mutationCode = "update-failed";
+        return;
+      }
+
+      await writeStrictAuditLogInTransaction(tx, {
+        entityType: "user",
+        entityId: updatedUser.id,
+        action: "update",
+        previousState: previousUserForAudit,
+        newState: updatedUser,
+        actor: auditActor,
       });
+    });
 
-    const updatedUser = (updatedRows[0] as UserRecord | undefined) ?? null;
+    if (mutationCode === "missing-user") {
+      redirect(
+        buildUsersRedirectUrl({
+          ...returnParams,
+          userAction: "error",
+          userCode: "missing-user",
+        }),
+      );
+    }
 
-    if (!updatedUser) {
+    if (mutationCode === "noop") {
+      redirect(
+        buildUsersRedirectUrl({
+          ...returnParams,
+          userAction: "noop",
+        }),
+      );
+    }
+
+    if (mutationCode === "last-admin-blocked") {
+      redirect(
+        buildUsersRedirectUrl({
+          ...returnParams,
+          userAction: "error",
+          userCode: "last-admin-blocked",
+        }),
+      );
+    }
+
+    if (mutationCode === "update-failed") {
       redirect(
         buildUsersRedirectUrl({
           ...returnParams,
@@ -172,18 +282,19 @@ export async function updateUserRole(formData: FormData) {
         }),
       );
     }
-
-    await writeAdminAudit({
-      entityType: "user",
-      logLabel: "user",
-      entityId: updatedUser.id,
-      action: "update",
-      previousState: existingUser,
-      newState: updatedUser,
-    });
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildUsersRedirectUrl({
+          ...returnParams,
+          userAction: "error",
+          userCode: "audit-actor-required",
+        }),
+      );
     }
 
     console.error("updateUserRole error:", error);

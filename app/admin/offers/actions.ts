@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
 import { getDbOrThrow } from "@/db/db";
 import { leads, offers } from "@/db/schema";
@@ -9,7 +10,11 @@ import {
   getOfferMutationBlocker,
   type OfferStatus,
 } from "@/app/lib/admin/governance";
-import { writeAuditLog } from "@/app/lib/admin/audit";
+import {
+  AuditActorBindingError,
+  requireStrictAuditActor,
+  writeStrictAuditLogInTransaction,
+} from "@/app/lib/admin/audit";
 
 export type OfferFormState = {
   ok: boolean;
@@ -91,6 +96,22 @@ function normalizeAmount(value: string): string | null {
 
 function isNewFormatOfferReference(value: string) {
   return /^OFF-\d{4}-\d{4,}$/.test(value);
+}
+
+function buildOffersRedirectUrl(
+  params: Record<string, string | null | undefined>,
+) {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  const query = searchParams.toString();
+
+  return query ? `/admin/offers?${query}` : "/admin/offers";
 }
 
 async function generateOfferReference() {
@@ -268,22 +289,49 @@ export async function saveOffer(
   }
 
   try {
-    if (id && existingOffer) {
-      const updatedRows = await db
-        .update(offers)
-        .set({
-          leadId,
-          offerReference,
-          validUntil: parsedValidUntil as Date,
-          totalAmount: parsedTotalAmount as string,
-          status,
-        })
-        .where(eq(offers.id, id))
-        .returning({
-          id: offers.id,
-        });
+    const auditActor = await requireStrictAuditActor();
 
-      if (updatedRows.length === 0) {
+    if (id && existingOffer) {
+      let updatedId = "";
+
+      await db.transaction(async (tx) => {
+        const updatedRows = await tx
+          .update(offers)
+          .set({
+            leadId,
+            offerReference,
+            validUntil: parsedValidUntil as Date,
+            totalAmount: parsedTotalAmount as string,
+            status,
+          })
+          .where(eq(offers.id, id))
+          .returning({
+            id: offers.id,
+          });
+
+        updatedId = updatedRows[0]?.id ?? "";
+
+        if (!updatedId) {
+          return;
+        }
+
+        await writeStrictAuditLogInTransaction(tx, {
+          entityType: "offer",
+          entityId: updatedId,
+          action: "update",
+          previousState: existingOffer,
+          newState: {
+            leadId,
+            offerReference,
+            validUntil: parsedValidUntil,
+            totalAmount: parsedTotalAmount,
+            status,
+          },
+          actor: auditActor,
+        });
+      });
+
+      if (!updatedId) {
         return {
           ok: false,
           message: "Teklif güncellenemedi.",
@@ -293,38 +341,30 @@ export async function saveOffer(
           },
         };
       }
-
-      await writeAuditLog({
-        entityType: "offer",
-        entityId: id,
-        action: "update",
-        previousState: existingOffer,
-        newState: {
-          leadId,
-          offerReference,
-          validUntil: parsedValidUntil,
-          totalAmount: parsedTotalAmount,
-          status,
-        },
-      });
     } else {
-      const insertedRows = await db
-        .insert(offers)
-        .values({
-          leadId,
-          offerReference,
-          validUntil: parsedValidUntil as Date,
-          totalAmount: parsedTotalAmount as string,
-          status,
-        })
-        .returning({
-          id: offers.id,
-        });
+      let insertedId = "";
 
-      const insertedId = insertedRows[0]?.id ?? "";
+      await db.transaction(async (tx) => {
+        const insertedRows = await tx
+          .insert(offers)
+          .values({
+            leadId,
+            offerReference,
+            validUntil: parsedValidUntil as Date,
+            totalAmount: parsedTotalAmount as string,
+            status,
+          })
+          .returning({
+            id: offers.id,
+          });
 
-      if (insertedId) {
-        await writeAuditLog({
+        insertedId = insertedRows[0]?.id ?? "";
+
+        if (!insertedId) {
+          return;
+        }
+
+        await writeStrictAuditLogInTransaction(tx, {
           entityType: "offer",
           entityId: insertedId,
           action: "create",
@@ -335,7 +375,19 @@ export async function saveOffer(
             totalAmount: parsedTotalAmount,
             status,
           },
+          actor: auditActor,
         });
+      });
+
+      if (!insertedId) {
+        return {
+          ok: false,
+          message: "Teklif oluşturulamadı.",
+          values,
+          errors: {
+            form: "Teklif kaydı oluşturulurken beklenmeyen bir hata oluştu.",
+          },
+        };
       }
     }
 
@@ -356,6 +408,17 @@ export async function saveOffer(
       errors: {},
     };
   } catch (error) {
+    if (error instanceof AuditActorBindingError) {
+      return {
+        ok: false,
+        message: "Teklif kaydı güvenli şekilde tamamlanamadı.",
+        values,
+        errors: {
+          form: "Session-bound audit actor çözülemediği için teklif mutation işlemi fail-closed durduruldu.",
+        },
+      };
+    }
+
     console.error("saveOffer error:", error);
 
     return {
@@ -374,7 +437,12 @@ export async function deleteOffer(id: string) {
   const normalizedId = String(id ?? "").trim();
 
   if (!normalizedId) {
-    return;
+    redirect(
+      buildOffersRedirectUrl({
+        offerAction: "error",
+        offerCode: "invalid-id",
+      }),
+    );
   }
 
   const existingRows = await db
@@ -393,7 +461,12 @@ export async function deleteOffer(id: string) {
   const existingOffer = existingRows[0] ?? null;
 
   if (!existingOffer) {
-    return;
+    redirect(
+      buildOffersRedirectUrl({
+        offerAction: "error",
+        offerCode: "missing-offer",
+      }),
+    );
   }
 
   const deleteBlocker = getOfferMutationBlocker({
@@ -402,36 +475,74 @@ export async function deleteOffer(id: string) {
   });
 
   if (deleteBlocker) {
-    throw new Error(
-      `Kritik statüdeki teklif doğrudan silinemez. ${existingOffer.offerReference} için önce kontrollü durum geçişi uygulanmalı. ${deleteBlocker}`,
+    redirect(
+      buildOffersRedirectUrl({
+        offerAction: "error",
+        offerCode: "critical-delete-blocked",
+      }),
     );
   }
 
-  await db.delete(offers).where(eq(offers.id, normalizedId));
-
   try {
-    const auditResult = await writeAuditLog({
-      entityType: "offer",
-      entityId: existingOffer.id,
-      action: "delete",
-      previousState: existingOffer,
+    const auditActor = await requireStrictAuditActor();
+    let deletedCount = 0;
+
+    await db.transaction(async (tx) => {
+      const deletedRows = await tx
+        .delete(offers)
+        .where(eq(offers.id, normalizedId))
+        .returning({
+          id: offers.id,
+        });
+
+      deletedCount = deletedRows.length;
+
+      if (deletedCount === 0) {
+        return;
+      }
+
+      await writeStrictAuditLogInTransaction(tx, {
+        entityType: "offer",
+        entityId: existingOffer.id,
+        action: "delete",
+        previousState: existingOffer,
+        actor: auditActor,
+      });
     });
 
-    if (!auditResult.ok || auditResult.skipped) {
-      console.warn("deleteOffer audit skipped:", {
-        offerId: existingOffer.id,
-        offerReference: existingOffer.offerReference,
-        reason: auditResult.reason,
-      });
+    if (deletedCount === 0) {
+      redirect(
+        buildOffersRedirectUrl({
+          offerAction: "error",
+          offerCode: "delete-failed",
+        }),
+      );
     }
   } catch (error) {
-    console.warn("deleteOffer audit warning:", {
-      offerId: existingOffer.id,
-      offerReference: existingOffer.offerReference,
-      error,
-    });
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildOffersRedirectUrl({
+          offerAction: "error",
+          offerCode: "audit-actor-required",
+        }),
+      );
+    }
+
+    console.error("deleteOffer error:", error);
+
+    redirect(
+      buildOffersRedirectUrl({
+        offerAction: "error",
+        offerCode: "delete-failed",
+      }),
+    );
   }
 
   revalidatePath("/admin/offers");
   revalidatePath("/admin/leads");
+  redirect(
+    buildOffersRedirectUrl({
+      offerAction: "deleted",
+    }),
+  );
 }
