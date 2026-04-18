@@ -32,6 +32,12 @@ type MediaRecord = {
 
 const MEDIA_ENTITY_TYPE = "media";
 
+function isMediaEntityRecord(
+  value: MediaRecord | null,
+): value is MediaRecord & { entityType: typeof MEDIA_ENTITY_TYPE } {
+  return Boolean(value && value.entityType === MEDIA_ENTITY_TYPE);
+}
+
 function normalizeTags(value: string) {
   return Array.from(
     new Set(
@@ -155,7 +161,7 @@ export async function saveMedia(formData: FormData) {
 
       insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
 
-      if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
+      if (!isMediaEntityRecord(insertedMedia)) {
         throw new Error("media-insert-invalid");
       }
 
@@ -168,7 +174,7 @@ export async function saveMedia(formData: FormData) {
       });
     });
 
-    if (!insertedMedia || insertedMedia.entityType !== MEDIA_ENTITY_TYPE) {
+    if (!isMediaEntityRecord(insertedMedia)) {
       redirect(
         buildMediaRedirectUrl({
           mediaAction: "error",
@@ -232,7 +238,7 @@ export async function deleteMedia(id: string) {
     );
   }
 
-  if (existingMedia.entityType !== MEDIA_ENTITY_TYPE) {
+  if (!isMediaEntityRecord(existingMedia)) {
     redirect(
       buildMediaRedirectUrl({
         mediaAction: "error",

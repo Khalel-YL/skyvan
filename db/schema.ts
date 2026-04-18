@@ -375,6 +375,7 @@ export const aiKnowledgeDocuments = pgTable("ai_knowledge_documents", {
   docType: docTypeEnum("doc_type").notNull(),
   s3Key: text("s3_key").notNull(),
   parsingStatus: parsingStatusEnum("parsing_status").default("pending").notNull(),
+  lastError: text("last_error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

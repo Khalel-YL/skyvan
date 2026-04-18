@@ -7,9 +7,7 @@ import type {
 
 export type ProductDocumentType = (typeof PRODUCT_DOCUMENT_TYPES)[number];
 export type ProductDocumentStatus = (typeof PRODUCT_DOCUMENT_STATUSES)[number];
-export type ProductDocumentFilterStatus =
-  | ProductDocumentStatus
-  | "all";
+export type ProductDocumentFilterStatus = "active" | "archived" | "all";
 
 export type RequiredProductDocumentType =
   (typeof REQUIRED_PRODUCT_DOCUMENT_TYPES)[number];
@@ -29,6 +27,10 @@ export type ProductDocumentListItem = {
   status: ProductDocumentStatus;
   createdAt: Date;
   updatedAt: Date;
+  aiKnowledgeDocumentId: string | null;
+  aiParsingStatus: "pending" | "processing" | "completed" | "failed" | null;
+  aiLastError: string | null;
+  aiUpdatedAt: Date | null;
 };
 
 export type ProductDocumentFormValues = {

@@ -66,7 +66,7 @@ export const restoreProductDocumentSchema = archiveProductDocumentSchema;
 
 export const productDocumentFiltersSchema = z.object({
   status: z
-    .enum(["all", ...PRODUCT_DOCUMENT_STATUSES])
+    .enum(["all", "active", "archived"])
     .optional()
     .default("active"),
 });

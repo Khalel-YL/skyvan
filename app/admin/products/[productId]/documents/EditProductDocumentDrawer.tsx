@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateProductDocument } from "./actions";
 import { PRODUCT_DOCUMENT_TYPE_OPTIONS } from "./constants";
@@ -21,6 +21,19 @@ function getFieldError(
   return errors?.[key]?.[0];
 }
 
+function getStatusLabel(status: ProductDocumentListItem["status"]) {
+  switch (status) {
+    case "draft":
+      return "Taslak";
+    case "active":
+      return "Aktif";
+    case "archived":
+      return "Arşiv";
+    default:
+      return status;
+  }
+}
+
 export function EditProductDocumentDrawer({
   document,
 }: {
@@ -28,23 +41,29 @@ export function EditProductDocumentDrawer({
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(
-    updateProductDocument,
-    initialState
-  );
+  const [isPending, startTransition] = useTransition();
+  const [state, setState] = useState<ProductDocumentActionState>(initialState);
 
-  useEffect(() => {
-    if (!state.ok) return;
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await updateProductDocument(initialState, formData);
+      setState(result);
 
-    setIsOpen(false);
-    router.refresh();
-  }, [router, state.ok]);
+      if (result.ok) {
+        setIsOpen(false);
+        router.refresh();
+      }
+    });
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setState(initialState);
+          setIsOpen(true);
+        }}
         className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
       >
         Düzenle
@@ -73,7 +92,7 @@ export function EditProductDocumentDrawer({
               </button>
             </div>
 
-            <form action={formAction} className="space-y-6 p-6">
+            <form action={handleSubmit} className="space-y-6 p-6">
               <input type="hidden" name="id" value={document.id} />
               <input type="hidden" name="productId" value={document.productId} />
 
@@ -186,7 +205,7 @@ export function EditProductDocumentDrawer({
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
                 Mevcut durum:{" "}
                 <span className="font-medium text-zinc-200">
-                  {document.status === "active" ? "Aktif" : "Arşiv"}
+                  {getStatusLabel(document.status)}
                 </span>
               </div>
 

@@ -1,5 +1,10 @@
 import { ArchiveProductDocumentDialog } from "./ArchiveProductDocumentDialog";
+import { AiIngestProductDocumentButton } from "./AiIngestProductDocumentButton";
 import { EditProductDocumentDrawer } from "./EditProductDocumentDrawer";
+import {
+  activateProductDocument,
+  setDraftProductDocument,
+} from "./actions";
 import { getProductDocumentTypeLabel } from "./lib";
 import type { ProductDocumentListItem } from "./types";
 
@@ -11,6 +16,8 @@ type Props = {
 
 function getStatusClasses(status: ProductDocumentListItem["status"]) {
   switch (status) {
+    case "draft":
+      return "border-amber-800 bg-amber-950 text-amber-300";
     case "active":
       return "border-green-800 bg-green-950 text-green-300";
     case "archived":
@@ -22,6 +29,8 @@ function getStatusClasses(status: ProductDocumentListItem["status"]) {
 
 function getStatusLabel(status: ProductDocumentListItem["status"]) {
   switch (status) {
+    case "draft":
+      return "Taslak";
     case "active":
       return "Aktif";
     case "archived":
@@ -53,6 +62,14 @@ function getUrlHostLabel(url: string) {
   } catch {
     return "Harici link";
   }
+}
+
+function getTransitionButtonClassName(tone: "success" | "warning") {
+  if (tone === "success") {
+    return "border-green-800 bg-green-950 text-green-300 hover:border-green-700";
+  }
+
+  return "border-blue-800 bg-blue-950 text-blue-300 hover:border-blue-700";
 }
 
 export function ProductDocumentsTable({
@@ -140,8 +157,59 @@ export function ProductDocumentsTable({
 
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <EditProductDocumentDrawer document={document} />
-                    <ArchiveProductDocumentDialog document={document} />
+                    {document.status === "draft" ? (
+                      <>
+                        <form
+                          action={activateProductDocument.bind(
+                            null,
+                            document.id,
+                            document.productId,
+                          )}
+                        >
+                          <button
+                            type="submit"
+                            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
+                              "success",
+                            )}`}
+                          >
+                            Aktifleştir
+                          </button>
+                        </form>
+                        <EditProductDocumentDrawer document={document} />
+                        <ArchiveProductDocumentDialog document={document} />
+                      </>
+                    ) : null}
+
+                    {document.status === "active" ? (
+                      <>
+                        <form
+                          action={setDraftProductDocument.bind(
+                            null,
+                            document.id,
+                            document.productId,
+                          )}
+                        >
+                          <button
+                            type="submit"
+                            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
+                              "warning",
+                            )}`}
+                          >
+                            Taslağa Al
+                          </button>
+                        </form>
+                        <EditProductDocumentDrawer document={document} />
+                        <ArchiveProductDocumentDialog document={document} />
+                        <AiIngestProductDocumentButton document={document} />
+                      </>
+                    ) : null}
+
+                    {document.status === "archived" ? (
+                      <>
+                        <ArchiveProductDocumentDialog document={document} />
+                        <EditProductDocumentDrawer document={document} />
+                      </>
+                    ) : null}
                   </div>
                 </td>
               </tr>

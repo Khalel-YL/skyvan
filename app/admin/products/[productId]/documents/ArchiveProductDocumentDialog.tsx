@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   archiveProductDocument,
@@ -28,13 +28,6 @@ export function ArchiveProductDocumentDialog({
 
   const isArchived = document.status === "archived";
 
-  useEffect(() => {
-    if (!state.ok) return;
-
-    setIsOpen(false);
-    router.refresh();
-  }, [router, state.ok]);
-
   function handleConfirm() {
     startTransition(async () => {
       const result = isArchived
@@ -42,6 +35,11 @@ export function ArchiveProductDocumentDialog({
         : await archiveProductDocument(document.id, document.productId);
 
       setState(result);
+
+      if (result.ok) {
+        setIsOpen(false);
+        router.refresh();
+      }
     });
   }
 
@@ -59,7 +57,7 @@ export function ArchiveProductDocumentDialog({
             : "border-amber-800 bg-amber-950 text-amber-300 hover:border-amber-700"
         }`}
       >
-        {isArchived ? "Geri Al" : "Arşivle"}
+        {isArchived ? "Aktifleştir" : "Arşivle"}
       </button>
 
       {isOpen ? (
@@ -70,7 +68,7 @@ export function ArchiveProductDocumentDialog({
             </p>
 
             <h3 className="mt-3 text-xl font-semibold text-zinc-100">
-              {isArchived ? "Belgeyi geri al" : "Belgeyi arşivle"}
+              {isArchived ? "Belgeyi aktifleştir" : "Belgeyi arşivle"}
             </h3>
 
             <p className="mt-2 text-sm text-zinc-400">
@@ -117,10 +115,10 @@ export function ArchiveProductDocumentDialog({
               >
                 {isPending
                   ? isArchived
-                    ? "Geri alınıyor..."
+                    ? "Aktifleştiriliyor..."
                     : "Arşivleniyor..."
                   : isArchived
-                  ? "Geri Al"
+                  ? "Aktifleştir"
                   : "Arşivle"}
               </button>
             </div>

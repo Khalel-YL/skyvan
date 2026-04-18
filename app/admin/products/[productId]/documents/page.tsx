@@ -48,11 +48,15 @@ export default async function ProductDocumentsPage({
   const { productId } = await params;
   const resolvedSearchParams = await searchParams;
 
-  const filters = productDocumentFiltersSchema.parse({
+  const filtersResult = productDocumentFiltersSchema.safeParse({
     status:
       resolvedSearchParams.status ??
       DEFAULT_PRODUCT_DOCUMENT_FILTERS.status,
   });
+
+  const filters = filtersResult.success
+    ? filtersResult.data
+    : { ...DEFAULT_PRODUCT_DOCUMENT_FILTERS };
 
   const product = await getProductDocumentsPageProduct(productId);
 

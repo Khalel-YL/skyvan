@@ -7,7 +7,7 @@ export const PRODUCT_DOCUMENT_TYPES = [
   "technical_note",
 ] as const;
 
-export const PRODUCT_DOCUMENT_STATUSES = ["active", "archived"] as const;
+export const PRODUCT_DOCUMENT_STATUSES = ["draft", "active", "archived"] as const;
 
 export const PRODUCT_DOCUMENT_TYPE_OPTIONS = [
   { value: "datasheet", label: "Datasheet" },
@@ -19,6 +19,7 @@ export const PRODUCT_DOCUMENT_TYPE_OPTIONS = [
 ] as const;
 
 export const PRODUCT_DOCUMENT_STATUS_OPTIONS = [
+  { value: "draft", label: "Taslak" },
   { value: "active", label: "Aktif" },
   { value: "archived", label: "Arşiv" },
 ] as const;
@@ -33,6 +34,7 @@ export const PRODUCT_DOCUMENT_TYPE_LABELS = {
 } as const;
 
 export const PRODUCT_DOCUMENT_STATUS_LABELS = {
+  draft: "Taslak",
   active: "Aktif",
   archived: "Arşiv",
 } as const;

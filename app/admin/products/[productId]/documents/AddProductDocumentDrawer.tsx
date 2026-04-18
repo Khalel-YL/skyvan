@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProductDocument } from "./actions";
 import { PRODUCT_DOCUMENT_TYPE_OPTIONS } from "./constants";
@@ -28,24 +28,30 @@ export function AddProductDocumentDrawer({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(
-    createProductDocument,
-    initialState
-  );
+  const [isPending, startTransition] = useTransition();
+  const [state, setState] = useState<ProductDocumentActionState>(initialState);
 
-  useEffect(() => {
-    if (!state.ok) return;
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await createProductDocument(initialState, formData);
+      setState(result);
 
-    formRef.current?.reset();
-    setIsOpen(false);
-    router.refresh();
-  }, [router, state.ok]);
+      if (result.ok) {
+        formRef.current?.reset();
+        setIsOpen(false);
+        router.refresh();
+      }
+    });
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setState(initialState);
+          setIsOpen(true);
+        }}
         className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-600 hover:text-white"
       >
         Belge Ekle
@@ -74,7 +80,7 @@ export function AddProductDocumentDrawer({
               </button>
             </div>
 
-            <form ref={formRef} action={formAction} className="space-y-6 p-6">
+            <form ref={formRef} action={handleSubmit} className="space-y-6 p-6">
               <input type="hidden" name="productId" value={productId} />
 
               {state.message ? (
