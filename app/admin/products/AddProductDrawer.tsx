@@ -286,9 +286,12 @@ function ProductFormFields({
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="draft">Taslak</option>
-          <option value="active">Aktif</option>
           <option value="archived">Arşiv</option>
         </select>
+        <p className="mt-1 text-xs text-zinc-500">
+          Yeni ürünler önce taslak akışta açılır. Aktif statü, AI-ready knowledge
+          kaydı oluştuğunda kullanılmalıdır.
+        </p>
         <FieldError errors={errors} name="status" />
       </div>
     </div>

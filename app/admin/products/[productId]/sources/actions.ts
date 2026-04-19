@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDbOrThrow } from "@/db/db";
 import { categories, manufacturerSourceRegistries, products } from "@/db/schema";
+import { alignLegacyActiveProducts } from "../../actions";
 
 import {
   createProductSourceBindingSchema,
@@ -70,6 +71,8 @@ export async function getProductSourceBindingsPageProduct(
   if (!isValidUuid(productId)) {
     return null;
   }
+
+  await alignLegacyActiveProducts([productId]);
 
   const [row] = await db()
     .select({

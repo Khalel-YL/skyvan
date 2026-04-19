@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "ES2017",
     "lib": [
       "dom",
@@ -23,7 +22,6 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -35,8 +33,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-, "app/admin/models/actions.ts"  ],
+    ".next/dev/types/**/*.ts",
+    "app/admin/models/actions.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

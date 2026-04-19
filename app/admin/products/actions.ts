@@ -1,10 +1,16 @@
 "use server";
 
-import { and, asc, desc, eq, ilike, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, ne, or, type SQL } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { getAiKnowledgeReadiness } from "@/app/lib/admin/governance";
 import { getDbOrThrow } from "@/db/db";
-import { categories, products } from "@/db/schema";
+import {
+  aiDocumentChunks,
+  aiKnowledgeDocuments,
+  categories,
+  products,
+} from "@/db/schema";
 import { writeAdminAudit } from "@/app/lib/admin/audit";
 
 import {
@@ -29,6 +35,8 @@ import type {
 function db() {
   return getDbOrThrow();
 }
+
+type DatasheetParsingStatus = "pending" | "processing" | "completed" | "failed";
 
 type ProductAuditState = {
   id: string;
@@ -69,6 +77,182 @@ const productAuditSelection = {
   createdAt: products.createdAt,
   updatedAt: products.updatedAt,
 };
+
+function revalidateProductPaths(productId?: string) {
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/datasheets");
+
+  if (!productId) {
+    return;
+  }
+
+  revalidatePath(`/admin/products/${productId}/documents`);
+  revalidatePath(`/admin/products/${productId}/sources`);
+}
+
+async function getAiReadyKnowledgeProductIds(productIds: string[]) {
+  const normalizedProductIds = Array.from(
+    new Set(productIds.map((value) => String(value ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!normalizedProductIds.length) {
+    return new Set<string>();
+  }
+
+  const knowledgeRows = await db()
+    .select({
+      id: aiKnowledgeDocuments.id,
+      docType: aiKnowledgeDocuments.docType,
+      productId: aiKnowledgeDocuments.productId,
+      parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      title: aiKnowledgeDocuments.title,
+      s3Key: aiKnowledgeDocuments.s3Key,
+    })
+    .from(aiKnowledgeDocuments)
+    .where(inArray(aiKnowledgeDocuments.productId, normalizedProductIds));
+
+  if (!knowledgeRows.length) {
+    return new Set<string>();
+  }
+
+  const chunkRows = await db()
+    .select({
+      documentId: aiDocumentChunks.documentId,
+      chunkCount: count(),
+    })
+    .from(aiDocumentChunks)
+    .where(
+      inArray(
+        aiDocumentChunks.documentId,
+        knowledgeRows.map((row) => row.id),
+      ),
+    )
+    .groupBy(aiDocumentChunks.documentId);
+
+  const chunkMap = new Map(
+    chunkRows.map((row) => [row.documentId, Number(row.chunkCount ?? 0)]),
+  );
+
+  const readyProductIds = new Set<string>();
+
+  for (const row of knowledgeRows) {
+    if (!row.productId || readyProductIds.has(row.productId)) {
+      continue;
+    }
+
+    const readiness = getAiKnowledgeReadiness({
+      docType: row.docType,
+      productId: row.productId,
+      parsingStatus: row.parsingStatus as DatasheetParsingStatus,
+      title: row.title,
+      s3Key: row.s3Key,
+      chunkCount: chunkMap.get(row.id) ?? 0,
+    });
+
+    if (readiness.approvedForAi) {
+      readyProductIds.add(row.productId);
+    }
+  }
+
+  return readyProductIds;
+}
+
+async function hasAiReadyKnowledgeForProduct(productId: string) {
+  return (await getAiReadyKnowledgeProductIds([productId])).has(productId);
+}
+
+export async function alignLegacyActiveProducts(productIds: string[]) {
+  const normalizedProductIds = Array.from(
+    new Set(productIds.map((value) => String(value ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!normalizedProductIds.length) {
+    return new Set<string>();
+  }
+
+  const activeRows = await db()
+    .select(productAuditSelection)
+    .from(products)
+    .where(
+      and(
+        eq(products.status, "active"),
+        inArray(products.id, normalizedProductIds),
+      ),
+    );
+
+  if (!activeRows.length) {
+    return new Set<string>();
+  }
+
+  const readyProductIds = await getAiReadyKnowledgeProductIds(
+    activeRows.map((row) => row.id),
+  );
+
+  const misalignedRows = activeRows.filter((row) => !readyProductIds.has(row.id));
+
+  if (!misalignedRows.length) {
+    return new Set<string>();
+  }
+
+  const updatedRows = await db()
+    .update(products)
+    .set({
+      status: "draft",
+      updatedAt: new Date(),
+    })
+    .where(inArray(products.id, misalignedRows.map((row) => row.id)))
+    .returning(productAuditSelection);
+
+  const updatedById = new Map(
+    updatedRows.map((row) => [row.id, row as ProductAuditState]),
+  );
+  const alignedProductIds = new Set<string>();
+
+  for (const previousState of misalignedRows) {
+    const nextState = updatedById.get(previousState.id);
+
+    if (!nextState) {
+      continue;
+    }
+
+    alignedProductIds.add(nextState.id);
+
+    await writeProductAudit({
+      entityId: nextState.id,
+      action: "update",
+      previousState,
+      newState: nextState,
+    });
+  }
+
+  return alignedProductIds;
+}
+
+async function getProductActivationError(params: {
+  productId?: string;
+  previousStatus?: ProductStatus | null;
+  nextStatus: ProductStatus;
+}) {
+  if (params.nextStatus !== "active") {
+    return null;
+  }
+
+  if (!params.productId) {
+    return "Yeni ürün doğrudan aktif açılamaz. Önce ürün kaydını oluşturup AI-ready bilgi hazırlığını tamamlayın.";
+  }
+
+  if (params.previousStatus === "active") {
+    return null;
+  }
+
+  const hasReadyKnowledge = await hasAiReadyKnowledgeForProduct(params.productId);
+
+  if (hasReadyKnowledge) {
+    return null;
+  }
+
+  return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI-ready knowledge kaydı oluşturun.";
+}
 
 async function getProductAuditStateById(
   productId: string
@@ -119,17 +303,19 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
     categoryId: filtersInput?.categoryId ?? "all",
   });
 
-  const whereClauses = [];
+  const whereClauses: SQL<unknown>[] = [];
 
   if (filters.q) {
-    whereClauses.push(
-      or(
-        ilike(products.name, `%${filters.q}%`),
-        ilike(products.slug, `%${filters.q}%`),
-        ilike(products.sku, `%${filters.q}%`),
-        ilike(products.shortDescription, `%${filters.q}%`)
-      )
+    const searchClause = or(
+      ilike(products.name, `%${filters.q}%`),
+      ilike(products.slug, `%${filters.q}%`),
+      ilike(products.sku, `%${filters.q}%`),
+      ilike(products.shortDescription, `%${filters.q}%`)
     );
+
+    if (searchClause) {
+      whereClauses.push(searchClause);
+    }
   }
 
   if (filters.status !== "all") {
@@ -140,32 +326,49 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
     whereClauses.push(eq(products.categoryId, filters.categoryId));
   }
 
-  const rows = await db()
-    .select({
-      id: products.id,
-      name: products.name,
-      slug: products.slug,
-      sku: products.sku,
-      categoryId: products.categoryId,
-      categoryName: categories.name,
-      shortDescription: products.shortDescription,
-      description: products.description,
-      imageUrl: products.imageUrl,
-      datasheetUrl: products.datasheetUrl,
-      basePrice: products.basePrice,
-      weightKg: products.weightKg,
-      powerDrawWatts: products.powerDrawWatts,
-      powerSupplyWatts: products.powerSupplyWatts,
-      status: products.status,
-      createdAt: products.createdAt,
-      updatedAt: products.updatedAt,
-    })
-    .from(products)
-    .innerJoin(categories, eq(products.categoryId, categories.id))
-    .where(whereClauses.length ? and(...whereClauses) : undefined)
-    .orderBy(desc(products.updatedAt), asc(products.name));
+  const queryRows = async () =>
+    db()
+      .select({
+        id: products.id,
+        name: products.name,
+        slug: products.slug,
+        sku: products.sku,
+        categoryId: products.categoryId,
+        categoryName: categories.name,
+        shortDescription: products.shortDescription,
+        description: products.description,
+        imageUrl: products.imageUrl,
+        datasheetUrl: products.datasheetUrl,
+        basePrice: products.basePrice,
+        weightKg: products.weightKg,
+        powerDrawWatts: products.powerDrawWatts,
+        powerSupplyWatts: products.powerSupplyWatts,
+        status: products.status,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
+      })
+      .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(whereClauses.length ? and(...whereClauses) : undefined)
+      .orderBy(desc(products.updatedAt), asc(products.name));
 
-  return rows satisfies ProductListItem[];
+  let rows = await queryRows();
+  const alignedProductIds = await alignLegacyActiveProducts(
+    rows
+      .filter((row) => row.status === "active")
+      .map((row) => row.id),
+  );
+
+  if (alignedProductIds.size > 0) {
+    rows = await queryRows();
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    lifecycleNote: alignedProductIds.has(row.id)
+      ? "legacy_active_downgraded"
+      : null,
+  })) satisfies ProductListItem[];
 }
 
 export async function createProduct(
@@ -251,6 +454,18 @@ export async function createProduct(
     };
   }
 
+  const activationError = await getProductActivationError({
+    nextStatus: data.status,
+  });
+
+  if (activationError) {
+    return {
+      ok: false,
+      message: activationError,
+      errors: { status: [activationError] },
+    };
+  }
+
   const createdRows = await db()
     .insert(products)
     .values({
@@ -287,7 +502,7 @@ export async function createProduct(
     newState: createdProduct,
   });
 
-  revalidatePath("/admin/products");
+  revalidateProductPaths(createdProduct.id);
 
   return {
     ok: true,
@@ -388,6 +603,20 @@ export async function updateProduct(
     };
   }
 
+  const activationError = await getProductActivationError({
+    productId: current.id,
+    previousStatus: current.status,
+    nextStatus: data.status,
+  });
+
+  if (activationError) {
+    return {
+      ok: false,
+      message: activationError,
+      errors: { status: [activationError] },
+    };
+  }
+
   const updatedRows = await db()
     .update(products)
     .set({
@@ -425,7 +654,7 @@ export async function updateProduct(
     newState: updatedProduct,
   });
 
-  revalidatePath("/admin/products");
+  revalidateProductPaths(updatedProduct.id);
 
   return {
     ok: true,
@@ -475,10 +704,60 @@ export async function archiveProduct(productId: string): Promise<ProductActionSt
     newState: archivedProduct,
   });
 
-  revalidatePath("/admin/products");
+  revalidateProductPaths(archivedProduct.id);
 
   return {
     ok: true,
     message: "Ürün arşive alındı.",
+  };
+}
+
+export async function restoreProduct(productId: string): Promise<ProductActionState> {
+  const current = await getProductAuditStateById(productId);
+
+  if (!current) {
+    return {
+      ok: false,
+      message: "Geri alınacak ürün bulunamadı.",
+    };
+  }
+
+  if (current.status !== "archived") {
+    return {
+      ok: true,
+      message: "Ürün zaten aktif akışta.",
+    };
+  }
+
+  const restoredRows = await db()
+    .update(products)
+    .set({
+      status: "draft",
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, productId))
+    .returning(productAuditSelection);
+
+  const restoredProduct = (restoredRows[0] as ProductAuditState | undefined) ?? null;
+
+  if (!restoredProduct) {
+    return {
+      ok: false,
+      message: "Ürün geri alınırken beklenmeyen bir hata oluştu.",
+    };
+  }
+
+  await writeProductAudit({
+    entityId: restoredProduct.id,
+    action: "update",
+    previousState: current,
+    newState: restoredProduct,
+  });
+
+  revalidateProductPaths(restoredProduct.id);
+
+  return {
+    ok: true,
+    message: "Ürün taslak duruma geri alındı.",
   };
 }

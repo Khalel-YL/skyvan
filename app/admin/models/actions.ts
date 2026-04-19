@@ -384,6 +384,8 @@ export async function saveModel(
           return;
         }
 
+        savedSlug = updatedModel.slug;
+
         await writeModelAudit({
           database: tx,
           actor: auditActor,
@@ -397,8 +399,6 @@ export async function saveModel(
       if (!updatedModel) {
         return createGenericError("Model kaydı işlem sırasında güncellenemedi.");
       }
-
-      savedSlug = updatedModel.slug;
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
       let insertedModel: ModelRecord | null = null;
@@ -434,6 +434,8 @@ export async function saveModel(
           return;
         }
 
+        savedSlug = insertedModel.slug;
+
         await writeModelAudit({
           database: tx,
           actor: auditActor,
@@ -446,8 +448,6 @@ export async function saveModel(
       if (!insertedModel) {
         return createGenericError("Model kaydı oluşturulamadı.");
       }
-
-      savedSlug = insertedModel.slug;
     }
 
     revalidatePath("/admin");

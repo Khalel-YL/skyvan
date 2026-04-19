@@ -26,6 +26,7 @@ import {
   restoreProductDocumentSchema,
   updateProductDocumentSchema,
 } from "./schema";
+import { alignLegacyActiveProducts } from "../../actions";
 import {
   buildDocumentDuplicateKey,
   emptyToNull,
@@ -44,6 +45,9 @@ type KnowledgeDocType = "datasheet" | "manual" | "rulebook";
 type KnowledgeParsingStatus = "pending" | "processing" | "completed" | "failed";
 
 type LockableDatabase = Pick<ReturnType<typeof getDbOrThrow>, "execute">;
+type TransactionDatabase = Parameters<
+  Parameters<ReturnType<typeof getDbOrThrow>["transaction"]>[0]
+>[0];
 
 type ProductDocumentIngestionRecord = {
   id: string;
@@ -93,7 +97,6 @@ type GeneratedChunk = {
 };
 
 const uuidSchema = z.string().uuid();
-const MOCK_EMBEDDING_MODEL_VERSION = "mock-embedding-v1";
 const DOCUMENT_FETCH_TIMEOUT_MS = 10_000;
 const MAX_CHUNK_LENGTH = 680;
 
@@ -436,6 +439,234 @@ async function writeKnowledgeAudit(input: {
   });
 }
 
+async function deleteKnowledgeChunksInTransaction(
+  database: TransactionDatabase,
+  documentId: string,
+) {
+  const existingChunkRows = await database
+    .select({
+      id: aiDocumentChunks.id,
+    })
+    .from(aiDocumentChunks)
+    .where(eq(aiDocumentChunks.documentId, documentId));
+
+  const existingChunkIds = existingChunkRows.map((row) => row.id);
+
+  if (existingChunkIds.length > 0) {
+    await database
+      .delete(aiEmbeddings)
+      .where(inArray(aiEmbeddings.chunkId, existingChunkIds));
+  }
+
+  await database
+    .delete(aiDocumentChunks)
+    .where(eq(aiDocumentChunks.documentId, documentId));
+}
+
+async function syncKnowledgeFromProductDocumentInTransaction(input: {
+  database: TransactionDatabase;
+  actor: StrictAuditActor;
+  document: ProductDocumentRecord;
+  previousDocument?: ProductDocumentRecord | null;
+}) {
+  const currentCanonicalKey = getCanonicalKnowledgeKey(input.document.url);
+
+  if (!currentCanonicalKey) {
+    return null;
+  }
+
+  const previousCanonicalKey = input.previousDocument
+    ? getCanonicalKnowledgeKey(input.previousDocument.url)
+    : null;
+
+  const candidateKeys = Array.from(
+    new Set(
+      [currentCanonicalKey, previousCanonicalKey].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  );
+
+  for (const candidateKey of candidateKeys) {
+    await lockKnowledgeIngestion(input.database, candidateKey);
+  }
+
+  const candidateRows =
+    candidateKeys.length > 0
+      ? await input.database
+          .select({
+            id: aiKnowledgeDocuments.id,
+            productId: aiKnowledgeDocuments.productId,
+            title: aiKnowledgeDocuments.title,
+            docType: aiKnowledgeDocuments.docType,
+            s3Key: aiKnowledgeDocuments.s3Key,
+            parsingStatus: aiKnowledgeDocuments.parsingStatus,
+            lastError: aiKnowledgeDocuments.lastError,
+            createdAt: aiKnowledgeDocuments.createdAt,
+            updatedAt: aiKnowledgeDocuments.updatedAt,
+          })
+          .from(aiKnowledgeDocuments)
+          .where(inArray(aiKnowledgeDocuments.s3Key, candidateKeys))
+          .orderBy(
+            desc(aiKnowledgeDocuments.updatedAt),
+            desc(aiKnowledgeDocuments.createdAt),
+          )
+      : [];
+
+  const currentKnowledgeDocument =
+    candidateRows.find((row) => row.s3Key === currentCanonicalKey) ?? null;
+  const previousKnowledgeDocument =
+    previousCanonicalKey && previousCanonicalKey !== currentCanonicalKey
+      ? (candidateRows.find((row) => row.s3Key === previousCanonicalKey) ?? null)
+      : null;
+  const existingKnowledgeDocument =
+    currentKnowledgeDocument ?? previousKnowledgeDocument;
+
+  if (!existingKnowledgeDocument && input.document.status !== "active") {
+    return null;
+  }
+
+  const nextDocType = mapProductDocumentTypeToKnowledgeDocType(input.document.type);
+  const previousDocType = input.previousDocument
+    ? mapProductDocumentTypeToKnowledgeDocType(input.previousDocument.type)
+    : null;
+  const sourceIdentityChanged =
+    Boolean(input.previousDocument) &&
+    (currentCanonicalKey !== previousCanonicalKey || nextDocType !== previousDocType);
+  const sourceReactivated =
+    input.document.status === "active" &&
+    input.previousDocument?.status !== "active";
+  const shouldResetLifecycle =
+    Boolean(existingKnowledgeDocument) &&
+    (sourceIdentityChanged || sourceReactivated || input.document.status !== "active");
+
+  if (shouldResetLifecycle && existingKnowledgeDocument) {
+    await deleteKnowledgeChunksInTransaction(
+      input.database,
+      existingKnowledgeDocument.id,
+    );
+  }
+
+  if (existingKnowledgeDocument) {
+    const nextParsingStatus: KnowledgeParsingStatus =
+      input.document.status !== "active"
+        ? "failed"
+        : sourceIdentityChanged || sourceReactivated
+          ? "pending"
+          : existingKnowledgeDocument.parsingStatus;
+
+    const nextLastError =
+      input.document.status !== "active"
+        ? "Kaynak belge aktif değil, AI işleme alınamaz."
+        : sourceIdentityChanged || sourceReactivated
+          ? null
+          : existingKnowledgeDocument.lastError;
+
+    const needsUpdate =
+      existingKnowledgeDocument.productId !== input.document.productId ||
+      existingKnowledgeDocument.title !== input.document.title ||
+      existingKnowledgeDocument.docType !== nextDocType ||
+      existingKnowledgeDocument.s3Key !== currentCanonicalKey ||
+      existingKnowledgeDocument.parsingStatus !== nextParsingStatus ||
+      (existingKnowledgeDocument.lastError ?? null) !== (nextLastError ?? null);
+
+    if (!needsUpdate) {
+      return existingKnowledgeDocument;
+    }
+
+    const updatedRows = await input.database
+      .update(aiKnowledgeDocuments)
+      .set({
+        productId: input.document.productId,
+        title: input.document.title,
+        docType: nextDocType,
+        s3Key: currentCanonicalKey,
+        parsingStatus: nextParsingStatus,
+        lastError: nextLastError,
+        updatedAt: new Date(),
+      })
+      .where(eq(aiKnowledgeDocuments.id, existingKnowledgeDocument.id))
+      .returning({
+        id: aiKnowledgeDocuments.id,
+        productId: aiKnowledgeDocuments.productId,
+        title: aiKnowledgeDocuments.title,
+        docType: aiKnowledgeDocuments.docType,
+        s3Key: aiKnowledgeDocuments.s3Key,
+        parsingStatus: aiKnowledgeDocuments.parsingStatus,
+        lastError: aiKnowledgeDocuments.lastError,
+        createdAt: aiKnowledgeDocuments.createdAt,
+        updatedAt: aiKnowledgeDocuments.updatedAt,
+      });
+
+    const updatedKnowledgeDocument =
+      (updatedRows[0] as KnowledgeDocumentRecord | undefined) ?? null;
+
+    if (!updatedKnowledgeDocument) {
+      throw new Error("AI knowledge kaydı kaynak belge ile senkronize edilemedi.");
+    }
+
+    await writeKnowledgeAudit({
+      database: input.database,
+      actor: input.actor,
+      entityId: updatedKnowledgeDocument.id,
+      action: "update",
+      previousState: buildKnowledgeAuditState(existingKnowledgeDocument, {
+        productDocumentId: input.document.id,
+        sourceType: input.document.type,
+      }),
+      newState: buildKnowledgeAuditState(updatedKnowledgeDocument, {
+        productDocumentId: input.document.id,
+        sourceType: input.document.type,
+      }),
+    });
+
+    return updatedKnowledgeDocument;
+  }
+
+  const insertedRows = await input.database
+    .insert(aiKnowledgeDocuments)
+    .values({
+      productId: input.document.productId,
+      title: input.document.title,
+      docType: nextDocType,
+      s3Key: currentCanonicalKey,
+      parsingStatus: "pending",
+      lastError: null,
+      updatedAt: new Date(),
+    })
+    .returning({
+      id: aiKnowledgeDocuments.id,
+      productId: aiKnowledgeDocuments.productId,
+      title: aiKnowledgeDocuments.title,
+      docType: aiKnowledgeDocuments.docType,
+      s3Key: aiKnowledgeDocuments.s3Key,
+      parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      lastError: aiKnowledgeDocuments.lastError,
+      createdAt: aiKnowledgeDocuments.createdAt,
+      updatedAt: aiKnowledgeDocuments.updatedAt,
+    });
+
+  const insertedKnowledgeDocument =
+    (insertedRows[0] as KnowledgeDocumentRecord | undefined) ?? null;
+
+  if (!insertedKnowledgeDocument) {
+    throw new Error("AI knowledge kaydı oluşturulamadı.");
+  }
+
+  await writeKnowledgeAudit({
+    database: input.database,
+    actor: input.actor,
+    entityId: insertedKnowledgeDocument.id,
+    action: "create",
+    newState: buildKnowledgeAuditState(insertedKnowledgeDocument, {
+      productDocumentId: input.document.id,
+      sourceType: input.document.type,
+    }),
+  });
+
+  return insertedKnowledgeDocument;
+}
+
 async function writeProductDocumentAudit(input: {
   database: AuditInsertDatabase;
   actor: StrictAuditActor;
@@ -508,20 +739,25 @@ async function getProductDocumentForIngestion(
 }
 
 function revalidateProductDocumentAiPaths(productId: string) {
+  revalidateProductDocumentPaths(productId);
+}
+
+function revalidateProductDocumentPaths(productId: string) {
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${productId}/documents`);
   revalidatePath("/admin/datasheets");
   revalidatePath("/admin/ai-core");
 }
 
-function revalidateProductDocumentPaths(productId: string) {
-  revalidatePath("/admin/products");
-  revalidatePath(`/admin/products/${productId}/documents`);
-}
-
 export async function getProductDocumentsPageProduct(
   productId: string,
 ): Promise<ProductDocumentsPageProduct | null> {
+  if (!isValidUuid(productId)) {
+    return null;
+  }
+
+  await alignLegacyActiveProducts([productId]);
+
   const row = await getProductBase(productId);
 
   if (!row) {
@@ -732,6 +968,12 @@ export async function createProductDocument(
         action: "create",
         newState: buildProductDocumentAuditState(createdDocument),
       });
+
+      await syncKnowledgeFromProductDocumentInTransaction({
+        database: tx,
+        actor: auditActor,
+        document: createdDocument,
+      });
     });
 
     if (!createdDocument) {
@@ -902,6 +1144,13 @@ export async function updateProductDocument(
         previousState: buildProductDocumentAuditState(currentDocument),
         newState: buildProductDocumentAuditState(updatedDocument),
       });
+
+      await syncKnowledgeFromProductDocumentInTransaction({
+        database: tx,
+        actor: auditActor,
+        document: updatedDocument,
+        previousDocument: currentDocument,
+      });
     });
 
     if (!updatedDocument) {
@@ -1024,6 +1273,13 @@ async function updateProductDocumentStatus(input: {
         action: "update",
         previousState: buildProductDocumentAuditState(currentDocument),
         newState: buildProductDocumentAuditState(updatedDocument),
+      });
+
+      await syncKnowledgeFromProductDocumentInTransaction({
+        database: tx,
+        actor: auditActor,
+        document: updatedDocument,
+        previousDocument: currentDocument,
       });
     });
 
@@ -1283,24 +1539,7 @@ export async function ingestProductDocumentToAi(
         createdKnowledgeDocument = true;
       }
 
-      const existingChunkRows = await tx
-        .select({
-          id: aiDocumentChunks.id,
-        })
-        .from(aiDocumentChunks)
-        .where(eq(aiDocumentChunks.documentId, processingKnowledgeDocument.id));
-
-      const existingChunkIds = existingChunkRows.map((row) => row.id);
-
-      if (existingChunkIds.length > 0) {
-        await tx
-          .delete(aiEmbeddings)
-          .where(inArray(aiEmbeddings.chunkId, existingChunkIds));
-      }
-
-      await tx
-        .delete(aiDocumentChunks)
-        .where(eq(aiDocumentChunks.documentId, processingKnowledgeDocument.id));
+      await deleteKnowledgeChunksInTransaction(tx, processingKnowledgeDocument.id);
 
       const insertedChunks = await tx
         .insert(aiDocumentChunks)
@@ -1324,13 +1563,6 @@ export async function ingestProductDocumentToAi(
       if (insertedChunks.length !== generatedChunks.length) {
         throw new Error("Tüm AI chunk kayıtları oluşturulamadı.");
       }
-
-      await tx.insert(aiEmbeddings).values(
-        insertedChunks.map((chunk, index) => ({
-          chunkId: chunk.id,
-          modelVersion: `${MOCK_EMBEDDING_MODEL_VERSION}:${index + 1}`,
-        })),
-      );
 
       const updatedRows = await tx
         .update(aiKnowledgeDocuments)

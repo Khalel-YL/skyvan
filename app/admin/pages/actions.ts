@@ -597,6 +597,7 @@ export async function savePage(
 
     if (id && previousPage) {
       let updatedPage: PageRecord | null = null;
+      let updatedPageSlug: string | null = null;
       let publishTransition: "publish" | "rollback" | null = null;
       let revisionName: string | null = null;
 
@@ -636,16 +637,18 @@ export async function savePage(
           return;
         }
 
-        const nextIsPublished = isPagePublishedContent(updatedPage.contentJson);
+        const nextUpdatedPage = updatedPage;
+        updatedPageSlug = nextUpdatedPage.slug;
+        const nextIsPublished = isPagePublishedContent(nextUpdatedPage.contentJson);
         publishTransition = getPagePublishTransition({
           previousIsPublished,
           nextIsPublished,
         });
         revisionName = publishTransition
           ? buildPageRevisionName({
-              title: updatedPage.title,
-              slug: updatedPage.slug ?? slug,
-              locale: updatedPage.locale,
+              title: nextUpdatedPage.title,
+              slug: nextUpdatedPage.slug ?? slug,
+              locale: nextUpdatedPage.locale,
               transition: publishTransition,
             })
           : null;
@@ -653,10 +656,10 @@ export async function savePage(
         await writePageAudit({
           database: tx,
           actor: auditActor,
-          entityId: updatedPage.id,
+          entityId: nextUpdatedPage.id,
           action: "update",
           previousState: buildPageAuditState(previousPage),
-          newState: buildPageAuditState(updatedPage, {
+          newState: buildPageAuditState(nextUpdatedPage, {
             publishTransition,
             revisionName,
           }),
@@ -684,13 +687,17 @@ export async function savePage(
       }
 
       revalidatePath("/admin/pages");
-      revalidatePagePath(updatedPage.slug);
+      revalidatePagePath(updatedPageSlug);
 
-      if (previousSlug && normalizeSlug(previousSlug) !== normalizeSlug(updatedPage.slug ?? "")) {
+      if (
+        previousSlug &&
+        normalizeSlug(previousSlug) !== normalizeSlug(updatedPageSlug ?? "")
+      ) {
         revalidatePagePath(previousSlug);
       }
     } else {
       let insertedPage: PageRecord | null = null;
+      let insertedPageSlug: string | null = null;
       let publishTransition: "publish" | "rollback" | null = null;
       let revisionName: string | null = null;
 
@@ -727,15 +734,17 @@ export async function savePage(
           return;
         }
 
+        const nextInsertedPage = insertedPage;
+        insertedPageSlug = nextInsertedPage.slug;
         publishTransition = getPagePublishTransition({
           previousIsPublished: false,
-          nextIsPublished: isPagePublishedContent(insertedPage.contentJson),
+          nextIsPublished: isPagePublishedContent(nextInsertedPage.contentJson),
         });
         revisionName = publishTransition
           ? buildPageRevisionName({
-              title: insertedPage.title,
-              slug: insertedPage.slug ?? slug,
-              locale: insertedPage.locale,
+              title: nextInsertedPage.title,
+              slug: nextInsertedPage.slug ?? slug,
+              locale: nextInsertedPage.locale,
               transition: publishTransition,
             })
           : null;
@@ -743,9 +752,9 @@ export async function savePage(
         await writePageAudit({
           database: tx,
           actor: auditActor,
-          entityId: insertedPage.id,
+          entityId: nextInsertedPage.id,
           action: "create",
-          newState: buildPageAuditState(insertedPage, {
+          newState: buildPageAuditState(nextInsertedPage, {
             publishTransition,
             revisionName,
           }),
@@ -773,7 +782,7 @@ export async function savePage(
       }
 
       revalidatePath("/admin/pages");
-      revalidatePagePath(insertedPage.slug);
+      revalidatePagePath(insertedPageSlug);
     }
   } catch (error) {
     if (error instanceof AuditActorBindingError) {
@@ -831,7 +840,9 @@ export async function deletePage(id: string, formData: FormData) {
     );
   }
 
-  if (isPagePublishedContent(page.contentJson)) {
+  const existingPage = page;
+
+  if (isPagePublishedContent(existingPage.contentJson)) {
     redirect(
       buildPagesRedirectUrl({
         pageAction: "error",
@@ -866,9 +877,9 @@ export async function deletePage(id: string, formData: FormData) {
       await writePageAudit({
         database: tx,
         actor: auditActor,
-        entityId: page.id,
+        entityId: existingPage.id,
         action: "delete",
-        previousState: buildPageAuditState(page),
+        previousState: buildPageAuditState(existingPage),
       });
     });
 
@@ -901,7 +912,7 @@ export async function deletePage(id: string, formData: FormData) {
   }
 
   revalidatePath("/admin/pages");
-  revalidatePagePath(page.slug);
+  revalidatePagePath(existingPage.slug);
   redirect(
     buildPagesRedirectUrl({
       pageAction: "deleted",
@@ -939,7 +950,8 @@ export async function repairPageSlug(
     );
   }
 
-  const nextSlug = normalizeSlug(page.title);
+  const existingPage = page;
+  const nextSlug = normalizeSlug(existingPage.title);
 
   if (!nextSlug) {
     redirect(
@@ -952,8 +964,8 @@ export async function repairPageSlug(
 
   const collision = await findPageBySlugAndLocale({
     slug: nextSlug,
-    locale: page.locale,
-    excludeId: page.id,
+    locale: existingPage.locale,
+    excludeId: existingPage.id,
   });
 
   if (collision) {
@@ -966,6 +978,7 @@ export async function repairPageSlug(
   }
 
   let updatedPage: PageRecord | null = null;
+  let updatedPageSlug: string | null = null;
 
   try {
     const auditActor = await requireStrictAuditActor();
@@ -979,7 +992,7 @@ export async function repairPageSlug(
         .where(
           and(
             eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
-            eq(localizedContent.id, page.id),
+            eq(localizedContent.id, existingPage.id),
           ),
         )
         .returning({
@@ -1000,13 +1013,15 @@ export async function repairPageSlug(
         return;
       }
 
+      const nextUpdatedPage = updatedPage;
+      updatedPageSlug = nextUpdatedPage.slug;
       await writePageAudit({
         database: tx,
         actor: auditActor,
-        entityId: updatedPage.id,
+        entityId: nextUpdatedPage.id,
         action: "update",
-        previousState: buildPageAuditState(page),
-        newState: buildPageAuditState(updatedPage),
+        previousState: buildPageAuditState(existingPage),
+        newState: buildPageAuditState(nextUpdatedPage),
       });
     });
   } catch (error) {
@@ -1039,8 +1054,8 @@ export async function repairPageSlug(
   }
 
   revalidatePath("/admin/pages");
-  revalidatePagePath(page.slug);
-  revalidatePagePath(updatedPage.slug);
+  revalidatePagePath(existingPage.slug);
+  revalidatePagePath(updatedPageSlug);
   redirect(
     buildPagesRedirectUrl({
       pageAction: "slug-repaired",

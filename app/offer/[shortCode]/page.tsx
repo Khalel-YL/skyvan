@@ -1,35 +1,78 @@
-import { db } from "@/db/db";
-import { builds } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getDbOrThrow } from "@/db/db";
+import {
+  builds,
+  buildSelectedProducts,
+  buildVersions,
+  models,
+  products,
+} from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Truck, Zap, Box, BrainCircuit, CheckCircle2, FileText, ArrowLeft, Printer, Hammer } from "lucide-react";
 import Link from "next/link";
 
 export default async function OfferPage({ params }: { params: { shortCode: string } }) {
-  // 'as any' kullanarak TypeScript'in ilişkisel veri karmaşasını (never hatasını) susturuyoruz
-  const build = await db.query.builds.findFirst({
-    where: eq(builds.shortCode, params.shortCode),
-    with: {
-      model: true,
-      versions: {
-        orderBy: (v: any, { desc }: any) => [desc(v.createdAt)], // Hata burada v:any ile çözüldü
-        limit: 1,
-        with: {
-          selectedProducts: {
-            with: {
-              product: true
-            }
-          }
-        }
-      }
-    }
-  }) as any;
+  const db = getDbOrThrow();
 
-  if (!build || !build.versions || build.versions.length === 0) return notFound();
+  const buildRows = await db
+    .select({
+      id: builds.id,
+      shortCode: builds.shortCode,
+      modelName: models.slug,
+    })
+    .from(builds)
+    .innerJoin(models, eq(builds.modelId, models.id))
+    .where(eq(builds.shortCode, params.shortCode))
+    .limit(1);
 
-  const version = build.versions[0];
-  const vehicle = build.model;
-  const selectedProducts = version.selectedProducts || [];
+  const build = buildRows[0];
+
+  if (!build) {
+    return notFound();
+  }
+
+  const versionRows = await db
+    .select({
+      id: buildVersions.id,
+      totalWeightKg: buildVersions.totalWeightKg,
+      totalPrice: buildVersions.totalPrice,
+    })
+    .from(buildVersions)
+    .where(eq(buildVersions.buildId, build.id))
+    .orderBy(desc(buildVersions.createdAt))
+    .limit(1);
+
+  const version = versionRows[0];
+
+  if (!version) {
+    return notFound();
+  }
+
+  const selectedProductRows = await db
+    .select({
+      quantity: buildSelectedProducts.quantity,
+      productSku: products.sku,
+      productTitle: products.name,
+      productName: products.name,
+      productBasePrice: products.basePrice,
+    })
+    .from(buildSelectedProducts)
+    .innerJoin(products, eq(buildSelectedProducts.productId, products.id))
+    .where(eq(buildSelectedProducts.buildVersionId, version.id));
+
+  const vehicle = {
+    name: build.modelName,
+  };
+
+  const selectedProducts = selectedProductRows.map((item) => ({
+    quantity: item.quantity,
+    product: {
+      sku: item.productSku,
+      title: item.productTitle,
+      name: item.productName,
+      basePrice: item.productBasePrice,
+    },
+  }));
 
   return (
     <div className="min-h-screen bg-black text-white p-8 md:p-16 font-sans">

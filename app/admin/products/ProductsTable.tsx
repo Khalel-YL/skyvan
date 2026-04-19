@@ -3,19 +3,32 @@ import type { ReactNode } from "react";
 
 import { inArray, sql } from "drizzle-orm";
 
+import { getAiKnowledgeReadiness } from "@/app/lib/admin/governance";
 import { getDbOrThrow } from "@/db/db";
-import { productDocuments } from "@/db/schema";
+import {
+  aiDocumentChunks,
+  aiKnowledgeDocuments,
+  productDocuments,
+} from "@/db/schema";
 
 import { DeleteProductDialog } from "./DeleteProductDialog";
 import { EditProductDrawer } from "./EditProductDrawer";
 import { formatMetric, formatMoney, formatWatts } from "./mappers";
 import { ProductStatusBadge } from "./ProductStatusBadge";
-import type { CategoryOption, ProductListItem } from "./types";
+import type { CategoryOption, ProductListItem, ProductStatus } from "./types";
 
 type DocumentCounts = {
   total: number;
+  draft: number;
   active: number;
   archived: number;
+};
+
+type KnowledgeCounts = {
+  total: number;
+  completed: number;
+  ready: number;
+  blocked: number;
 };
 
 type SourceBindingCounts = {
@@ -37,6 +50,21 @@ type ReadinessMeta = {
   detail: string;
 };
 
+function isLegacyAlignedToDraft(note: ProductListItem["lifecycleNote"]) {
+  return (
+    note === "legacy_active_downgraded" ||
+    note === "legacy_active_aligned_to_draft"
+  );
+}
+
+function getDisplayProductStatus(product: ProductListItem): ProductStatus {
+  if (isLegacyAlignedToDraft(product.lifecycleNote)) {
+    return "draft";
+  }
+
+  return product.status;
+}
+
 async function getDocumentCountsByProductIds(productIds: string[]) {
   if (!productIds.length) {
     return new Map<string, DocumentCounts>();
@@ -48,6 +76,14 @@ async function getDocumentCountsByProductIds(productIds: string[]) {
     .select({
       productId: productDocuments.productId,
       total: sql<number>`count(*)::int`,
+      draft: sql<number>`
+        sum(
+          case
+            when ${productDocuments.status} = 'draft' then 1
+            else 0
+          end
+        )::int
+      `,
       active: sql<number>`
         sum(
           case
@@ -74,11 +110,94 @@ async function getDocumentCountsByProductIds(productIds: string[]) {
       row.productId,
       {
         total: Number(row.total ?? 0),
+        draft: Number(row.draft ?? 0),
         active: Number(row.active ?? 0),
         archived: Number(row.archived ?? 0),
       },
     ]),
   );
+}
+
+async function getKnowledgeCountsByProductIds(productIds: string[]) {
+  if (!productIds.length) {
+    return new Map<string, KnowledgeCounts>();
+  }
+
+  const db = getDbOrThrow();
+
+  const documents = await db
+    .select({
+      id: aiKnowledgeDocuments.id,
+      productId: aiKnowledgeDocuments.productId,
+      docType: aiKnowledgeDocuments.docType,
+      parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      title: aiKnowledgeDocuments.title,
+      s3Key: aiKnowledgeDocuments.s3Key,
+    })
+    .from(aiKnowledgeDocuments)
+    .where(inArray(aiKnowledgeDocuments.productId, productIds));
+
+  if (!documents.length) {
+    return new Map<string, KnowledgeCounts>();
+  }
+
+  const chunkRows = await db
+    .select({
+      documentId: aiDocumentChunks.documentId,
+      chunkCount: sql<number>`count(*)::int`,
+    })
+    .from(aiDocumentChunks)
+    .where(
+      inArray(
+        aiDocumentChunks.documentId,
+        documents.map((document) => document.id),
+      ),
+    )
+    .groupBy(aiDocumentChunks.documentId);
+
+  const chunkMap = new Map(
+    chunkRows.map((row) => [row.documentId, Number(row.chunkCount ?? 0)]),
+  );
+
+  const knowledgeByProductId = new Map<string, KnowledgeCounts>();
+
+  for (const document of documents) {
+    if (!document.productId) {
+      continue;
+    }
+
+    const current = knowledgeByProductId.get(document.productId) ?? {
+      total: 0,
+      completed: 0,
+      ready: 0,
+      blocked: 0,
+    };
+
+    current.total += 1;
+
+    if (document.parsingStatus === "completed") {
+      current.completed += 1;
+    }
+
+    const readiness = getAiKnowledgeReadiness({
+      docType: document.docType,
+      productId: document.productId,
+      parsingStatus: document.parsingStatus,
+      title: document.title,
+      s3Key: document.s3Key,
+      chunkCount: chunkMap.get(document.id) ?? 0,
+    });
+
+    if (readiness.approvedForAi) {
+      current.ready += 1;
+    } else {
+      current.blocked += 1;
+    }
+
+    knowledgeByProductId.set(document.productId, current);
+  }
+
+  return knowledgeByProductId;
 }
 
 async function getSourceBindingCountsByProductIds(productIds: string[]) {
@@ -192,75 +311,82 @@ async function getSourceBindingQualityByProductIds(productIds: string[]) {
 
 function getReadinessScore(
   documentCounts: DocumentCounts,
-  sourceBindingCounts: SourceBindingCounts,
-  sourceBindingQuality: SourceBindingQuality,
+  knowledgeCounts: KnowledgeCounts,
 ) {
   let score = 0;
 
   if (documentCounts.active > 0) {
     score += 50;
+  } else if (documentCounts.draft > 0) {
+    score += 25;
   }
 
-  if (sourceBindingCounts.active === 0) {
-    return score;
-  }
-
-  if (sourceBindingQuality.targetedActive > 0) {
+  if (knowledgeCounts.ready > 0) {
     score += 50;
     return score;
   }
 
-  score += 25;
+  if (knowledgeCounts.total > 0) {
+    score += 25;
+    return score;
+  }
+
   return score;
 }
 
 function getReadinessMeta(
   documentCounts: DocumentCounts,
-  sourceBindingCounts: SourceBindingCounts,
-  sourceBindingQuality: SourceBindingQuality,
+  knowledgeCounts: KnowledgeCounts,
 ): ReadinessMeta {
-  const score = getReadinessScore(
-    documentCounts,
-    sourceBindingCounts,
-    sourceBindingQuality,
-  );
+  const score = getReadinessScore(documentCounts, knowledgeCounts);
 
   if (score === 100) {
     return {
       label: "AI Hazır",
       tone: "border-emerald-900/60 bg-emerald-950/30 text-emerald-300",
-      detail: "AI hazır (ürün canlı öneri verebilir).",
+      detail: "Aktif belge ve AI-ready knowledge kaydı hizalı.",
     };
   }
 
-  if (score === 75) {
+  if (knowledgeCounts.ready > 0 && documentCounts.active === 0) {
     return {
-      label: "Binding Zayıf",
+      label: "Belge Pasif",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Belge var ancak binding hedefi geniş; path hint daraltılmalı.",
+      detail: "AI-ready knowledge var ancak aktif ürün belgesi görünmüyor.",
     };
   }
 
-  if (documentCounts.active > 0 && sourceBindingCounts.active === 0) {
+  if (knowledgeCounts.total > 0) {
     return {
-      label: "Binding Eksik",
+      label: "AI Bloklu",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Belge var ancak AI veri kaynağı bağlı değil.",
+      detail:
+        documentCounts.active > 0
+          ? "Knowledge kaydı var ama AI-ready şartlarını henüz sağlamıyor."
+          : "Knowledge kaydı var ancak AI-ready seviyesine ulaşmamış.",
     };
   }
 
-  if (documentCounts.active === 0 && sourceBindingCounts.active > 0) {
+  if (documentCounts.active > 0) {
     return {
-      label: "Belge Eksik",
+      label: "İşleme Eksik",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Kaynak bağlı ancak AI içerik öğrenemiyor (belge eksik).",
+      detail: "Aktif belge var ancak knowledge / chunk hazır değil.",
+    };
+  }
+
+  if (documentCounts.draft > 0) {
+    return {
+      label: "Belge Taslakta",
+      tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
+      detail: "Belge var ama henüz aktif akışa alınmamış.",
     };
   }
 
   return {
     label: "Hazırlık Eksik",
     tone: "border-red-900/60 bg-red-950/30 text-red-300",
-    detail: "AI için veri yok (belge ve kaynak eksik).",
+    detail: "AI için kullanılabilir belge / knowledge sinyali yok.",
   };
 }
 
@@ -269,10 +395,12 @@ function getReadinessPriority(
   score: number,
 ) {
   if (score === 0) return 0;
-  if (meta.label === "Belge Eksik") return 1;
-  if (meta.label === "Binding Eksik") return 2;
-  if (meta.label === "Binding Zayıf") return 3;
-  if (score === 100) return 4;
+  if (meta.label === "Hazırlık Eksik") return 1;
+  if (meta.label === "Belge Taslakta") return 2;
+  if (meta.label === "İşleme Eksik") return 3;
+  if (meta.label === "AI Bloklu") return 4;
+  if (meta.label === "Belge Pasif") return 5;
+  if (score === 100) return 6;
   return 5;
 }
 
@@ -347,12 +475,14 @@ function ReadinessBadge({
 
 function ReadinessPanel({
   documentCounts,
+  knowledgeCounts,
   sourceBindingCounts,
   sourceBindingQuality,
   meta,
   score,
 }: {
   documentCounts: DocumentCounts;
+  knowledgeCounts: KnowledgeCounts;
   sourceBindingCounts: SourceBindingCounts;
   sourceBindingQuality: SourceBindingQuality;
   meta: ReadinessMeta;
@@ -379,11 +509,30 @@ function ReadinessPanel({
         label="Belgeler"
         items={[
           { text: `T ${documentCounts.total}` },
+          ...(documentCounts.draft > 0
+            ? [{ text: `D ${documentCounts.draft}`, tone: "text-amber-300" }]
+            : []),
           ...(documentCounts.active > 0
             ? [{ text: `A ${documentCounts.active}`, tone: "text-emerald-300" }]
             : []),
           ...(documentCounts.archived > 0
             ? [{ text: `R ${documentCounts.archived}` }]
+            : []),
+        ]}
+      />
+
+      <InlineCountsSection
+        label="AI Knowledge"
+        items={[
+          { text: `T ${knowledgeCounts.total}` },
+          ...(knowledgeCounts.ready > 0
+            ? [{ text: `Hazır ${knowledgeCounts.ready}`, tone: "text-emerald-300" }]
+            : []),
+          ...(knowledgeCounts.completed > 0
+            ? [{ text: `Completed ${knowledgeCounts.completed}` }]
+            : []),
+          ...(knowledgeCounts.blocked > 0
+            ? [{ text: `Bloklu ${knowledgeCounts.blocked}`, tone: "text-amber-300" }]
             : []),
         ]}
       />
@@ -453,10 +602,12 @@ export async function ProductsTable({
 
   const [
     documentCountsByProductId,
+    knowledgeCountsByProductId,
     sourceBindingCountsByProductId,
     sourceBindingQualityByProductId,
   ] = await Promise.all([
     getDocumentCountsByProductIds(productIds),
+    getKnowledgeCountsByProductIds(productIds),
     getSourceBindingCountsByProductIds(productIds),
     getSourceBindingQualityByProductIds(productIds),
   ]);
@@ -465,8 +616,16 @@ export async function ProductsTable({
     .map((product) => {
       const documentCounts = documentCountsByProductId.get(product.id) ?? {
         total: 0,
+        draft: 0,
         active: 0,
         archived: 0,
+      };
+
+      const knowledgeCounts = knowledgeCountsByProductId.get(product.id) ?? {
+        total: 0,
+        completed: 0,
+        ready: 0,
+        blocked: 0,
       };
 
       const sourceBindingCounts = sourceBindingCountsByProductId.get(
@@ -486,21 +645,14 @@ export async function ProductsTable({
         broadActive: 0,
       };
 
-      const score = getReadinessScore(
-        documentCounts,
-        sourceBindingCounts,
-        sourceBindingQuality,
-      );
+      const score = getReadinessScore(documentCounts, knowledgeCounts);
 
-      const meta = getReadinessMeta(
-        documentCounts,
-        sourceBindingCounts,
-        sourceBindingQuality,
-      );
+      const meta = getReadinessMeta(documentCounts, knowledgeCounts);
 
       return {
         product,
         documentCounts,
+        knowledgeCounts,
         sourceBindingCounts,
         sourceBindingQuality,
         score,
@@ -525,11 +677,17 @@ export async function ProductsTable({
         ({
           product,
           documentCounts,
+          knowledgeCounts,
           sourceBindingCounts,
           sourceBindingQuality,
           score,
           meta,
         }) => {
+          const displayStatus = getDisplayProductStatus(product);
+          const displayProduct =
+            displayStatus === product.status
+              ? product
+              : { ...product, status: displayStatus };
           const documentsNeedAttention = documentCounts.active === 0;
           const bindingsNeedAttention =
             sourceBindingCounts.active === 0 ||
@@ -552,8 +710,13 @@ export async function ProductsTable({
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-                    <ProductStatusBadge status={product.status} />
+                    <ProductStatusBadge status={displayStatus} />
                     <ReadinessBadge meta={meta} />
+                    {isLegacyAlignedToDraft(product.lifecycleNote) ? (
+                      <InfoChip className="border-amber-900/60 bg-amber-950/30 text-amber-300">
+                        Legacy aktif taslağa alındı
+                      </InfoChip>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -617,16 +780,18 @@ export async function ProductsTable({
                     Kaynak Bağları
                   </Link>
 
-                  <EditProductDrawer product={product} categories={categories} />
+                  <EditProductDrawer product={displayProduct} categories={categories} />
 
                   <DeleteProductDialog
                     productId={product.id}
                     productName={product.name}
+                    productStatus={displayStatus}
                   />
                 </div>
 
                 <ReadinessPanel
                   documentCounts={documentCounts}
+                  knowledgeCounts={knowledgeCounts}
                   sourceBindingCounts={sourceBindingCounts}
                   sourceBindingQuality={sourceBindingQuality}
                   meta={meta}

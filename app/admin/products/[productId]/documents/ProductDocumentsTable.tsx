@@ -160,11 +160,12 @@ export function ProductDocumentsTable({
                     {document.status === "draft" ? (
                       <>
                         <form
-                          action={activateProductDocument.bind(
-                            null,
-                            document.id,
-                            document.productId,
-                          )}
+                          action={async () => {
+                            await activateProductDocument(
+                              document.id,
+                              document.productId,
+                            );
+                          }}
                         >
                           <button
                             type="submit"
@@ -183,11 +184,12 @@ export function ProductDocumentsTable({
                     {document.status === "active" ? (
                       <>
                         <form
-                          action={setDraftProductDocument.bind(
-                            null,
-                            document.id,
-                            document.productId,
-                          )}
+                          action={async () => {
+                            await setDraftProductDocument(
+                              document.id,
+                              document.productId,
+                            );
+                          }}
                         >
                           <button
                             type="submit"

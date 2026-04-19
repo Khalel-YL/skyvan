@@ -31,6 +31,10 @@ export type ProductListItem = {
   powerDrawWatts: string | null;
   powerSupplyWatts: string | null;
   status: ProductStatus;
+  lifecycleNote:
+    | "legacy_active_downgraded"
+    | "legacy_active_aligned_to_draft"
+    | null;
   createdAt: Date;
   updatedAt: Date;
 };

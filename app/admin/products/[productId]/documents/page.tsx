@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  getProductAiDecisionSignal,
+  getProductGroundedExplanation,
+} from "@/app/lib/admin/governance";
 import { AddProductDocumentDrawer } from "./AddProductDocumentDrawer";
 import { DEFAULT_PRODUCT_DOCUMENT_FILTERS } from "./constants";
 import { ProductDocumentsSummary } from "./ProductDocumentsSummary";
@@ -81,7 +85,11 @@ export default async function ProductDocumentsPage({
     );
   }
 
-  const documents = await getProductDocuments(productId, filters);
+  const [documents, groundedExplanation, decisionSignal] = await Promise.all([
+    getProductDocuments(productId, filters),
+    getProductGroundedExplanation({ productId }),
+    getProductAiDecisionSignal({ productId }),
+  ]);
   const summary = buildProductDocumentsSummary(documents);
 
   const statusHref = (status: "all" | "active" | "archived") =>
@@ -191,7 +199,11 @@ export default async function ProductDocumentsPage({
         </div>
       </div>
 
-      <ProductDocumentsSummary summary={summary} />
+      <ProductDocumentsSummary
+        summary={summary}
+        groundedExplanation={groundedExplanation}
+        decisionSignal={decisionSignal}
+      />
 
       <ProductDocumentsTable
         documents={documents}

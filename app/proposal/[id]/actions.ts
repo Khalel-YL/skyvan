@@ -1,12 +1,14 @@
 "use server";
 
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function signCaravanProposal(id: string, finalPrice: number, selectedExtras: string[]) {
   try {
+    const db = getDbOrThrow();
+
     // 1. Veritabanından mevcut teklifi bul
     const offerData = await db.select().from(localizedContent).where(eq(localizedContent.id, id));
     if (!offerData || offerData.length === 0) throw new Error("Teklif bulunamadı");

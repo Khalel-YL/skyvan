@@ -14,6 +14,25 @@ const initialState: ProductDocumentActionState = {
   message: "",
 };
 
+function formatUpdatedAt(value: Date | string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function getButtonLabel(document: ProductDocumentListItem) {
   if (document.aiParsingStatus === "completed") {
     return "Yeniden İşle";
@@ -24,7 +43,7 @@ function getButtonLabel(document: ProductDocumentListItem) {
   }
 
   if (document.aiParsingStatus === "processing") {
-    return "Zorla Yeniden İşle";
+    return "İşleniyor";
   }
 
   return "AI İşle";
@@ -44,10 +63,38 @@ function getButtonClassName(document: ProductDocumentListItem) {
   }
 
   if (document.aiParsingStatus === "processing") {
-    return "border-amber-500/20 bg-amber-500/10 text-amber-200 hover:bg-amber-500/15";
+    return "border-amber-500/20 bg-amber-500/10 text-amber-200";
   }
 
   return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15";
+}
+
+function getStatusMessage(document: ProductDocumentListItem) {
+  if (document.status !== "active") {
+    return "Belge aktif değil, AI işleme alınamaz.";
+  }
+
+  if (document.aiParsingStatus === "pending") {
+    return "Kaynak sync edildi. AI işleme manuel başlatılır.";
+  }
+
+  if (document.aiParsingStatus === "processing") {
+    return "AI işleme sürüyor. İşlem tamamlanmadan yeniden tetiklenemez.";
+  }
+
+  if (document.aiParsingStatus === "completed") {
+    const updatedAtLabel = formatUpdatedAt(document.aiUpdatedAt);
+
+    return updatedAtLabel
+      ? `AI işleme tamamlandı. Son güncelleme: ${updatedAtLabel}.`
+      : "AI işleme tamamlandı.";
+  }
+
+  if (document.aiParsingStatus === "failed") {
+    return document.aiLastError || "Önceki AI işleme başarısız oldu. Tekrar deneyin.";
+  }
+
+  return null;
 }
 
 export function AiIngestProductDocumentButton({
@@ -58,7 +105,8 @@ export function AiIngestProductDocumentButton({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<ProductDocumentActionState>(initialState);
-  const canIngest = document.status === "active";
+  const canIngest =
+    document.status === "active" && document.aiParsingStatus !== "processing";
 
   function handleClick() {
     if (!canIngest) {
@@ -76,11 +124,9 @@ export function AiIngestProductDocumentButton({
   }
 
   const message =
-    !canIngest
-      ? "Belge aktif değil, AI işleme alınamaz."
-      : !state.ok && state.message
+    !state.ok && state.message
         ? state.message
-        : document.aiLastError;
+        : getStatusMessage(document);
 
   return (
     <div className="space-y-2">

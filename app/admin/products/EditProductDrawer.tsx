@@ -325,6 +325,10 @@ function ProductFormFields({
           <option value="active">Aktif</option>
           <option value="archived">Arşiv</option>
         </select>
+        <p className="mt-1 text-xs text-zinc-500">
+          Aktif statü yalnızca AI-ready knowledge sinyali bulunan ürünlerde güvenli
+          kabul edilir.
+        </p>
         <FieldError errors={errors} name="status" />
       </div>
     </div>

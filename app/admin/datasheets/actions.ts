@@ -1,11 +1,11 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDbOrThrow } from "@/db/db";
-import { aiKnowledgeDocuments } from "@/db/schema";
+import { aiDocumentChunks, aiKnowledgeDocuments, products } from "@/db/schema";
 import {
   hasBlockedScheme,
   normalizeWhitespace,
@@ -17,7 +17,10 @@ import {
   requireStrictAuditActor,
   writeStrictAuditLogInTransaction,
 } from "@/app/lib/admin/audit";
-import { getDatasheetGuardrailBlockers } from "@/app/lib/admin/governance";
+import {
+  getAiKnowledgeReadiness,
+  getDatasheetGuardrailBlockers,
+} from "@/app/lib/admin/governance";
 
 type FieldName = "title" | "docType" | "parsingStatus" | "s3Key";
 
@@ -38,6 +41,11 @@ type DatasheetRecord = {
   parsingStatus: DatasheetParsingStatus;
   s3Key: string;
   updatedAt: Date | string;
+};
+
+type DatasheetReadinessSnapshot = {
+  chunkCount: number;
+  approvedForAi: boolean;
 };
 
 type GovernanceBlockerSeverity = "error" | "warning";
@@ -235,6 +243,64 @@ function buildDatasheetState(input: {
   };
 }
 
+function revalidateDatasheetLifecyclePaths(productIds: Array<string | null | undefined>) {
+  revalidatePath("/admin");
+  revalidatePath("/admin/datasheets");
+  revalidatePath("/admin/ai-core");
+  revalidatePath("/admin/products");
+
+  const uniqueProductIds = Array.from(
+    new Set(
+      productIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  for (const productId of uniqueProductIds) {
+    revalidatePath(`/admin/products/${productId}/documents`);
+  }
+}
+
+async function getDatasheetReadinessSnapshot(
+  record: DatasheetRecord,
+): Promise<DatasheetReadinessSnapshot> {
+  const db = getDbOrThrow();
+
+  const [chunkRows, productRows] = await Promise.all([
+    db
+      .select({ chunkCount: count() })
+      .from(aiDocumentChunks)
+      .where(eq(aiDocumentChunks.documentId, record.id)),
+    record.docType !== "rulebook" && record.productId
+      ? db
+          .select({ id: products.id })
+          .from(products)
+          .where(eq(products.id, record.productId))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
+
+  const chunkCount = Number(chunkRows[0]?.chunkCount ?? 0);
+  const resolvedProductId =
+    record.docType === "rulebook"
+      ? record.productId
+      : productRows[0]?.id ?? null;
+  const readiness = getAiKnowledgeReadiness({
+    docType: record.docType,
+    productId: resolvedProductId,
+    parsingStatus: record.parsingStatus,
+    title: record.title,
+    s3Key: record.s3Key,
+    chunkCount,
+  });
+
+  return {
+    chunkCount,
+    approvedForAi: readiness.approvedForAi,
+  };
+}
+
 async function getDatasheetById(id: string): Promise<DatasheetRecord | null> {
   const db = getDbOrThrow();
 
@@ -347,17 +413,6 @@ export async function saveDatasheet(
     };
   }
 
-  if (
-    previousDocument?.parsingStatus === "completed" &&
-    nextParsingStatus !== "completed"
-  ) {
-    return {
-      status: "error",
-      message: buildCompletedDowngradeMessage(),
-      fieldErrors: {},
-    };
-  }
-
   const governanceBlockers = getDatasheetGuardrailBlockers({
     title,
     productId,
@@ -382,6 +437,23 @@ export async function saveDatasheet(
   const now = new Date();
 
   try {
+    const previousReadiness =
+      previousDocument?.parsingStatus === "completed"
+        ? await getDatasheetReadinessSnapshot(previousDocument)
+        : null;
+
+    if (
+      previousDocument?.parsingStatus === "completed" &&
+      nextParsingStatus !== "completed" &&
+      previousReadiness?.approvedForAi
+    ) {
+      return {
+        status: "error",
+        message: buildCompletedDowngradeMessage(),
+        fieldErrors: {},
+      };
+    }
+
     const auditActor = await requireStrictAuditActor();
 
     if (id && previousDocument) {
@@ -498,9 +570,10 @@ export async function saveDatasheet(
     };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/datasheets");
-  revalidatePath("/admin/ai-core");
+  revalidateDatasheetLifecyclePaths([
+    previousDocument?.productId ?? null,
+    productId || null,
+  ]);
 
   redirect(
     id
@@ -517,18 +590,24 @@ export async function deleteDatasheet(id: string) {
   }
 
   const normalizedId = String(id ?? "").trim();
+  let existingDocument: DatasheetRecord | null = null;
 
   try {
-    const existingDocument = await getDatasheetById(normalizedId);
+    existingDocument = await getDatasheetById(normalizedId);
 
     if (!existingDocument) {
-      revalidatePath("/admin");
-      revalidatePath("/admin/datasheets");
-      revalidatePath("/admin/ai-core");
+      revalidateDatasheetLifecyclePaths([]);
       redirect("/admin/datasheets?docAction=deleted");
     }
 
-    if (existingDocument.parsingStatus === "completed") {
+    const activeExistingDocument = existingDocument;
+
+    const readiness =
+      activeExistingDocument.parsingStatus === "completed"
+        ? await getDatasheetReadinessSnapshot(activeExistingDocument)
+        : null;
+
+    if (readiness?.approvedForAi) {
       redirect(buildCompletedDeleteGuardRedirect());
     }
 
@@ -552,9 +631,9 @@ export async function deleteDatasheet(id: string) {
       await writeDatasheetAudit({
         database: tx,
         actor: auditActor,
-        entityId: existingDocument.id,
+        entityId: activeExistingDocument.id,
         action: "delete",
-        previousState: buildDatasheetState(existingDocument),
+        previousState: buildDatasheetState(activeExistingDocument),
       });
     });
 
@@ -570,9 +649,7 @@ export async function deleteDatasheet(id: string) {
     redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/datasheets");
-  revalidatePath("/admin/ai-core");
+  revalidateDatasheetLifecyclePaths([existingDocument?.productId ?? null]);
 
   redirect("/admin/datasheets?docAction=deleted");
 }

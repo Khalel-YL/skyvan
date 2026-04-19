@@ -1,4 +1,3 @@
-import { count } from "drizzle-orm";
 import {
   AlertTriangle,
   BrainCircuit,
@@ -10,12 +9,11 @@ import {
 
 import { db } from "@/db/db";
 import {
-  aiDocumentChunks,
-  aiKnowledgeDocuments,
-} from "@/db/schema";
-import {
-  getAiKnowledgeReadiness,
+  getAiGroundedChunkRecords,
+  getAiUsageKnowledgeRecords,
   getGovernanceRuntime,
+  type AiGroundedChunkRecord,
+  type AiKnowledgeUsageRecord,
 } from "@/app/lib/admin/governance";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 
@@ -28,19 +26,8 @@ type RuntimeItem = {
   tone: RuntimeTone;
 };
 
-type KnowledgeDocument = {
-  id: string;
-  productId: string | null;
-  title: string;
-  docType: string;
-  parsingStatus: "pending" | "processing" | "completed" | "failed";
-  s3Key: string;
-  chunkCount: number;
-  readiness: ReturnType<typeof getAiKnowledgeReadiness>;
-};
-
 type KnowledgeState = {
-  documents: KnowledgeDocument[];
+  documents: AiKnowledgeUsageRecord[];
   totalCount: number;
   readyCount: number;
   blockedCount: number;
@@ -48,6 +35,8 @@ type KnowledgeState = {
   queueCount: number;
   completedWithoutChunksCount: number;
   missingProductReferenceCount: number;
+  groundedChunkCount: number;
+  groundedChunkPreview: AiGroundedChunkRecord[];
   dbAvailable: boolean;
   dbMessage: string | null;
 };
@@ -133,6 +122,16 @@ function getRuntimeItems(params: {
   ];
 }
 
+function compactChunkPreview(value: string) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= 140) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 137)}...`;
+}
+
 async function getKnowledgeState(): Promise<KnowledgeState> {
   if (!db) {
     return {
@@ -144,6 +143,8 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       queueCount: 0,
       completedWithoutChunksCount: 0,
       missingProductReferenceCount: 0,
+      groundedChunkCount: 0,
+      groundedChunkPreview: [],
       dbAvailable: false,
       dbMessage:
         "Veritabanı çevrimdışı olduğu için AI knowledge görünürlüğü şu anda yalnızca runtime seviyesinde gösteriliyor.",
@@ -151,51 +152,17 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
   }
 
   try {
-    const [documents, chunkRows] = await Promise.all([
-      db
-        .select({
-          id: aiKnowledgeDocuments.id,
-          productId: aiKnowledgeDocuments.productId,
-          title: aiKnowledgeDocuments.title,
-          docType: aiKnowledgeDocuments.docType,
-          parsingStatus: aiKnowledgeDocuments.parsingStatus,
-          s3Key: aiKnowledgeDocuments.s3Key,
-        })
-        .from(aiKnowledgeDocuments),
-      db
-        .select({
-          documentId: aiDocumentChunks.documentId,
-          chunkCount: count(),
-        })
-        .from(aiDocumentChunks)
-        .groupBy(aiDocumentChunks.documentId),
+    const [evaluatedDocuments, groundedChunkPreview] = await Promise.all([
+      getAiUsageKnowledgeRecords(),
+      getAiGroundedChunkRecords({ limit: 3 }),
     ]);
-
-    const chunkMap = new Map(
-      chunkRows.map((row) => [row.documentId, Number(row.chunkCount ?? 0)]),
-    );
-
-    const evaluatedDocuments: KnowledgeDocument[] = documents.map((document) => {
-      const chunkCount = chunkMap.get(document.id) ?? 0;
-      const readiness = getAiKnowledgeReadiness({
-        docType: document.docType,
-        productId: document.productId,
-        parsingStatus: document.parsingStatus,
-        title: document.title,
-        s3Key: document.s3Key,
-        chunkCount,
-      });
-
-      return {
-        ...document,
-        chunkCount,
-        readiness,
-      };
-    });
 
     const readyCount = evaluatedDocuments.filter(
       (item) => item.readiness.approvedForAi,
     ).length;
+    const groundedChunkCount = evaluatedDocuments
+      .filter((item) => item.readiness.approvedForAi)
+      .reduce((sum, item) => sum + item.chunkCount, 0);
 
     return {
       documents: evaluatedDocuments,
@@ -213,8 +180,10 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
         (item) => item.parsingStatus === "completed" && item.chunkCount <= 0,
       ).length,
       missingProductReferenceCount: evaluatedDocuments.filter(
-        (item) => item.docType !== "rulebook" && !item.productId,
+        (item) => item.hasMissingProductReference,
       ).length,
+      groundedChunkCount,
+      groundedChunkPreview,
       dbAvailable: true,
       dbMessage: null,
     };
@@ -230,6 +199,8 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       queueCount: 0,
       completedWithoutChunksCount: 0,
       missingProductReferenceCount: 0,
+      groundedChunkCount: 0,
+      groundedChunkPreview: [],
       dbAvailable: false,
       dbMessage:
         "AI knowledge kayıtları okunurken beklenmeyen bir hata oluştu. Runtime görünürlüğü korunuyor.",
@@ -306,7 +277,7 @@ export default async function AICoreAdminPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
             <div className="text-xs text-zinc-500">Toplam belge</div>
             <div className="mt-2 text-3xl font-semibold text-white">
@@ -318,12 +289,12 @@ export default async function AICoreAdminPage() {
           </div>
 
           <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-emerald-200">
-            <div className="text-xs text-emerald-300/80">AI-ready</div>
+            <div className="text-xs text-emerald-300/80">Grounded usage</div>
             <div className="mt-2 text-3xl font-semibold">
               {knowledgeState.readyCount}
             </div>
             <div className="mt-2 text-xs text-emerald-300/80">
-              completed + chunk + temel alanlar tamam
+              AI için gerçekten kullanılabilir belge sayısı
             </div>
           </div>
 
@@ -344,6 +315,16 @@ export default async function AICoreAdminPage() {
             </div>
             <div className="mt-2 text-xs text-amber-300/80">
               İşleme kuyruğundaki kayıtlar
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-sky-500/20 bg-sky-500/10 p-5 text-sky-200">
+            <div className="text-xs text-sky-300/80">Grounded chunk</div>
+            <div className="mt-2 text-3xl font-semibold">
+              {knowledgeState.groundedChunkCount}
+            </div>
+            <div className="mt-2 text-xs text-sky-300/80">
+              Eligible belgelerden okunabilir chunk toplamı
             </div>
           </div>
 
@@ -432,6 +413,36 @@ export default async function AICoreAdminPage() {
               storage alanı dolu ve chunk üretmiş bilgi kayıtlarıyla konuşmalıdır.
             </div>
           </div>
+
+          <div className={`mt-4 rounded-2xl border p-4 ${toneClasses("success")}`}>
+            <div className="text-sm font-medium">Grounded kullanım önizlemesi</div>
+            <div className="mt-2 text-sm leading-6">
+              Aşağıdaki örnekler mevcut retrieval katmanının gerçekten okuyabileceği
+              eligible chunk kayıtlarını temsil eder.
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {knowledgeState.groundedChunkPreview.length === 0 ? (
+                <div className="text-sm text-emerald-200/80">
+                  Henüz grounded kullanım için açılmış chunk görünmüyor.
+                </div>
+              ) : (
+                knowledgeState.groundedChunkPreview.map((chunk) => (
+                  <div
+                    key={chunk.id}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-3"
+                  >
+                    <div className="text-xs text-emerald-300/90">
+                      {chunk.title} · {chunk.docType} · chunk #{chunk.chunkIndex + 1}
+                    </div>
+                    <div className="mt-2 text-xs leading-5 text-zinc-300">
+                      {compactChunkPreview(chunk.contentText)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
@@ -468,7 +479,7 @@ export default async function AICoreAdminPage() {
                       </div>
                       <div className="mt-1 text-xs opacity-80">
                         {item.docType} · {item.parsingStatus} · chunk: {item.chunkCount}
-                        {item.productId ? "" : " · ürün bağı yok"}
+                        {item.hasMissingProductReference ? " · ürün bağı eksik" : ""}
                       </div>
                     </div>
 

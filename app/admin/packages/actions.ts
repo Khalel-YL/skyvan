@@ -292,6 +292,8 @@ export async function savePackage(
           return;
         }
 
+        savedSlug = updatedPackage.slug;
+
         await writePackageAudit({
           database: tx,
           actor: auditActor,
@@ -305,8 +307,6 @@ export async function savePackage(
       if (!updatedPackage) {
         return createGenericError("Paket kaydı işlem sırasında güncellenemedi.");
       }
-
-      savedSlug = updatedPackage.slug;
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
       let insertedPackage: PackageRecord | null = null;
@@ -338,6 +338,8 @@ export async function savePackage(
           return;
         }
 
+        savedSlug = insertedPackage.slug;
+
         await writePackageAudit({
           database: tx,
           actor: auditActor,
@@ -350,8 +352,6 @@ export async function savePackage(
       if (!insertedPackage) {
         return createGenericError("Paket kaydı oluşturulamadı.");
       }
-
-      savedSlug = insertedPackage.slug;
     }
 
     revalidatePath("/admin");

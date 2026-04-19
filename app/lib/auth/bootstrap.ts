@@ -241,6 +241,7 @@ export async function claimInitialAdminOwnership(input: {
   const now = new Date();
   let claimedUser: ReturnType<typeof mapBootstrapUser> | null = null;
   let previousUser: ReturnType<typeof mapBootstrapUser> | null = null;
+  let claimed = false;
   let mutationError: AdminBootstrapError | null = null;
 
   await database.transaction(async (tx) => {
@@ -291,6 +292,7 @@ export async function claimInitialAdminOwnership(input: {
 
     if (currentUser.role === "admin") {
       claimedUser = mapBootstrapUser(currentUser);
+      claimed = false;
       return;
     }
 
@@ -324,6 +326,7 @@ export async function claimInitialAdminOwnership(input: {
     }
 
     claimedUser = mapBootstrapUser(promotedUser);
+    claimed = true;
 
     await insertAuditLogWithActor(tx, {
       entityType: "user",
@@ -349,6 +352,6 @@ export async function claimInitialAdminOwnership(input: {
   return {
     user: claimedUser,
     previousUser,
-    claimed: previousUser.role !== "admin" && claimedUser.role === "admin",
+    claimed,
   };
 }

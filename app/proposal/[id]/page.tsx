@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { Compass, Zap } from "lucide-react";
@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import ProposalClient from "./ProposalClient"; // Standart ve tertemiz import
 
 export default async function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
+  const db = getDbOrThrow();
   const resolvedParams = await params;
   const id = resolvedParams.id;
   

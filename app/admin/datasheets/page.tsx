@@ -305,13 +305,18 @@ async function getDatasheetsSafely(
           | "processing"
           | "completed"
           | "failed",
-        productLabel: document.productId
-          ? product
-            ? `${product.sku} · ${product.name}`
-            : "Eksik ürün referansı"
-          : "Genel doküman",
+        productLabel:
+          document.docType !== "rulebook" && !document.productId
+            ? "Eksik ürün referansı"
+            : document.productId
+              ? product
+                ? `${product.sku} · ${product.name}`
+                : "Eksik ürün referansı"
+              : "Genel doküman",
         chunkCount: chunkMap.get(document.id) ?? 0,
-        hasMissingProductReference,
+        hasMissingProductReference:
+          document.docType !== "rulebook" &&
+          (!document.productId || hasMissingProductReference),
       };
     });
   } catch (error) {
@@ -624,7 +629,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   </p>
                   <p className="mt-1 text-xs text-neutral-400">
                     Duplicate anahtar, güvensiz bağlantı, eksik ürün referansı ve
-                    chunk'sız tamamlanan kayıtlar denetlenir.
+                    chunk&apos;sız tamamlanan kayıtlar denetlenir.
                   </p>
                 </div>
 
@@ -700,7 +705,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   {summary.orphanProduct}
                 </p>
                 <p className="mt-1 text-xs opacity-90">
-                  Belge ürüne bağlı görünüyor ama ürün kaydı yok.
+                  Ürün bağı zorunlu olan kayıtlar için eksik ya da bozuk referans.
                 </p>
               </Link>
 
@@ -717,7 +722,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 )}`}
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
-                  Chunk'sız tamamlandı
+                  Chunk&apos;sız tamamlandı
                 </p>
                 <p className="mt-2 text-2xl font-semibold">
                   {summary.completedNoChunks}

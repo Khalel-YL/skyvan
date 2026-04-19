@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import { getDbOrThrow } from "@/db/db";
 import { leads } from "@/db/schema";
 import { desc, isNotNull } from "drizzle-orm";
 import { 
@@ -8,6 +8,8 @@ import {
 import { moveOfferStage } from "./actions";
 
 export default async function OffersPage() {
+  const db = getDbOrThrow();
+
   // SİHİR BURADA: Sadece "buildVersionId" (Atölye tasarımı) olan, yani GERÇEK teklif isteyenleri çekiyoruz.
   const rawOffers = await db.select().from(leads).where(isNotNull(leads.buildVersionId)).orderBy(desc(leads.createdAt));
 
