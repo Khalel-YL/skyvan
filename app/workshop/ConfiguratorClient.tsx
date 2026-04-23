@@ -294,6 +294,11 @@ export default function ConfiguratorClient({
       actionHint,
     };
   }, [savedAiDecisionAggregate]);
+  const shouldRenderSavedProductAiSignals =
+    isApproved &&
+    !hasAiDecisionBundleError &&
+    savedAiDecisionAggregate !== null &&
+    savedAiDecisionProducts.length > 0;
   const saveSuccessHint = isApproved
     ? hasAiDecisionBundleError
       ? "Proje kaydedildi. Teklif ekranı açılıyor."
@@ -421,7 +426,9 @@ export default function ConfiguratorClient({
                     cart.find((item) => item.product.id === product.id)?.quantity || 0;
                   const title =
                     product.title || product.name || product.sku || "Donanım Kalemi";
-                  const productAiDecision = savedAiDecisionProductsById.get(product.id);
+                  const productAiDecision = shouldRenderSavedProductAiSignals
+                    ? savedAiDecisionProductsById.get(product.id)
+                    : undefined;
                   const productCardClass =
                     productAiDecision?.status === "blocker"
                       ? "border-red-500/45 shadow-[0_0_24px_rgba(239,68,68,0.08)] bg-zinc-900/50"
@@ -568,7 +575,7 @@ export default function ConfiguratorClient({
                       Kontrolü
                     </h3>
                     <div className="space-y-3">
-                      {savedAiDecisionProducts.length > 0 ? (
+                      {shouldRenderSavedProductAiSignals ? (
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[9px] font-bold uppercase tracking-widest text-zinc-500">
                           <span className="flex items-center gap-2">
                             <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]" />

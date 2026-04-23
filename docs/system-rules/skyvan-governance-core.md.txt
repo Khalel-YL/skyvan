@@ -1,0 +1,264 @@
+# SKYVAN GOVERNANCE CORE
+
+## 0. AMAÇ
+
+Bu doküman, Skyvan sisteminin:
+
+- veri kontrolünü
+- AI davranış sınırlarını
+- publish disiplinini
+- audit zorunluluğunu
+- kritik operasyon güvenliğini
+
+tanımlar.
+
+Bu bir öneri dokümanı değildir.
+
+➡️ Bu bir sistem standardıdır.
+
+---
+
+## 1. TEMEL PRENSİP
+
+Skyvan’da hiçbir çalışan sistem:
+
+❌ kontrolsüz  
+❌ izlenemez  
+❌ geri alınamaz  
+❌ yetkisiz  
+
+olamaz.
+
+Her sistem:
+
+✅ izlenebilir  
+✅ kontrol edilebilir  
+✅ gerektiğinde durdurulabilir  
+✅ gerektiğinde geri alınabilir  
+
+olmak zorundadır.
+
+---
+
+## 2. GOVERNANCE KATMANLARI
+
+Skyvan’da tüm aksiyonlar 3 seviyeye ayrılır:
+
+### 2.1 SERBEST ALAN (FAST LANE)
+
+- draft içerik oluşturma
+- taslak veri düzenleme
+- AI öneri üretimi
+- non-critical editler
+
+Özellikler:
+
+- audit opsiyonel
+- approval yok
+- sistem bloklamaz
+
+---
+
+### 2.2 KONTROLLÜ ALAN (SOFT GOVERNANCE)
+
+- publish öncesi içerik düzenleme
+- SEO alanları
+- AI tarafından üretilmiş içeriklerin düzenlenmesi
+
+Özellikler:
+
+- audit önerilir
+- sistem uyarı üretir
+- bloklama yok
+
+---
+
+### 2.3 KRİTİK ALAN (HARD GOVERNANCE)
+
+Aşağıdaki işlemler kritik kabul edilir:
+
+- içerik publish etmek
+- fiyat belirlemek veya değiştirmek
+- teklif (offer) kabul etmek
+- teknik rule değiştirmek
+- datasheet onaylamak
+- AI knowledge approve etmek
+
+Zorunlu kurallar:
+
+- audit log zorunlu
+- bazı işlemler approval gerektirir
+- AI doğrudan işlem yapamaz
+
+---
+
+## 3. AUDIT ZORUNLULUĞU
+
+Aşağıdaki işlemler audit log üretmek zorundadır:
+
+- create
+- update
+- delete
+- publish
+- approval
+- status değişimleri
+
+Audit içeriği:
+
+- actor (kim yaptı)
+- action (ne yaptı)
+- entity (hangi veri)
+- before (önceki state)
+- after (sonraki state)
+- timestamp
+
+Audit’siz kritik işlem = sistem hatasıdır.
+
+---
+
+## 4. APPROVAL SİSTEMİ
+
+Bazı işlemler doğrudan uygulanamaz.
+
+Önce:
+
+➡️ pending state’e alınır  
+➡️ yetkili kişi onaylar  
+➡️ işlem uygulanır  
+
+Approval gereken alanlar:
+
+- publish
+- datasheet → completed
+- AI knowledge → approved
+- kritik rule değişimleri
+
+---
+
+## 5. PUBLISH DİSİPLİNİ
+
+Publish bir buton değildir.
+
+Publish bir sistem aksiyonudur.
+
+Kurallar:
+
+- publish snapshot alınır
+- revision kaydı oluşturulur
+- rollback mümkün olmalıdır
+- eksik veri varsa publish bloklanır
+
+---
+
+## 6. AI GUARDRAILS
+
+AI aşağıdakileri yapabilir:
+
+✅ öneri üretir  
+✅ açıklama yapar  
+✅ içerik taslağı oluşturur  
+
+AI aşağıdakileri yapamaz:
+
+❌ publish edemez  
+❌ fiyat belirleyemez  
+❌ sipariş onaylayamaz  
+❌ teknik güvenlik kararı veremez  
+
+AI sadece:
+
+➡️ approved knowledge kullanır
+
+---
+
+## 7. CRITICAL ACTION POLICY
+
+Aşağıdaki işlemler sistem seviyesinde korunur:
+
+- fiyat değişimi
+- offer accepted
+- publish
+- datasheet completion
+- rule severity değişimi
+
+Bu işlemler:
+
+- audit zorunlu
+- bazı durumlarda approval zorunlu
+- doğrudan override edilemez
+
+---
+
+## 8. ROL VE YETKİ
+
+Temel roller:
+
+- super_admin
+- editor
+- seo
+- satış
+- teknik
+- ai_denetcisi
+
+Kurallar:
+
+- herkes her şeyi yapamaz
+- kritik işlemler role bağlıdır
+- override sadece super_admin tarafından yapılabilir
+
+---
+
+## 9. VERİ GERÇEKLİĞİ
+
+Yasak:
+
+❌ fake data  
+❌ geçici bypass  
+❌ nullable ile kurtarma  
+❌ sistem dışı kısa yol  
+
+Zorunlu:
+
+✅ gerçek veri  
+✅ doğrulanmış veri  
+✅ deterministik sonuç  
+
+---
+
+## 10. SİSTEM KALİTE STANDARDI
+
+Skyvan’da geliştirilen her modül:
+
+❌ sadece çalışan bir sistem olamaz
+
+Her modül:
+
+✅ governance uyumlu  
+✅ audit destekli  
+✅ kontrol edilebilir  
+✅ production-ready  
+
+olmak zorundadır.
+
+---
+
+## 11. SON KURAL
+
+Eğer bir feature:
+
+- audit üretmiyorsa
+- kontrol edilemiyorsa
+- geri alınamıyorsa
+
+➡️ o feature sisteme eklenmez.
+
+---
+
+## 12. SİSTEM MODÜL KALİTE STANDARDI
+
+Skyvan’da geliştirilen her modül:
+
+- sadece çalışan bir sistem olamaz.
+- her modül gerçek bir sistem olmak zorunda
+- her modül kodlaması tüm sisteme uymak zorunda
+- sistem kusursuz ve uyumlu çalışmak zorunda

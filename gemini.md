@@ -1,0 +1,2 @@
+# SKYVAN DIGITAL BRAIN - MASTER DIRECTIVE
+Bu projenin tüm anayasası, mimarisi ve kısıtlamaları `docs/` klasörünün içindeki 5 dosyada yer almaktadır. Herhangi bir kod yazmadan veya analiz yapmadan önce bu klasördeki tüm dosyaları baştan sona oku ve oradaki kuralları %100 eksiksiz uygula.

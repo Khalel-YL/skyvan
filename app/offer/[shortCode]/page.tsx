@@ -1,4 +1,5 @@
 import { getDbOrThrow } from "@/db/db";
+import { getProductSelectionAiDecisionBundle } from "@/app/lib/admin/governance";
 import {
   builds,
   buildSelectedProducts,
@@ -8,7 +9,7 @@ import {
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { Truck, Zap, Box, BrainCircuit, CheckCircle2, FileText, ArrowLeft, Printer, Hammer } from "lucide-react";
+import { Truck, Box, CheckCircle2, FileText, ArrowLeft, Printer, Hammer } from "lucide-react";
 import Link from "next/link";
 
 export default async function OfferPage({ params }: { params: { shortCode: string } }) {
@@ -50,6 +51,7 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
 
   const selectedProductRows = await db
     .select({
+      productId: products.id,
       quantity: buildSelectedProducts.quantity,
       productSku: products.sku,
       productTitle: products.name,
@@ -60,9 +62,59 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
     .innerJoin(products, eq(buildSelectedProducts.productId, products.id))
     .where(eq(buildSelectedProducts.buildVersionId, version.id));
 
+  const selectedProductIds = Array.from(
+    new Set(
+      selectedProductRows
+        .map((item) => item.productId)
+        .filter((productId): productId is string => Boolean(productId)),
+    ),
+  );
+  const hasAiInput = selectedProductIds.length > 0;
+
+  let offerAiAggregate: Awaited<
+    ReturnType<typeof getProductSelectionAiDecisionBundle>
+  >["aggregate"] | null = null;
+  let aiBridgeFailed = false;
+
+  if (hasAiInput) {
+    try {
+      const aiDecisionBundle = await getProductSelectionAiDecisionBundle({
+        productIds: selectedProductIds,
+      });
+
+      offerAiAggregate = aiDecisionBundle.aggregate;
+    } catch (error) {
+      console.error("OFFER_AI_SIGNAL_BRIDGE_HATASI:", error);
+      aiBridgeFailed = true;
+    }
+  }
+
   const vehicle = {
     name: build.modelName,
   };
+
+  const normalizedOfferAiSignal = offerAiAggregate
+    ? offerAiAggregate.blockerCount > 0
+      ? {
+          label: `BLOCKED (${offerAiAggregate.blockerCount})`,
+          reason: offerAiAggregate.reason,
+          badgeClassName: "border-red-500/30 bg-red-500/10 text-red-300",
+          panelClassName: "border-red-900/60 bg-red-950/20",
+        }
+      : offerAiAggregate.warningCount > 0
+        ? {
+            label: `WARNING (${offerAiAggregate.warningCount})`,
+            reason: offerAiAggregate.reason,
+            badgeClassName: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+            panelClassName: "border-amber-900/60 bg-amber-950/20",
+          }
+        : {
+            label: "READY",
+            reason: offerAiAggregate.reason,
+            badgeClassName: "border-green-500/30 bg-green-500/10 text-green-300",
+            panelClassName: "border-green-900/60 bg-green-950/20",
+          }
+    : null;
 
   const selectedProducts = selectedProductRows.map((item) => ({
     quantity: item.quantity,
@@ -108,6 +160,31 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
             </div>
         </div>
 
+        {normalizedOfferAiSignal ? (
+          <div className="px-12 md:px-20 py-6 border-b border-zinc-900 bg-zinc-950/40">
+            <div
+              className={`inline-flex max-w-2xl items-start gap-3 rounded-[1.5rem] border px-4 py-3 ${normalizedOfferAiSignal.panelClassName}`}
+            >
+              <span
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest ${normalizedOfferAiSignal.badgeClassName}`}
+              >
+                {normalizedOfferAiSignal.label}
+              </span>
+              <p className="pt-0.5 text-[11px] leading-relaxed text-zinc-300">
+                {normalizedOfferAiSignal.reason}
+              </p>
+            </div>
+          </div>
+        ) : aiBridgeFailed && hasAiInput ? (
+          <div className="px-12 md:px-20 py-6 border-b border-zinc-900 bg-zinc-950/40">
+            <div className="inline-flex items-center gap-3 rounded-[1.5rem] border border-zinc-800 bg-black px-4 py-3">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                AI Signal unavailable for this build
+              </span>
+            </div>
+          </div>
+        ) : null}
+
         {/* ÖZET PANELİ */}
         <div className="grid grid-cols-1 md:grid-cols-2 border-b border-zinc-900">
             <div className="p-10 border-r border-zinc-900 flex items-center gap-6">
@@ -133,7 +210,7 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
             </h2>
             
             <div className="space-y-4">
-                {selectedProducts.map((item: any, idx: number) => (
+                {selectedProducts.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-6 bg-zinc-900/30 rounded-2xl border border-zinc-900 hover:border-zinc-800 transition-all">
                         <div className="flex items-center gap-8">
                             <span className="text-xs font-mono text-zinc-700 w-6">{(idx + 1).toString().padStart(2, '0')}</span>

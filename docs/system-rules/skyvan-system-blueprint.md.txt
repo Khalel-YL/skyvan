@@ -1,0 +1,359 @@
+# SKYVAN SYSTEM BLUEPRINT
+
+( Admin + AI + Workshop Unified Architecture )
+
+---
+
+## 0. AMAÇ
+
+Bu doküman, Skyvan sisteminin:
+
+* Admin panel mimarisi
+* İçerik ve veri yönetimi
+* AI sistem katmanları
+* Teknik bilgi işleme mantığı
+* Stabilizasyon ve güvenlik prensipleri
+
+için **tek referans kaynaktır**.
+
+Bu sistem:
+➡️ basit bir CMS değildir
+➡️ bir chatbot değildir
+
+Bu sistem:
+
+**Skyvan Digital Brain / Engineering Intelligence System**
+
+---
+
+## 1. TEMEL PRENSİP
+
+Sistemin ana kuralı:
+
+> AI önerir, sınıflandırır, hızlandırır ve kontrol eder.
+> Nihai teknik ve ticari kararı insan verir.
+
+---
+
+## 2. SİSTEM 3 ANA KATMAN
+
+### 2.1 VİTRİN YÖNETİMİ
+
+* Pages
+* Blog
+* Media
+* SEO
+* Menü / Footer
+* Kampanya
+
+### 2.2 TİCARİ OPERASYON
+
+* Leads
+* Offers
+* Orders
+* Production Updates
+* CRM Light
+
+### 2.3 TEKNİK ZEKA MERKEZİ
+
+* Datasheet
+* Teknik veri
+* Rules Engine
+* AI Knowledge
+* Configurator (Workshop)
+
+---
+
+## 3. ADMIN PANEL ÇEKİRDEK MODÜLLERİ
+
+### Dashboard
+
+Tek bakışta sistem durumu:
+
+* lead sayısı
+* teklif durumu
+* bekleyen içerik
+* SEO eksikleri
+* AI uyarıları
+* hata kayıtları
+
+---
+
+### Content / CMS
+
+Zorunlu özellikler:
+
+* sayfa yönetimi
+* blok tabanlı içerik
+* çoklu dil
+* slug / SEO alanları
+* taslak / yayında / arşiv
+* versiyon geçmişi
+* preview
+
+⚠️ Kural:
+Serbest metin minimumda tutulur
+Yapılandırılmış veri tercih edilir
+
+---
+
+### Media Yönetimi
+
+Zorunlu yapı:
+
+* dosya yükleme
+* klasörleme
+* etiketleme
+* alt text
+* odak noktası
+* kullanım takibi
+
+⚠️ Kritik:
+Bir medya hangi sayfalarda kullanılıyor bilinmeli
+
+---
+
+### SEO Merkezi
+
+* meta title / description
+* canonical
+* schema yönetimi
+* sitemap
+* redirect
+* kırık link
+* eksik alan raporları
+
+---
+
+### Model / Ürün Yönetimi
+
+Tamamen yapılandırılmış veri:
+
+Örnek:
+
+* su tankı (L)
+* akü (Ah)
+* inverter (W)
+* panel (W)
+
+⚠️ Serbest metin yok
+
+---
+
+### Configurator / Workshop
+
+* paket kuralları
+* opsiyon uyumluluğu
+* fiyat hesaplama (server-side)
+* teklif snapshot
+
+⚠️ Kritik:
+Frontend fiyat = referans
+Gerçek fiyat = backend
+
+---
+
+### CRM / Lead Yönetimi
+
+* lead listesi
+* durum akışı
+* müşteri notları
+* kaynak takibi
+* lead scoring
+
+---
+
+### Datasheet Merkezi
+
+* PDF yükleme
+* ürün ilişkilendirme
+* versiyon kontrolü
+* teknik veri çıkarımı
+
+---
+
+### Production / Order
+
+* üretim akışı
+* iş emirleri
+* parça listesi
+* kalite kontrol
+
+---
+
+### Kullanıcı / Yetki
+
+Roller:
+
+* super admin
+* editor
+* seo
+* satış
+* teknik
+* AI denetleyici
+
+---
+
+## 4. AI SİSTEM MİMARİSİ
+
+AI tek parça değildir.
+
+### 4.1 Public AI Advisor
+
+* müşteri yönlendirme
+* paket önerisi
+* lead üretimi
+
+---
+
+### 4.2 Admin AI Copilot
+
+* içerik üretimi
+* teklif taslağı
+* veri kontrolü
+
+---
+
+### 4.3 Workshop Engineering AI
+
+* teknik analiz
+* sistem önerisi
+* risk uyarıları
+
+---
+
+### 4.4 Rule Engine + Approval Layer
+
+* teknik sınırlar
+* güvenlik kontrolleri
+* insan onayı zorunluluğu
+
+---
+
+### 4.5 Knowledge Core
+
+Veri katmanları:
+
+* raw document
+* parsed data
+* approved knowledge
+* public answerable
+* internal only
+
+⚠️ AI sadece approved knowledge ile konuşur
+
+---
+
+## 5. DATASHEET → AI DÖNÜŞÜM AKIŞI
+
+1. belge yüklenir
+2. AI okur
+3. parser çalışır
+4. insan onaylar
+5. structured data oluşur
+6. AI kullanır
+
+---
+
+## 6. GUARDRAILS (KRİTİK)
+
+AI ASLA şunları tek başına yapamaz:
+
+* fiyat yayınlama
+* sipariş onayı
+* teknik güvenlik kararı
+* garanti kararı
+* stok işlemi
+
+---
+
+## 7. CONTENT + MEDIA GERÇEKLİK KURALI
+
+❌ yasak:
+
+* mock veri
+* random değerler
+* simülasyon metrikler
+
+✅ zorunlu:
+
+* gerçek veri
+* deterministic hesap
+* validation
+
+---
+
+## 8. PUBLISH + AUDIT SİSTEMİ
+
+* revision sistemi aktif olmalı
+* her değişiklik loglanmalı
+* yayın snapshot tutulmalı
+* rollback mümkün olmalı
+
+---
+
+## 9. STABİLİZASYON PRENSİPLERİ
+
+* modül bazlı ilerleme
+* çalışan sistemi bozma
+* minimal değişiklik
+* batch mantığı
+
+---
+
+## 10. YAPILMAMASI GEREKENLER
+
+* her şeyi serbest metin yapmak
+* AI’yı kontrolsüz bırakmak
+* frontend’e güvenmek
+* SEO’yu sona bırakmak
+* medya yönetimini basit kurmak
+
+---
+
+## 11. HEDEF TANIM
+
+Bu sistem:
+
+❌ CMS değildir
+❌ chatbot değildir
+
+Bu sistem:
+
+**Skyvan Digital Brain**
+
+---
+
+## 12. GELİŞİM FAZLARI
+
+### Faz 1
+
+Admin veri omurgası (tamamlandıya yakın)
+
+### Faz 2
+
+Content + Media + Publish stabilization
+
+### Faz 3
+
+AI governance + knowledge system
+
+### Faz 4
+
+Workshop + configurator intelligence
+
+### Faz 5
+
+Full integration
+
+---
+
+## SON
+
+Bu doküman:
+
+* teknik karar referansıdır
+* modül geliştirme rehberidir
+* AI kontrol çerçevesidir
+
+Tüm geliştirmeler buna göre yapılır.
