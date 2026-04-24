@@ -2,19 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
-  Activity,
-  AlertOctagon,
   ArrowLeft,
   Box,
-  BrainCircuit,
-  Check,
-  CheckCircle2,
+  ChevronDown,
   Hammer,
   Minus,
   Plus,
-  Settings2,
-  ShieldAlert,
-  Sun,
   Truck,
   Zap,
 } from "lucide-react";
@@ -28,6 +21,8 @@ type WorkshopProduct = {
   sku?: string | null;
   weightKg?: string | number | null;
   basePrice?: string | number | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
 };
 
 type WorkshopModel = {
@@ -60,6 +55,185 @@ type WorkshopAiDecisionAggregate =
 type WorkshopAiDecisionProduct =
   NonNullable<SaveEngineeringBuildSuccessResult["aiDecisionBundle"]>["products"][number];
 
+type VehicleGroupDefinition = {
+  id: string;
+  label: string;
+  detail: string;
+  matchers: string[];
+  variantOrder: string[];
+};
+
+type VehicleGroup = VehicleGroupDefinition & {
+  models: WorkshopModel[];
+};
+
+type LayoutZone = {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  tone: string;
+};
+
+type ProjectLayoutTemplate = {
+  id: string;
+  name: string;
+  short: string;
+  tags: string[];
+  suitableFor: string[];
+  zones: LayoutZone[];
+};
+
+type VisualLayerType =
+  | "vehicle_shell"
+  | "floor"
+  | "wall"
+  | "bed"
+  | "kitchen"
+  | "storage"
+  | "bathroom"
+  | "seat"
+  | "table"
+  | "window"
+  | "door"
+  | "material_overlay"
+  | "shadow"
+  | "light";
+
+type VisualLayer = {
+  id: string;
+  type: VisualLayerType;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  visible: boolean;
+  materialTarget?: "surface" | "furniture" | "floor" | "wall";
+  className: string;
+};
+
+type ProductVisualMeta =
+  | {
+      visual: false;
+      reason: "technical_hidden";
+    }
+  | {
+      visual: true;
+      effectType: "material";
+      target: "furniture" | "floor" | "wall";
+      material: string;
+    }
+  | {
+      visual: true;
+      effectType: "layer";
+      targetLayer: "bed" | "kitchen" | "storage" | "bathroom" | "table" | "seat";
+    };
+
+const vehicleGroupDefinitions: VehicleGroupDefinition[] = [
+  {
+    id: "psa",
+    label: "PSA Grubu",
+    detail: "Fiat Ducato / Peugeot Boxer / Citroen Jumper",
+    matchers: ["ducato", "boxer", "jumper"],
+    variantOrder: ["L2H2", "L3H2", "L4H2", "L3H3", "L4H3"],
+  },
+  {
+    id: "mercedes",
+    label: "Mercedes Grubu",
+    detail: "Mercedes-Benz Sprinter",
+    matchers: ["sprinter"],
+    variantOrder: ["L2H2", "L3H2", "L3H3", "L4H3"],
+  },
+  {
+    id: "ford",
+    label: "Ford Grubu",
+    detail: "Ford Transit",
+    matchers: ["transit"],
+    variantOrder: ["L2H2", "L3H2", "L4H3"],
+  },
+  {
+    id: "vw",
+    label: "VW Grubu",
+    detail: "Volkswagen Crafter / Volkswagen Transporter",
+    matchers: ["crafter", "transporter"],
+    variantOrder: ["L1H1", "L2H1", "L3H2", "L4H3"],
+  },
+  {
+    id: "renault",
+    label: "Renault Grubu",
+    detail: "Renault Master / Renault Trafic",
+    matchers: ["master", "trafic"],
+    variantOrder: ["L1H1", "L2H1", "L2H2", "L3H2", "L3H3"],
+  },
+  {
+    id: "iveco",
+    label: "Iveco",
+    detail: "Iveco Daily",
+    matchers: ["daily"],
+    variantOrder: ["L3H2", "L4H3", "L5H3"],
+  },
+];
+
+const projectLayoutTemplates: ProjectLayoutTemplate[] = [
+  {
+    id: "kompakt-yasam-plani",
+    name: "Kompakt Yaşam Planı",
+    short: "Çift kişilik yatak + kompakt mutfak",
+    tags: ["Yatak", "Mutfak", "Depolama"],
+    suitableFor: ["L2H2", "L3H2"],
+    zones: [
+      { id: "depolama", label: "Depolama", x: 6, y: 10, w: 22, h: 18, tone: "bg-zinc-700/80" },
+      { id: "mutfak", label: "Mutfak", x: 32, y: 10, w: 24, h: 24, tone: "bg-amber-500/70" },
+      { id: "yatak", label: "Yatak", x: 60, y: 10, w: 30, h: 52, tone: "bg-blue-500/70" },
+      { id: "gecis", label: "Geçiş", x: 32, y: 40, w: 24, h: 22, tone: "bg-white/10" },
+    ],
+  },
+  {
+    id: "duslu-seyahat-plani",
+    name: "Duşlu Seyahat Planı",
+    short: "Duş/WC + mutfak + yatak",
+    tags: ["Dus/WC", "Mutfak", "Yatak"],
+    suitableFor: ["L3H2", "L4H3"],
+    zones: [
+      { id: "dus", label: "Duş/WC", x: 6, y: 10, w: 22, h: 32, tone: "bg-cyan-500/70" },
+      { id: "mutfak", label: "Mutfak", x: 32, y: 10, w: 24, h: 22, tone: "bg-amber-500/70" },
+      { id: "depolama", label: "Depolama", x: 32, y: 36, w: 24, h: 26, tone: "bg-zinc-700/80" },
+      { id: "yatak", label: "Yatak", x: 60, y: 10, w: 30, h: 52, tone: "bg-blue-500/70" },
+    ],
+  },
+  {
+    id: "aile-oturma-plani",
+    name: "Aile Oturma Planı",
+    short: "Oturma grubu + dönüşebilir yatak",
+    tags: ["Oturma", "Masa", "Yatak"],
+    suitableFor: ["L3H2", "L4H3"],
+    zones: [
+      { id: "oturma", label: "Oturma", x: 6, y: 10, w: 28, h: 36, tone: "bg-emerald-500/70" },
+      { id: "masa", label: "Masa", x: 38, y: 18, w: 16, h: 16, tone: "bg-orange-500/70" },
+      { id: "mutfak", label: "Mutfak", x: 58, y: 10, w: 32, h: 20, tone: "bg-amber-500/70" },
+      { id: "yatak", label: "Yatak", x: 58, y: 34, w: 32, h: 28, tone: "bg-blue-500/70" },
+    ],
+  },
+  {
+    id: "off-grid-plan",
+    name: "Bağımsız Enerji Planı",
+    short: "Enerji ve depolama öncelikli düzen",
+    tags: ["Enerji", "Depolama", "Uzun Yol"],
+    suitableFor: ["L4H3", "L5H3"],
+    zones: [
+      { id: "enerji", label: "Enerji", x: 6, y: 10, w: 24, h: 24, tone: "bg-fuchsia-500/70" },
+      { id: "depolama", label: "Depolama", x: 6, y: 38, w: 24, h: 24, tone: "bg-zinc-700/80" },
+      { id: "mutfak", label: "Mutfak", x: 34, y: 10, w: 24, h: 22, tone: "bg-amber-500/70" },
+      { id: "yatak", label: "Yatak", x: 62, y: 10, w: 28, h: 30, tone: "bg-blue-500/70" },
+      { id: "depo", label: "Uzun Yol", x: 62, y: 44, w: 28, h: 18, tone: "bg-emerald-500/70" },
+    ],
+  },
+];
+
 function formatModelSlug(value: string) {
   return value
     .split(/[-_]+/)
@@ -82,10 +256,646 @@ function getModelPlatformLabel(model: WorkshopModel) {
   const preferredBrand = model.brand?.trim();
 
   if (preferredBrand) {
-    return `${preferredBrand} Platform`;
+    return `${preferredBrand} Platformu`;
   }
 
-  return `${getModelDisplayName(model)} Platform`;
+  return `${getModelDisplayName(model)} Platformu`;
+}
+
+function getModelSearchText(model: WorkshopModel) {
+  return `${model.slug} ${model.name ?? ""} ${model.brand ?? ""}`.toLowerCase();
+}
+
+function getModelVariantLabel(model: WorkshopModel) {
+  const source = `${model.slug} ${model.name ?? ""}`;
+  const variantMatch = source.match(/l\s*([1-5])\s*h\s*([1-4])/i);
+
+  if (variantMatch) {
+    return `L${variantMatch[1]}H${variantMatch[2]}`;
+  }
+
+  return null;
+}
+
+function getModelSeriesLabel(model: WorkshopModel) {
+  const displayName = getModelDisplayName(model);
+  const variantLabel = getModelVariantLabel(model);
+
+  if (!variantLabel) {
+    return displayName;
+  }
+
+  const variantIndex = displayName.toLowerCase().indexOf(variantLabel.toLowerCase());
+  if (variantIndex > 0) {
+    return displayName.slice(0, variantIndex).trim();
+  }
+
+  return displayName;
+}
+
+function getProductSearchText(product: WorkshopProduct) {
+  return [
+    product.title,
+    product.name,
+    product.categoryName,
+    product.sku,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getProductVisualMeta(product: WorkshopProduct): ProductVisualMeta | null {
+  const text = getProductSearchText(product);
+
+  if (
+    text.includes("mppt") ||
+    text.includes("inverter") ||
+    text.includes("akü") ||
+    text.includes("aku") ||
+    text.includes("solar") ||
+    text.includes("panel") ||
+    text.includes("elektrik") ||
+    text.includes("victron") ||
+    text.includes("sigorta") ||
+    text.includes("fuse") ||
+    text.includes("kablo") ||
+    text.includes("cable") ||
+    text.includes("water") ||
+    text.includes("su tesisat") ||
+    text.includes("combiner")
+  ) {
+    return {
+      visual: false,
+      reason: "technical_hidden",
+    };
+  }
+
+  if (
+    text.includes("ahşap") ||
+    text.includes("ahsap") ||
+    text.includes("wood") ||
+    text.includes("meşe") ||
+    text.includes("oak")
+  ) {
+    return {
+      visual: true,
+      effectType: "material",
+      target: "furniture",
+      material: "wood_oak",
+    };
+  }
+
+  if (text.includes("zemin") || text.includes("floor") || text.includes("vinil")) {
+    return {
+      visual: true,
+      effectType: "material",
+      target: "floor",
+      material: "graphite_floor",
+    };
+  }
+
+  if (text.includes("duvar") || text.includes("wall") || text.includes("kaplama")) {
+    return {
+      visual: true,
+      effectType: "material",
+      target: "wall",
+      material: "soft_wall",
+    };
+  }
+
+  if (text.includes("yatak") || text.includes("bed")) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "bed",
+    };
+  }
+
+  if (text.includes("mutfak") || text.includes("kitchen")) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "kitchen",
+    };
+  }
+
+  if (
+    text.includes("dolap") ||
+    text.includes("depolama") ||
+    text.includes("cabinet") ||
+    text.includes("storage")
+  ) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "storage",
+    };
+  }
+
+  if (
+    text.includes("duş") ||
+    text.includes("dus") ||
+    text.includes("wc") ||
+    text.includes("banyo") ||
+    text.includes("bathroom")
+  ) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "bathroom",
+    };
+  }
+
+  if (text.includes("masa") || text.includes("table")) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "table",
+    };
+  }
+
+  if (text.includes("koltuk") || text.includes("seat") || text.includes("oturma")) {
+    return {
+      visual: true,
+      effectType: "layer",
+      targetLayer: "seat",
+    };
+  }
+
+  return null;
+}
+
+function getMaterialOverlayClass(
+  target: "furniture" | "floor" | "wall",
+  material: string | null,
+) {
+  if (!material) {
+    return "";
+  }
+
+  if (target === "furniture" && material === "wood_oak") {
+    return "bg-[linear-gradient(145deg,rgba(143,108,73,0.24),rgba(98,70,44,0.34))]";
+  }
+
+  if (target === "floor" && material === "graphite_floor") {
+    return "bg-[linear-gradient(180deg,rgba(98,84,68,0.16),rgba(28,24,20,0.24))]";
+  }
+
+  if (target === "wall" && material === "soft_wall") {
+    return "bg-[linear-gradient(180deg,rgba(212,212,216,0.08),rgba(82,82,91,0.14))]";
+  }
+
+  return "";
+}
+
+function getLayoutDrivenVisualLayers(layout: ProjectLayoutTemplate) {
+  const layerState: Record<string, boolean> = {};
+
+  layout.zones.forEach((zone) => {
+    const label = zone.label.toLowerCase();
+
+    if (label.includes("yatak")) {
+      layerState.bed = true;
+    }
+    if (label.includes("mutfak")) {
+      layerState.kitchen = true;
+    }
+    if (label.includes("depolama")) {
+      layerState.storage = true;
+    }
+    if (label.includes("duş") || label.includes("wc")) {
+      layerState.bathroom = true;
+    }
+    if (label.includes("oturma")) {
+      layerState.seat = true;
+    }
+    if (label.includes("masa")) {
+      layerState.table = true;
+    }
+  });
+
+  return layerState;
+}
+
+function rebuildVisualStateFromSelectedProducts(nextProducts: WorkshopCartItem[]) {
+  const activeVisualLayers: Record<string, boolean> = {};
+  const activeMaterials: {
+    furniture: string | null;
+    floor: string | null;
+    wall: string | null;
+  } = {
+    furniture: null,
+    floor: null,
+    wall: null,
+  };
+
+  nextProducts.forEach((item) => {
+    for (let index = 0; index < item.quantity; index += 1) {
+      const meta = getProductVisualMeta(item.product);
+
+      if (!meta || meta.visual === false) {
+        continue;
+      }
+
+      if (meta.effectType === "material") {
+        activeMaterials[meta.target] = meta.material;
+      }
+
+      if (meta.effectType === "layer") {
+        activeVisualLayers[meta.targetLayer] = true;
+      }
+    }
+  });
+
+  return {
+    activeVisualLayers,
+    activeMaterials,
+  };
+}
+
+function createVisualLayer(
+  layer: Omit<VisualLayer, "className"> & { className?: string },
+): VisualLayer {
+  return {
+    ...layer,
+    className: layer.className ?? "",
+  };
+}
+
+function renderLayoutSchematic(
+  layout: ProjectLayoutTemplate,
+  size: "small" | "large" = "small",
+) {
+  const containerClass =
+    size === "large"
+      ? "h-full min-h-[26rem] rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.08),transparent_30%),linear-gradient(180deg,rgba(13,13,15,0.98),rgba(5,5,6,0.99))] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+      : "h-36 rounded-[1.25rem] border border-white/8 bg-[linear-gradient(180deg,rgba(14,14,16,0.96),rgba(6,6,7,0.98))]";
+  const labelClass =
+    size === "large"
+      ? "text-[10px] tracking-[0.08em]"
+      : "text-[8px] tracking-[0.08em]";
+  const frameClass =
+    size === "large"
+      ? "absolute inset-[6%_6%] rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,32,0.96),rgba(13,13,15,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-30px_50px_rgba(0,0,0,0.28)]"
+      : "absolute inset-[10%_7%] rounded-[1.2rem] border border-white/10 bg-black/50";
+  const canvasClass =
+    size === "large"
+      ? "absolute inset-[6%_8%] rounded-[1.8rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_42%),linear-gradient(180deg,rgba(43,43,48,0.88),rgba(24,24,28,0.94))] shadow-[inset_0_18px_24px_rgba(255,255,255,0.03),inset_0_-24px_38px_rgba(0,0,0,0.26)]"
+      : "absolute inset-0";
+  const zoneClass =
+    size === "large"
+      ? "rounded-[1.15rem] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),inset_0_-10px_18px_rgba(0,0,0,0.22),0_16px_30px_rgba(0,0,0,0.18)] backdrop-blur-[1px]"
+      : "rounded-[0.85rem] border border-white/10";
+  const zoneToneMap: Record<string, string> = {
+    Yatak:
+      "bg-[linear-gradient(180deg,rgba(96,165,250,0.9),rgba(37,99,235,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_48%)] before:content-['']",
+    Mutfak:
+      "bg-[linear-gradient(180deg,rgba(251,191,36,0.88),rgba(217,119,6,0.7))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] before:content-['']",
+    "Duş/WC":
+      "bg-[linear-gradient(180deg,rgba(34,211,238,0.88),rgba(8,145,178,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] before:content-['']",
+    Depolama:
+      "bg-[linear-gradient(180deg,rgba(113,113,122,0.88),rgba(63,63,70,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_48%)] before:content-['']",
+    Oturma:
+      "bg-[linear-gradient(180deg,rgba(52,211,153,0.88),rgba(5,150,105,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] before:content-['']",
+    Masa:
+      "bg-[linear-gradient(180deg,rgba(251,146,60,0.88),rgba(194,65,12,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] before:content-['']",
+    Enerji:
+      "bg-[linear-gradient(180deg,rgba(217,70,239,0.9),rgba(147,51,234,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_48%)] before:content-['']",
+    "Uzun Yol":
+      "bg-[linear-gradient(180deg,rgba(74,222,128,0.88),rgba(22,163,74,0.72))] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_48%)] before:content-['']",
+    Geçiş:
+      "bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]",
+  };
+
+  return (
+    <div className={`relative w-full overflow-hidden ${containerClass}`}>
+      <div className={frameClass}>
+        {size === "large" ? (
+          <>
+            <div className="absolute left-[4.2%] top-[7%] bottom-[7%] w-[3.8%] rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
+            <div className="absolute right-[4.2%] top-[7%] bottom-[7%] w-[3.8%] rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
+          </>
+        ) : null}
+        <div className={canvasClass}>
+          <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:22px_22px]" />
+          {size === "large" ? (
+            <div className="absolute inset-[4%] rounded-[1.5rem] border border-white/6" />
+          ) : null}
+        </div>
+        {layout.zones.map((zone) => (
+          <div
+            key={zone.id}
+            className={`absolute flex items-center justify-center px-1 text-center font-medium text-white/95 ${zoneClass} ${zoneToneMap[zone.label] ?? zone.tone} ${labelClass}`}
+            style={{
+              left: `${zone.x}%`,
+              top: `${zone.y}%`,
+              width: `${zone.w}%`,
+              height: `${zone.h}%`,
+            }}
+          >
+            <span className="relative z-10">{zone.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getIsometricSceneLayers(input: {
+  layout: ProjectLayoutTemplate;
+  activeVisualLayers: Record<string, boolean>;
+  activeMaterials: {
+    furniture: string | null;
+    floor: string | null;
+    wall: string | null;
+  };
+}) {
+  const layoutLayers = getLayoutDrivenVisualLayers(input.layout);
+  const isLayerVisible = (layerId: keyof typeof layoutLayers | string) =>
+    Boolean(layoutLayers[layerId] || input.activeVisualLayers[layerId]);
+  const isLayerHighlighted = (layerId: string) => Boolean(input.activeVisualLayers[layerId]);
+
+  const furnitureMaterial = getMaterialOverlayClass(
+    "furniture",
+    input.activeMaterials.furniture,
+  );
+  const floorMaterial = getMaterialOverlayClass("floor", input.activeMaterials.floor);
+  const wallMaterial = getMaterialOverlayClass("wall", input.activeMaterials.wall);
+
+  return [
+    createVisualLayer({
+      id: "shadow-base",
+      type: "shadow",
+      label: "Yumuşak Gölge",
+      x: 6,
+      y: 80,
+      w: 88,
+      h: 11,
+      z: 1,
+      visible: true,
+      className:
+        "rounded-[50%] bg-[radial-gradient(circle,rgba(0,0,0,0.52),rgba(0,0,0,0.02)_72%)] blur-3xl",
+    }),
+    createVisualLayer({
+      id: "vehicle-shell",
+      type: "vehicle_shell",
+      label: "Araç Gövdesi",
+      x: 6,
+      y: 8,
+      w: 88,
+      h: 70,
+      z: 5,
+      visible: true,
+      className:
+        "rounded-[3.35rem] border border-white/12 bg-[linear-gradient(180deg,rgba(42,42,46,0.96),rgba(13,13,15,0.99))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-24px_34px_rgba(0,0,0,0.2),0_36px_90px_rgba(0,0,0,0.4)] before:absolute before:inset-[1.7%] before:rounded-[3rem] before:border before:border-white/6 before:content-['']",
+    }),
+    createVisualLayer({
+      id: "light",
+      type: "light",
+      label: "Üst Işık",
+      x: 12,
+      y: 11,
+      w: 72,
+      h: 22,
+      z: 6,
+      visible: true,
+      className:
+        "rounded-[50%] bg-[radial-gradient(circle,rgba(255,255,255,0.18),rgba(255,255,255,0.01)_72%)] blur-3xl",
+    }),
+    createVisualLayer({
+      id: "shell-cutaway-rim",
+      type: "vehicle_shell",
+      label: "Kesit Kenarı",
+      x: 10,
+      y: 13,
+      w: 80,
+      h: 9,
+      z: 8,
+      visible: true,
+      className:
+        "rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(86,86,94,0.42),rgba(34,34,39,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+    }),
+    createVisualLayer({
+      id: "wall-left",
+      type: "wall",
+      label: "Sol Duvar",
+      x: 13,
+      y: 20,
+      w: 12,
+      h: 46,
+      z: 10,
+      visible: true,
+      materialTarget: "wall",
+      className:
+        "rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(112,112,118,0.34),rgba(44,44,49,0.18))] shadow-[inset_3px_0_12px_rgba(255,255,255,0.05),inset_0_-14px_22px_rgba(0,0,0,0.24),0_10px_22px_rgba(0,0,0,0.14)] before:absolute before:right-[6%] before:top-[8%] before:bottom-[8%] before:w-[12%] before:rounded-full before:bg-black/18 before:content-[''] " +
+        wallMaterial,
+    }),
+    createVisualLayer({
+      id: "wall-right",
+      type: "wall",
+      label: "Sağ Duvar",
+      x: 75,
+      y: 20,
+      w: 12,
+      h: 46,
+      z: 10,
+      visible: true,
+      materialTarget: "wall",
+      className:
+        "rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(112,112,118,0.34),rgba(44,44,49,0.18))] shadow-[inset_-3px_0_12px_rgba(255,255,255,0.05),inset_0_-14px_22px_rgba(0,0,0,0.24),0_10px_22px_rgba(0,0,0,0.14)] before:absolute before:left-[6%] before:top-[8%] before:bottom-[8%] before:w-[12%] before:rounded-full before:bg-black/18 before:content-[''] " +
+        wallMaterial,
+    }),
+    createVisualLayer({
+      id: "wall-back",
+      type: "wall",
+      label: "Arka Duvar",
+      x: 24,
+      y: 18,
+      w: 52,
+      h: 12,
+      z: 12,
+      visible: true,
+      materialTarget: "wall",
+      className:
+        "rounded-[1.65rem] border border-white/8 bg-[linear-gradient(180deg,rgba(126,126,136,0.28),rgba(46,46,50,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_14px_rgba(0,0,0,0.18)] before:absolute before:inset-x-[6%] before:bottom-[18%] before:h-[8%] before:rounded-full before:bg-black/16 before:content-[''] " +
+        wallMaterial,
+    }),
+    createVisualLayer({
+      id: "cabin-boundary",
+      type: "wall",
+      label: "Kabin Ayrımı",
+      x: 30,
+      y: 61,
+      w: 38,
+      h: 5,
+      z: 15,
+      visible: true,
+      materialTarget: "wall",
+      className:
+        "rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(90,90,96,0.32),rgba(40,40,44,0.18))] shadow-[0_10px_14px_rgba(0,0,0,0.14)]",
+    }),
+    createVisualLayer({
+      id: "window-left",
+      type: "window",
+      label: "Sol Pencere",
+      x: 15.8,
+      y: 24,
+      w: 7.2,
+      h: 18,
+      z: 13,
+      visible: true,
+      className:
+        "rounded-[1.05rem] border border-sky-200/18 bg-[linear-gradient(180deg,rgba(148,184,207,0.18),rgba(71,85,105,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm before:absolute before:inset-[14%] before:rounded-[0.8rem] before:border before:border-white/10 before:content-['']",
+    }),
+    createVisualLayer({
+      id: "window-right",
+      type: "window",
+      label: "Sağ Pencere",
+      x: 77,
+      y: 24,
+      w: 7.2,
+      h: 18,
+      z: 13,
+      visible: true,
+      className:
+        "rounded-[1.05rem] border border-sky-200/18 bg-[linear-gradient(180deg,rgba(148,184,207,0.18),rgba(71,85,105,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm before:absolute before:inset-[14%] before:rounded-[0.8rem] before:border before:border-white/10 before:content-['']",
+    }),
+    createVisualLayer({
+      id: "door",
+      type: "door",
+      label: "Giriş",
+      x: 71,
+      y: 53,
+      w: 14,
+      h: 16,
+      z: 14,
+      visible: true,
+      className:
+        "rounded-[1.4rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] before:absolute before:right-[16%] before:top-[18%] before:h-[12%] before:w-[8%] before:rounded-full before:bg-white/30 before:content-['']",
+    }),
+    createVisualLayer({
+      id: "floor",
+      type: "floor",
+      label: "Zemin",
+      x: 21,
+      y: 28,
+      w: 58,
+      h: 39,
+      z: 20,
+      visible: true,
+      materialTarget: "floor",
+      className:
+        "rounded-[2.15rem] border border-white/8 bg-[linear-gradient(180deg,rgba(94,74,57,0.46),rgba(41,31,25,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-16px_30px_rgba(0,0,0,0.26),0_16px_34px_rgba(0,0,0,0.18)] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.015)_1px,transparent_1px)] before:bg-[size:28px_28px] before:opacity-60 before:content-[''] after:absolute after:inset-[2.6%] after:rounded-[1.75rem] after:border after:border-black/12 after:content-[''] " +
+        floorMaterial,
+    }),
+    createVisualLayer({
+      id: "bed",
+      type: "bed",
+      label: "Yatak",
+      x: 54,
+      y: 35,
+      w: 19,
+      h: 24,
+      z: 30,
+      visible: isLayerVisible("bed"),
+      materialTarget: "furniture",
+      className:
+        "rounded-[1.35rem] border border-slate-200/12 bg-[linear-gradient(180deg,rgba(187,196,206,0.92),rgba(109,122,138,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_22px_32px_rgba(0,0,0,0.24)] before:absolute before:inset-x-[6%] before:bottom-[-12%] before:h-[24%] before:rounded-[1rem] before:bg-[linear-gradient(180deg,rgba(88,64,45,0.72),rgba(45,31,24,0.92))] before:shadow-[0_12px_20px_rgba(0,0,0,0.18)] before:content-[''] after:absolute after:left-[10%] after:right-[10%] after:top-[10%] after:h-[28%] after:rounded-[1rem] after:bg-white/18 after:content-[''] " +
+        (isLayerHighlighted("bed")
+          ? "ring-2 ring-slate-200/24 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_26px_38px_rgba(148,163,184,0.18)] "
+          : "opacity-80 ") +
+        furnitureMaterial,
+    }),
+    createVisualLayer({
+      id: "kitchen",
+      type: "kitchen",
+      label: "Mutfak",
+      x: 34,
+      y: 31,
+      w: 14,
+      h: 22,
+      z: 32,
+      visible: isLayerVisible("kitchen"),
+      materialTarget: "furniture",
+      className:
+        "rounded-[1.15rem] border border-stone-200/12 bg-[linear-gradient(180deg,rgba(141,120,96,0.86),rgba(83,63,49,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.24)] before:absolute before:inset-x-[4%] before:top-[-7%] before:h-[16%] before:rounded-[0.9rem] before:bg-[linear-gradient(180deg,rgba(220,220,223,0.84),rgba(122,122,128,0.62))] before:shadow-[0_8px_16px_rgba(0,0,0,0.16)] before:content-[''] after:absolute after:left-[12%] after:top-[16%] after:h-[16%] after:w-[18%] after:rounded-full after:border after:border-black/12 after:bg-black/16 after:content-[''] " +
+        (isLayerHighlighted("kitchen")
+          ? "ring-2 ring-stone-200/22 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_26px_40px_rgba(161,98,7,0.14)] "
+          : "opacity-80 ") +
+        furnitureMaterial,
+    }),
+    createVisualLayer({
+      id: "storage",
+      type: "storage",
+      label: "Depolama",
+      x: 24,
+      y: 31,
+      w: 12,
+      h: 20,
+      z: 31,
+      visible: isLayerVisible("storage"),
+      materialTarget: "furniture",
+      className:
+        "rounded-[1.1rem] border border-white/10 bg-[linear-gradient(180deg,rgba(126,120,112,0.8),rgba(67,61,58,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_30px_rgba(0,0,0,0.24)] before:absolute before:left-[8%] before:right-[8%] before:top-[8%] before:h-[18%] before:rounded-[0.8rem] before:bg-[linear-gradient(180deg,rgba(160,140,116,0.42),rgba(77,58,38,0.26))] before:content-[''] after:absolute after:right-[-8%] after:top-[10%] after:bottom-[10%] after:w-[12%] after:rounded-full after:bg-black/14 after:blur-[1px] after:content-[''] " +
+        (isLayerHighlighted("storage")
+          ? "ring-2 ring-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_26px_38px_rgba(255,255,255,0.08)] "
+          : "opacity-78 ") +
+        furnitureMaterial,
+    }),
+    createVisualLayer({
+      id: "bathroom",
+      type: "bathroom",
+      label: "Duş/WC",
+      x: 24,
+      y: 28,
+      w: 14,
+      h: 16,
+      z: 33,
+      visible: isLayerVisible("bathroom"),
+      className:
+        "rounded-[1.2rem] border border-sky-100/14 bg-[linear-gradient(180deg,rgba(141,174,186,0.8),rgba(74,104,114,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.24)] before:absolute before:left-[16%] before:top-[16%] before:h-[22%] before:w-[22%] before:rounded-full before:bg-white/22 before:content-[''] after:absolute after:right-[14%] after:bottom-[16%] after:h-[14%] after:w-[24%] after:rounded-full after:bg-black/10 after:content-[''] " +
+        (isLayerHighlighted("bathroom")
+          ? "ring-2 ring-sky-200/22 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_26px_38px_rgba(125,211,252,0.14)] "
+          : "opacity-78 "),
+    }),
+    createVisualLayer({
+      id: "seat",
+      type: "seat",
+      label: "Oturma",
+      x: 28,
+      y: 46,
+      w: 18,
+      h: 12,
+      z: 34,
+      visible: isLayerVisible("seat"),
+      materialTarget: "furniture",
+      className:
+        "rounded-[1.3rem] border border-emerald-100/10 bg-[linear-gradient(180deg,rgba(112,135,118,0.84),rgba(63,86,74,0.74))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.22)] before:absolute before:inset-x-[8%] before:top-[8%] before:h-[34%] before:rounded-[1rem] before:bg-white/10 before:content-[''] " +
+        (isLayerHighlighted("seat")
+          ? "ring-2 ring-emerald-200/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_26px_38px_rgba(52,211,153,0.14)] "
+          : "opacity-78 ") +
+        furnitureMaterial,
+    }),
+    createVisualLayer({
+      id: "table",
+      type: "table",
+      label: "Masa",
+      x: 45,
+      y: 45,
+      w: 10,
+      h: 10,
+      z: 35,
+      visible: isLayerVisible("table"),
+      materialTarget: "furniture",
+      className:
+        "rounded-[0.95rem] border border-stone-100/12 bg-[linear-gradient(180deg,rgba(149,126,103,0.88),rgba(97,76,61,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_28px_rgba(0,0,0,0.22)] before:absolute before:left-[18%] before:right-[18%] before:bottom-[-22%] before:h-[30%] before:rounded-full before:bg-black/16 before:content-[''] " +
+        (isLayerHighlighted("table")
+          ? "ring-2 ring-stone-200/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_24px_34px_rgba(245,158,11,0.12)] "
+          : "opacity-78 ") +
+        furnitureMaterial,
+    }),
+  ].sort((left, right) => left.z - right.z);
 }
 
 export default function ConfiguratorClient({
@@ -96,6 +906,7 @@ export default function ConfiguratorClient({
   dbModels: WorkshopModel[];
 }) {
   const [activeVehicle, setActiveVehicle] = useState<WorkshopModel | null>(null);
+  const [selectedLayout, setSelectedLayout] = useState<ProjectLayoutTemplate | null>(null);
   const [cart, setCart] = useState<WorkshopCartItem[]>([]);
   const [isApproved, setIsApproved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -105,8 +916,18 @@ export default function ConfiguratorClient({
     WorkshopAiDecisionProduct[]
   >([]);
   const [hasAiDecisionBundleError, setHasAiDecisionBundleError] = useState(false);
-
-  const availableModels = dbModels && dbModels.length > 0 ? dbModels : [];
+  const [activeVehicleGroupId, setActiveVehicleGroupId] = useState<string | null>(null);
+  const [activeVisualLayers, setActiveVisualLayers] = useState<Record<string, boolean>>({});
+  const [activeMaterials, setActiveMaterials] = useState<{
+    furniture: string | null;
+    floor: string | null;
+    wall: string | null;
+  }>({
+    furniture: null,
+    floor: null,
+    wall: null,
+  });
+  const availableModels = useMemo(() => dbModels ?? [], [dbModels]);
   const savedAiDecisionProductsById = useMemo(
     () =>
       new Map(
@@ -117,6 +938,71 @@ export default function ConfiguratorClient({
       ),
     [savedAiDecisionProducts],
   );
+  const vehicleGroups = useMemo<VehicleGroup[]>(() => {
+    return vehicleGroupDefinitions
+      .map((group) => {
+        const models = availableModels
+          .filter((model) => {
+            const searchText = getModelSearchText(model);
+            return group.matchers.some((matcher) => searchText.includes(matcher));
+          })
+          .sort((left, right) => {
+            const leftVariant = getModelVariantLabel(left);
+            const rightVariant = getModelVariantLabel(right);
+            const leftIndex =
+              leftVariant === null
+                ? Number.MAX_SAFE_INTEGER
+                : group.variantOrder.indexOf(leftVariant);
+            const rightIndex =
+              rightVariant === null
+                ? Number.MAX_SAFE_INTEGER
+                : group.variantOrder.indexOf(rightVariant);
+
+            if (leftIndex !== rightIndex) {
+              return leftIndex - rightIndex;
+            }
+
+            return getModelDisplayName(left).localeCompare(getModelDisplayName(right), "tr");
+          });
+
+        return {
+          ...group,
+          models,
+        };
+      })
+      .filter((group) => group.models.length > 0);
+  }, [availableModels]);
+
+  const groupedProducts = useMemo(() => {
+    const categoryMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        products: WorkshopProduct[];
+      }
+    >();
+
+    dbProducts.forEach((product) => {
+      const categoryId = product.categoryId?.trim() || "default-category";
+      const categoryName = product.categoryName?.trim() || "Donanım Kalemleri";
+      const existingCategory = categoryMap.get(categoryId);
+
+      if (existingCategory) {
+        existingCategory.products.push(product);
+        return;
+      }
+
+      categoryMap.set(categoryId, {
+        id: categoryId,
+        name: categoryName,
+        products: [product],
+      });
+    });
+
+    return Array.from(categoryMap.values());
+  }, [dbProducts]);
+  const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     let weight = activeVehicle ? Number(activeVehicle.baseWeightKg || 2100) : 0;
@@ -196,6 +1082,12 @@ export default function ConfiguratorClient({
   const hasCriticalError =
     stats.weight > maxAllowedWeight || aiInsights.some((insight) => insight.type === "critical");
 
+  const applyVisualStateFromCart = (nextCart: WorkshopCartItem[]) => {
+    const rebuiltState = rebuildVisualStateFromSelectedProducts(nextCart);
+    setActiveVisualLayers(rebuiltState.activeVisualLayers);
+    setActiveMaterials(rebuiltState.activeMaterials);
+  };
+
   const handleAddItem = (product: WorkshopProduct) => {
     setSavedAiDecisionAggregate(null);
     setSavedAiDecisionProducts([]);
@@ -203,16 +1095,17 @@ export default function ConfiguratorClient({
 
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
+      const nextCart = existing
+        ? prev.map((item) =>
+            item.product.id === product.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item,
+          )
+        : [...prev, { product, quantity: 1 }];
 
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
+      applyVisualStateFromCart(nextCart);
 
-      return [...prev, { product, quantity: 1 }];
+      return nextCart;
     });
   };
 
@@ -223,16 +1116,18 @@ export default function ConfiguratorClient({
 
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === productId);
+      const nextCart =
+        existing && existing.quantity > 1
+          ? prev.map((item) =>
+              item.product.id === productId
+                ? { ...item, quantity: item.quantity - 1 }
+                : item,
+            )
+          : prev.filter((item) => item.product.id !== productId);
 
-      if (existing && existing.quantity > 1) {
-        return prev.map((item) =>
-          item.product.id === productId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item,
-        );
-      }
+      applyVisualStateFromCart(nextCart);
 
-      return prev.filter((item) => item.product.id !== productId);
+      return nextCart;
     });
   };
 
@@ -294,16 +1189,147 @@ export default function ConfiguratorClient({
       actionHint,
     };
   }, [savedAiDecisionAggregate]);
+
   const shouldRenderSavedProductAiSignals =
     isApproved &&
     !hasAiDecisionBundleError &&
     savedAiDecisionAggregate !== null &&
     savedAiDecisionProducts.length > 0;
+
   const saveSuccessHint = isApproved
     ? hasAiDecisionBundleError
       ? "Proje kaydedildi. Teklif ekranı açılıyor."
       : "Proje kaydedildi. AI değerlendirmesi tamamlandı. Teklif ekranı açılıyor."
     : null;
+
+  const payloadReserveKg = Math.max(maxAllowedWeight - stats.weight, 0);
+  const visiblePowerW = stats.solarW > 0 ? stats.solarW : stats.inverterW;
+  const totalSelectedUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalBudget = cart.reduce(
+    (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
+    0,
+  );
+  const resolvedOpenCategoryId =
+    groupedProducts.some((category) => category.id === openCategoryId)
+      ? openCategoryId
+      : groupedProducts[0]?.id ?? null;
+  const activeVehicleGroup =
+    vehicleGroups.find((group) => group.id === activeVehicleGroupId) ?? vehicleGroups[0] ?? null;
+  const activeVehicleVariant = activeVehicle ? getModelVariantLabel(activeVehicle) : null;
+  const recommendedLayouts = useMemo(() => {
+    if (!activeVehicleVariant) {
+      return projectLayoutTemplates;
+    }
+
+    return [...projectLayoutTemplates].sort((left, right) => {
+      const leftSuitable = left.suitableFor.includes(activeVehicleVariant);
+      const rightSuitable = right.suitableFor.includes(activeVehicleVariant);
+
+      if (leftSuitable === rightSuitable) {
+        return 0;
+      }
+
+      return leftSuitable ? -1 : 1;
+    });
+  }, [activeVehicleVariant]);
+  const sceneLayers = useMemo(() => {
+    if (!selectedLayout) {
+      return [];
+    }
+
+    return getIsometricSceneLayers({
+      layout: selectedLayout,
+      activeVisualLayers,
+      activeMaterials,
+    });
+  }, [selectedLayout, activeVisualLayers, activeMaterials]);
+  const visibleSceneLayers = useMemo(
+    () =>
+      sceneLayers.filter(
+        (layer) =>
+          layer.visible &&
+          ["bed", "kitchen", "storage", "bathroom", "seat", "table"].includes(layer.type),
+      ),
+    [sceneLayers],
+  );
+
+  const riskSummary = hasCriticalError
+    ? {
+        label: "BLOKE",
+        className: "border-red-500/30 bg-red-500/10 text-red-300",
+      }
+    : normalizedAggregateAi?.severity === "warning"
+      ? {
+          label: "UYARI",
+          className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+        }
+      : normalizedAggregateAi?.severity === "ready"
+        ? {
+            label: "HAZIR",
+            className: "border-green-500/30 bg-green-500/10 text-green-300",
+          }
+        : {
+            label: "BEKLEMEDE",
+            className: "border-zinc-700 bg-zinc-900 text-zinc-300",
+          };
+
+  const handleSaveProject = async () => {
+    if (!activeVehicle) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSavedAiDecisionAggregate(null);
+    setSavedAiDecisionProducts([]);
+    setHasAiDecisionBundleError(false);
+
+    const totalPrice = cart.reduce(
+      (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
+      0,
+    );
+
+    const result = await saveEngineeringBuild({
+      vehicleId: activeVehicle.id,
+      cart,
+      stats,
+      totalPrice,
+    });
+
+    if (result.success) {
+      setSavedAiDecisionAggregate(result.aiDecisionBundle?.aggregate ?? null);
+      setSavedAiDecisionProducts(result.aiDecisionBundle?.products ?? []);
+      setHasAiDecisionBundleError(!result.aiDecisionBundle);
+      setIsApproved(true);
+      setIsSaving(false);
+
+      setTimeout(() => {
+        window.location.href = `/offer/${result.shortCode}`;
+      }, 1800);
+
+      return;
+    }
+
+    alert("Kayıt Hatası: " + result.error);
+    setSavedAiDecisionAggregate(null);
+    setSavedAiDecisionProducts([]);
+    setHasAiDecisionBundleError(false);
+    setIsSaving(false);
+  };
+
+  const resetBuildState = () => {
+    setCart([]);
+    setIsApproved(false);
+    setIsSaving(false);
+    setSavedAiDecisionAggregate(null);
+    setSavedAiDecisionProducts([]);
+    setHasAiDecisionBundleError(false);
+    setActiveVisualLayers({});
+    setActiveMaterials({
+      furniture: null,
+      floor: null,
+      wall: null,
+    });
+  };
 
   return (
     <>
@@ -325,473 +1351,685 @@ export default function ConfiguratorClient({
       `}</style>
 
       {!activeVehicle ? (
-        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
-          <div className="mb-14 text-center">
-            <div className="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <Hammer className="h-10 w-10 text-blue-500" />
-            </div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase mb-2">
-              SkyVan <span className="text-blue-500">Atölye</span>
-            </h1>
-            <p className="text-xs text-zinc-500 uppercase tracking-[0.3em] font-mono">
-              Üretim Hattı Başlatılıyor
-            </p>
-          </div>
-
-          <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8">
-            {availableModels.map((model) => (
-              <div
-                key={model.id}
-                onClick={() => setActiveVehicle(model)}
-                className="bg-zinc-950 border border-zinc-900 hover:border-blue-500 p-10 rounded-[2.5rem] cursor-pointer transition-all group"
-              >
-                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-4 block">
-                  {getModelPlatformLabel(model)}
-                </span>
-                <h2 className="text-2xl font-bold mb-8 text-zinc-100 group-hover:text-white transition-colors">
-                  {getModelDisplayName(model)}
-                </h2>
-                <div className="space-y-4 mb-10 flex-1">
-                  <div className="flex justify-between border-b border-zinc-900 pb-3 text-sm text-zinc-500">
-                    <span>Boş Kütle</span>
-                    <span className="text-zinc-100 font-mono font-bold">
-                      {model.baseWeightKg} KG
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-zinc-500 font-bold">
-                    <span>Üst Limit</span>
-                    <span className="text-red-500 font-mono">
-                      {Number(model.baseWeightKg) + Number(model.maxPayloadKg || 1400)} KG
-                    </span>
-                  </div>
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.07),transparent_28%),linear-gradient(180deg,#060606,#020202)] text-white px-5 py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-6 flex items-end justify-between gap-6 border-b border-white/5 pb-4">
+              <div className="max-w-3xl">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/8 bg-white/[0.03]">
+                  <Hammer className="h-5.5 w-5.5 text-blue-400" />
                 </div>
-                <div className="pt-6 border-t border-zinc-900 flex items-center justify-between opacity-40 group-hover:opacity-100 transition-opacity">
-                  <span className="text-xs font-bold uppercase tracking-widest">
-                    Hattı Seç
-                  </span>
-                  <ArrowLeft className="h-4 w-4 rotate-180" />
+                <p className="text-[10px] font-medium tracking-[0.2em] text-zinc-500">
+                  SKYVAN ATÖLYE
+                </p>
+                <h1 className="mt-2 text-[2rem] font-semibold tracking-[-0.04em] text-zinc-50 lg:text-[2.35rem]">
+                  Araç Platformunu Seç
+                </h1>
+                <p className="mt-2 max-w-2xl text-[13px] leading-6 text-zinc-400">
+                  Her model aynı premium atölye yüzeyine açılır. Grubu seçin, varyantı belirleyin
+                  ve yapılandırma
+                  hattını doğrudan başlatın.
+                </p>
+              </div>
+              <div className="hidden shrink-0 items-end gap-4 lg:flex">
+                <div className="text-right">
+                  <p className="text-[10px] tracking-[0.18em] text-zinc-600">Hazır</p>
+                  <p className="mt-1 text-lg font-medium tracking-tight text-zinc-200">
+                    {availableModels.length}
+                  </p>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-2">
+              {vehicleGroups.map((group) => {
+                const isActive = group.id === activeVehicleGroup?.id;
+
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => setActiveVehicleGroupId(group.id)}
+                    className={`rounded-full border px-3 py-2 text-left transition-all duration-200 ${
+                      isActive
+                        ? "border-blue-400/40 bg-blue-500/[0.12] text-zinc-50 shadow-[0_0_0_1px_rgba(96,165,250,0.18)]"
+                        : "border-white/6 bg-white/[0.03] text-zinc-400 hover:border-white/12 hover:bg-white/[0.05] hover:text-zinc-200"
+                    }`}
+                  >
+                    <span className="block text-[11px] font-medium tracking-[0.01em]">
+                      {group.label}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">
+                      {group.models.length} varyant
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeVehicleGroup ? (
+              <div className="mb-4 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-medium tracking-[0.18em] text-zinc-500">
+                    {activeVehicleGroup.label}
+                  </p>
+                  <h2 className="mt-1 text-[1.45rem] font-semibold tracking-[-0.03em] text-zinc-100">
+                    {activeVehicleGroup.detail}
+                  </h2>
+                </div>
+                <p className="hidden text-[11px] text-zinc-500 lg:block">
+                  Seçili grupta {activeVehicleGroup.models.length} uygun varyant var
+                </p>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {activeVehicleGroup?.models.map((model) => {
+                const variantLabel = getModelVariantLabel(model);
+                const seriesLabel = getModelSeriesLabel(model);
+
+                return (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => {
+                      resetBuildState();
+                      setSelectedLayout(null);
+                      setActiveVehicle(model);
+                    }}
+                    className="group relative overflow-hidden rounded-[1.2rem] border border-white/6 bg-[linear-gradient(180deg,rgba(24,24,27,0.78),rgba(10,10,10,0.96))] p-4 text-left transition-all duration-300 ease-out hover:-translate-y-[2px] hover:border-blue-400/40 hover:bg-[linear-gradient(180deg,rgba(28,28,32,0.88),rgba(10,10,10,0.98))] hover:shadow-[0_18px_45px_rgba(0,0,0,0.32)]"
+                  >
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent opacity-60" />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-medium tracking-[0.12em] text-zinc-500">
+                        {seriesLabel}
+                      </p>
+                      <h2 className="mt-1.5 truncate text-[1.35rem] font-semibold tracking-[-0.04em] text-zinc-50">
+                        {variantLabel ?? getModelDisplayName(model)}
+                      </h2>
+                    </div>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/8 bg-white/[0.03] text-zinc-500 transition-all duration-300 group-hover:border-blue-400/40 group-hover:bg-blue-500/[0.08] group-hover:text-blue-300">
+                      <ArrowLeft className="h-3.5 w-3.5 rotate-180 transition-transform duration-300 group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/6 pt-2.5">
+                    <p className="min-w-0 truncate text-[12px] text-zinc-400">
+                      <span className="font-medium text-zinc-100">
+                        {Number(model.baseWeightKg || 0).toLocaleString("tr-TR")} KG
+                      </span>
+                      <span className="mx-2 text-zinc-700">•</span>
+                      <span>
+                        {(
+                          Number(model.baseWeightKg || 0) +
+                          Number(model.maxPayloadKg || 1400)
+                        ).toLocaleString("tr-TR")}{" "}
+                        KG limiti
+                      </span>
+                    </p>
+                    <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-medium tracking-[0.14em] text-zinc-500 transition-colors group-hover:text-zinc-200">
+                      <span>Seç</span>
+                      <ArrowLeft className="h-3.5 w-3.5 rotate-180 transition-transform duration-300 group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : !selectedLayout ? (
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.06),transparent_28%),linear-gradient(180deg,#050505,#020202)] text-white px-5 py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/5 pb-4">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetBuildState();
+                    setSelectedLayout(null);
+                    setActiveVehicle(null);
+                  }}
+                  className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-[0.85rem] border border-white/6 bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.05]"
+                >
+                  <ArrowLeft className="h-3 w-3 text-zinc-300" />
+                </button>
+
+                <div>
+                  <p className="text-[10px] font-medium tracking-[0.18em] text-zinc-500">
+                    Proje Krokisi
+                  </p>
+                  <h1 className="mt-1 text-[1.9rem] font-semibold tracking-[-0.04em] text-zinc-50">
+                    Yerleşim Planını Seç
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-[13px] leading-6 text-zinc-400">
+                    Seçili araç için başlangıç düzenini belirleyin. Krokiden sonra atölye
+                    ekranına geçilecek.
+                  </p>
+                </div>
+              </div>
+
+              <div className="hidden min-w-[16rem] rounded-[1.15rem] border border-white/6 bg-white/[0.03] px-4 py-3 lg:block">
+                  <p className="text-[9px] font-medium tracking-[0.18em] text-zinc-500">
+                    Seçili Araç
+                  </p>
+                <p className="mt-1 text-[1rem] font-medium tracking-[-0.03em] text-zinc-100">
+                  {getModelDisplayName(activeVehicle)}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {getModelPlatformLabel(activeVehicle)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4 rounded-[1.15rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))] px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-medium tracking-[0.16em] text-zinc-500">
+                    Araç Varyantı
+                  </p>
+                  <p className="mt-1 text-[1.1rem] font-medium tracking-[-0.03em] text-zinc-100">
+                    {activeVehicleVariant ?? getModelDisplayName(activeVehicle)}
+                  </p>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Uygun planlar önce listelenir, diğer planlar yine seçilebilir.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {recommendedLayouts.map((layout) => {
+                const isRecommended = activeVehicleVariant
+                  ? layout.suitableFor.includes(activeVehicleVariant)
+                  : false;
+
+                return (
+                  <button
+                    key={layout.id}
+                    type="button"
+                    onClick={() => {
+                      resetBuildState();
+                      setSelectedLayout(layout);
+                    }}
+                    className={`group rounded-[1.3rem] border p-4 text-left transition-all duration-300 ${
+                      isRecommended
+                        ? "border-blue-400/25 bg-[linear-gradient(180deg,rgba(22,24,30,0.96),rgba(8,8,10,0.99))] shadow-[0_0_0_1px_rgba(96,165,250,0.08)] hover:border-blue-400/40"
+                        : "border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))] hover:border-white/12"
+                    }`}
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-[1.2rem] font-semibold tracking-[-0.03em] text-zinc-50">
+                            {layout.name}
+                          </h2>
+                          {isRecommended ? (
+                            <span className="rounded-full border border-blue-400/25 bg-blue-500/[0.08] px-2 py-0.5 text-[8px] font-medium tracking-[0.14em] text-blue-300">
+                              Uygun
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-[12px] text-zinc-400">{layout.short}</p>
+                      </div>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/8 bg-white/[0.03] text-zinc-500 transition-all duration-300 group-hover:border-blue-400/35 group-hover:bg-blue-500/[0.08] group-hover:text-blue-300">
+                        <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                      </div>
+                    </div>
+
+                    {renderLayoutSchematic(layout)}
+
+                    <div className="mt-4">
+                      <p className="text-[9px] font-medium tracking-[0.14em] text-zinc-500">
+                        Uygun Araç Ölçüleri
+                      </p>
+                      <p className="mt-1 text-[12px] text-zinc-300">
+                        {layout.suitableFor.join(" / ")}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {layout.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-white/6 bg-white/[0.03] px-2.5 py-1 text-[9px] font-medium tracking-[0.12em] text-zinc-400"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
+                      <span className="text-[10px] font-medium tracking-[0.14em] text-zinc-500">
+                        Bu krokiyle devam et
+                      </span>
+                      <span className="text-[10px] font-medium tracking-[0.14em] text-zinc-200">
+                        Seç
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : (
-        <div className="h-screen w-full bg-black text-white flex flex-col overflow-hidden font-sans">
-          <header className="h-16 shrink-0 border-b border-zinc-900 bg-zinc-950 flex items-center justify-between px-8 z-50">
-            <div className="flex items-center gap-5">
-              <button
-                onClick={() => {
-                  setSavedAiDecisionAggregate(null);
-                  setSavedAiDecisionProducts([]);
-                  setHasAiDecisionBundleError(false);
-                  setActiveVehicle(null);
-                }}
-                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 p-2.5 rounded-xl transition-all"
-              >
-                <ArrowLeft className="h-5 w-5 text-zinc-400" />
-              </button>
-              <div className="h-6 w-px bg-zinc-800"></div>
-              <h1 className="text-[11px] font-bold tracking-widest uppercase">
-                SkyVan Atölye <span className="text-blue-500 ml-1">OS</span>
-              </h1>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2.5 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl">
-                <Truck className="h-4 w-4 text-blue-500" />
-                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-tighter">
-                  {getModelDisplayName(activeVehicle)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 text-green-500 px-4 py-2">
-                <BrainCircuit className="h-4 w-4" />
-                <span className="text-[10px] font-mono tracking-widest uppercase">
-                  AI_CORE_SYNC
-                </span>
-                {normalizedAggregateAi ? (
-                  <span
-                    className={`rounded-full border px-2 py-1 text-[9px] font-bold tracking-widest ${normalizedAggregateAi.tone.badge}`}
-                  >
-                    {normalizedAggregateAi.label}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </header>
+        <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.04),transparent_24%),linear-gradient(180deg,#050505,#020202)] text-white font-sans">
+          <div className="grid h-full grid-rows-[auto_1fr]">
+            <header className="border-b border-white/5 bg-black/65 px-2 py-0.5 backdrop-blur-sm lg:px-2.5">
+              <div className="flex h-7 items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setSavedAiDecisionAggregate(null);
+                    setSavedAiDecisionProducts([]);
+                    setHasAiDecisionBundleError(false);
+                    setSelectedLayout(null);
+                  }}
+                  className="flex h-6.5 w-6.5 items-center justify-center rounded-[0.7rem] border border-white/6 bg-white/[0.03] transition-colors hover:border-white/10 hover:bg-white/[0.05]"
+                >
+                  <ArrowLeft className="h-2.5 w-2.5 text-zinc-400" />
+                </button>
 
-          <div className="flex flex-1 flex-row h-[calc(100vh-64px)] w-full overflow-hidden bg-black">
-            <div className="flex-1 overflow-y-auto p-8 lg:p-12 border-r border-zinc-900 custom-scrollbar">
-              <div className="max-w-4xl mx-auto space-y-4 pb-12">
-                {dbProducts.map((product) => {
-                  const quantity =
-                    cart.find((item) => item.product.id === product.id)?.quantity || 0;
-                  const title =
-                    product.title || product.name || product.sku || "Donanım Kalemi";
-                  const productAiDecision = shouldRenderSavedProductAiSignals
-                    ? savedAiDecisionProductsById.get(product.id)
-                    : undefined;
-                  const productCardClass =
-                    productAiDecision?.status === "blocker"
-                      ? "border-red-500/45 shadow-[0_0_24px_rgba(239,68,68,0.08)] bg-zinc-900/50"
-                      : productAiDecision?.status === "warning"
-                        ? "border-amber-400/35 shadow-[0_0_20px_rgba(251,191,36,0.06)] bg-zinc-900/50"
-                        : quantity > 0
-                          ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.05)] bg-zinc-900/50"
-                          : "border-zinc-900 hover:border-zinc-800";
-                  const productAiSignalClass =
-                    productAiDecision?.status === "blocker"
-                      ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]"
-                      : productAiDecision?.status === "warning"
-                        ? "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.4)]"
-                        : productAiDecision?.status === "ready"
-                          ? "bg-green-400 shadow-[0_0_12px_rgba(74,222,128,0.35)]"
-                          : null;
+                <div className="h-3 w-px bg-white/6" />
 
-                  return (
-                    <div
-                      key={product.id}
-                      className={`bg-zinc-950 border ${productCardClass} rounded-[1.5rem] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-all`}
-                    >
-                      <div className="flex-1 pr-4">
-                        <div className="text-[10px] font-bold text-zinc-600 mb-2 uppercase tracking-widest">
-                          {product.sku}
-                        </div>
-                        <div className="mb-3 flex items-center gap-2">
-                          <h3 className="text-base font-bold text-zinc-200">{title}</h3>
-                          {productAiDecision && productAiSignalClass ? (
-                            <span
-                              className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${productAiSignalClass}`}
-                              title={productAiDecision.reason}
-                              aria-label={`${title} AI durumu: ${productAiDecision.status}`}
-                            />
-                          ) : null}
-                        </div>
-                        <div className="flex gap-4 items-center">
-                          <span className="text-xs text-zinc-500 flex items-center gap-1.5 bg-black px-3 py-1.5 rounded-lg border border-zinc-900">
-                            <Box className="h-3.5 w-3.5 text-zinc-600" />{" "}
-                            {product.weightKg || 0} KG
-                          </span>
-                          <span className="text-xs text-zinc-500 flex items-center gap-1.5 bg-black px-3 py-1.5 rounded-lg border border-zinc-900">
-                            <Zap className="h-3.5 w-3.5 text-amber-500" />{" "}
-                            {Number(product.basePrice || 0).toLocaleString("tr-TR")} ₺
-                          </span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 ml-6">
-                        {quantity > 0 ? (
-                          <div className="flex items-center gap-2 bg-black border border-zinc-900 rounded-xl p-1.5 shadow-inner">
-                            <button
-                              onClick={() => handleRemoveItem(product.id)}
-                              className="p-2.5 bg-zinc-900 rounded-lg text-zinc-500 hover:text-white transition-all"
-                            >
-                              <Minus className="h-4 w-4" />
-                            </button>
-                            <span className="w-10 text-center text-lg font-mono font-bold text-blue-500">
-                              {quantity}
-                            </span>
-                            <button
-                              onClick={() => handleAddItem(product)}
-                              className="p-2.5 bg-zinc-900 rounded-lg text-zinc-500 hover:text-white transition-all"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleAddItem(product)}
-                            className="px-8 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl text-[10px] font-bold tracking-widest uppercase border border-zinc-800 transition-all"
-                          >
-                            Sisteme Dahil Et
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <aside className="w-[420px] shrink-0 bg-zinc-950 flex flex-col h-full relative z-40 border-l border-zinc-900 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-8 border-b border-zinc-900 pb-4 flex items-center gap-3">
-                  <Settings2 className="h-5 w-5 text-blue-500" /> Atölye Telemetrisi
-                </h2>
-
-                <div className="bg-black border border-zinc-900 p-7 rounded-[2rem] mb-6 shadow-inner relative overflow-hidden">
-                  <div className="flex justify-between items-center mb-5 relative z-10">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                      Kütle İndeksi
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Truck className="h-2.5 w-2.5 text-zinc-500" />
+                    <span className="shrink-0 text-[7px] font-medium tracking-[0.12em] text-zinc-600">
+                      Seçili Model
                     </span>
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-1 rounded bg-zinc-950 border border-zinc-900 ${
-                        stats.weight > maxAllowedWeight ? "text-red-500" : "text-blue-500"
-                      }`}
-                    >
-                      MAX {maxAllowedWeight}
-                    </span>
-                  </div>
-                  <div className="text-5xl font-mono font-bold text-white mb-5 relative z-10 tracking-tighter">
-                    {stats.weight.toLocaleString("tr-TR")}{" "}
-                    <span className="text-sm text-zinc-600 font-sans tracking-widest uppercase ml-1">
-                      KG
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-900 relative z-10">
-                    <div
-                      className={`h-full transition-all duration-1000 ${
-                        stats.weight > maxAllowedWeight ? "bg-red-500" : "bg-blue-500"
-                      }`}
-                      style={{
-                        width: `${Math.min((stats.weight / maxAllowedWeight) * 100, 100)}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-black border border-zinc-900 p-6 rounded-[1.5rem] shadow-inner text-center">
-                    <div className="text-[10px] font-bold text-zinc-600 uppercase mb-3 flex items-center justify-center gap-2">
-                      <Sun className="h-4 w-4 text-amber-500" />
-                      Solar PV
-                    </div>
-                    <div className="text-3xl font-mono font-bold text-amber-500 tracking-tighter">
-                      {stats.solarW}W
-                    </div>
-                  </div>
-                  <div className="bg-black border border-zinc-900 p-6 rounded-[1.5rem] shadow-inner text-center">
-                    <div className="text-[10px] font-bold text-zinc-600 uppercase mb-3 flex items-center justify-center gap-2">
-                      <Activity className="h-4 w-4 text-blue-500" />
-                      Sürüş Şarjı
-                    </div>
-                    <div className="text-3xl font-mono font-bold text-blue-500 tracking-tighter">
-                      {stats.dcdcA}A
+                    <div className="min-w-0 flex items-center gap-1.5">
+                      <p className="truncate text-[10px] font-medium leading-tight tracking-[-0.02em] text-zinc-100">
+                        {getModelDisplayName(activeVehicle)}
+                      </p>
+                      <span className="text-[9px] text-zinc-700">→</span>
+                      <p className="truncate text-[9px] font-medium tracking-[-0.01em] text-zinc-300">
+                        {selectedLayout.name}
+                      </p>
                     </div>
                   </div>
                 </div>
-
-                {cart.length > 0 ? (
-                  <div className="mt-4">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-5 flex items-center gap-3">
-                      <BrainCircuit className="h-5 w-5 text-blue-500" /> AI Mühendislik
-                      Kontrolü
-                    </h3>
-                    <div className="space-y-3">
-                      {shouldRenderSavedProductAiSignals ? (
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[9px] font-bold uppercase tracking-widest text-zinc-500">
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]" />
-                            Blokaj
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.4)]" />
-                            Uyarı
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-400 shadow-[0_0_12px_rgba(74,222,128,0.35)]" />
-                            Hazır
-                          </span>
-                        </div>
-                      ) : null}
-
-                      {savedAiDecisionAggregate && normalizedAggregateAi ? (
-                        <div
-                          className={`p-5 rounded-[1.25rem] border ${normalizedAggregateAi.tone.panel}`}
-                        >
-                          <div className="flex items-center justify-between gap-3 mb-3">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                              Kayıt AI Karar Sinyali
-                            </span>
-                            <span
-                              className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-widest ${normalizedAggregateAi.tone.badge}`}
-                            >
-                              {normalizedAggregateAi.label}
-                            </span>
-                          </div>
-                          <p className="text-[11px] leading-relaxed text-zinc-300">
-                            {savedAiDecisionAggregate.reason}
-                          </p>
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <span className="rounded-lg border border-zinc-800 bg-black px-2.5 py-1 text-[10px] font-mono text-zinc-400">
-                              Ürün {savedAiDecisionAggregate.totalProducts}
-                            </span>
-                            <span className="rounded-lg border border-green-900/60 bg-black px-2.5 py-1 text-[10px] font-mono text-green-300">
-                              Hazır {savedAiDecisionAggregate.readyCount}
-                            </span>
-                            <span className="rounded-lg border border-amber-900/60 bg-black px-2.5 py-1 text-[10px] font-mono text-amber-300">
-                              Uyarı {savedAiDecisionAggregate.warningCount}
-                            </span>
-                            <span className="rounded-lg border border-red-900/60 bg-black px-2.5 py-1 text-[10px] font-mono text-red-300">
-                              Blokaj {savedAiDecisionAggregate.blockerCount}
-                            </span>
-                          </div>
-                          <p
-                            className={`mt-4 text-[10px] leading-relaxed ${normalizedAggregateAi.actionHint.className}`}
-                          >
-                            {normalizedAggregateAi.actionHint.text}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {hasAiDecisionBundleError ? (
-                        <div className="p-5 rounded-[1.25rem] border border-zinc-800 bg-black">
-                          <p className="text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-3">
-                            <AlertOctagon className="h-5 w-5 text-zinc-500" /> Kayıt AI
-                            sinyali bu projede üretilemedi
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {aiInsights.length === 0 ? (
-                        <div className="p-5 bg-black border border-zinc-900 rounded-[1.25rem] border-l-4 border-l-green-600/50 shadow-inner">
-                          <p className="text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-3">
-                            <CheckCircle2 className="h-5 w-5 text-green-500" /> Mühendislik
-                            standartları uygun
-                          </p>
-                        </div>
-                      ) : (
-                        aiInsights.map((insight, index) => (
-                          <div
-                            key={index}
-                            className={`p-5 rounded-[1.25rem] border ${
-                              insight.type === "critical"
-                                ? "bg-red-950/20 border-red-900/50 border-l-4 border-l-red-500"
-                                : "bg-blue-950/20 border-blue-900/50 border-l-4 border-l-blue-500"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 mb-2">
-                              {insight.type === "critical" ? (
-                                <ShieldAlert className="h-5 w-5 text-red-500" />
-                              ) : (
-                                <Check className="h-4 w-4 text-blue-400" />
-                              )}
-                              <span
-                                className={`text-[10px] font-bold uppercase tracking-widest ${
-                                  insight.type === "critical"
-                                    ? "text-red-500"
-                                    : "text-blue-400"
-                                }`}
-                              >
-                                {insight.title}
-                              </span>
-                            </div>
-                            <p
-                              className={`text-[11px] leading-relaxed ${
-                                insight.type === "critical"
-                                  ? "text-red-200/70"
-                                  : "text-blue-200/70"
-                              }`}
-                            >
-                              {insight.message}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : null}
               </div>
+            </header>
 
-              <div className="shrink-0 p-8 border-t border-zinc-900 bg-zinc-950">
-                {hasAiDecisionBundleError ? (
-                  <div className="mb-6 rounded-[1.25rem] border border-zinc-800 bg-black p-4">
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-3">
-                      <AlertOctagon className="h-4 w-4 text-zinc-500" /> AI karar sinyali alınamadı
+            <main className="min-h-0 overflow-hidden p-2 pt-1 lg:p-2 lg:pt-1.5">
+              <div className="grid h-full grid-cols-[340px_minmax(0,1fr)] gap-2">
+                <aside className="min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(20,20,23,0.97),rgba(8,8,9,0.995))]">
+                  <div className="border-b border-white/6 px-3 py-2">
+                    <h2 className="text-[10px] font-medium tracking-[0.18em] text-zinc-500">
+                      Malzemeler
+                    </h2>
+                    <p className="mt-1 text-[11px] text-zinc-500">
+                      Kategori bazlı ürün seçimi ve adet kontrolü.
                     </p>
                   </div>
-                ) : null}
 
-                <div className="flex justify-between items-end mb-6">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">
-                      Atölye Bütçesi
-                    </span>
-                    <span className="text-[9px] text-blue-500 font-bold uppercase tracking-widest font-mono">
-                      ESTIMATE_CALC
-                    </span>
+                  <div className="h-[calc(100%-57px)] overflow-y-auto px-1.5 py-1.5 custom-scrollbar">
+                    <div className="space-y-2 pb-1">
+                      {groupedProducts.map((category) => (
+                        <section
+                          key={category.id}
+                          className={`overflow-hidden rounded-[0.95rem] border transition-all ${
+                            resolvedOpenCategoryId === category.id
+                              ? "border-white/10 bg-white/[0.03]"
+                              : "border-white/5 bg-black/30"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setOpenCategoryId(category.id)}
+                            className="flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.03]"
+                            aria-expanded={resolvedOpenCategoryId === category.id}
+                          >
+                            <span className="min-w-0 text-[10px] font-medium tracking-[0.14em] text-zinc-500">
+                              {category.name}
+                            </span>
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-[10px] font-mono text-zinc-600">
+                                {category.products.length}
+                              </span>
+                              <ChevronDown
+                                className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${
+                                  resolvedOpenCategoryId === category.id ? "rotate-180" : ""
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          <div
+                            className={`overflow-hidden border-t border-white/5 transition-all duration-200 ${
+                              resolvedOpenCategoryId === category.id
+                                ? "max-h-[1600px] opacity-100"
+                                : "max-h-0 opacity-0"
+                            }`}
+                          >
+                            <div className="space-y-1.5 p-1.5">
+                              {category.products.map((product) => {
+                                const quantity =
+                                  cart.find((item) => item.product.id === product.id)?.quantity ||
+                                  0;
+                                const title =
+                                  product.title || product.name || product.sku || "Donanım Kalemi";
+                                const productAiDecision = shouldRenderSavedProductAiSignals
+                                  ? savedAiDecisionProductsById.get(product.id)
+                                  : undefined;
+                                const productCardClass =
+                                  productAiDecision?.status === "blocker"
+                                    ? "border-red-500/35 bg-red-500/[0.05]"
+                                    : productAiDecision?.status === "warning"
+                                      ? "border-amber-400/25 bg-amber-500/[0.04]"
+                                      : quantity > 0
+                                        ? "border-blue-400/35 bg-blue-500/[0.07] shadow-[0_0_0_1px_rgba(96,165,250,0.08)]"
+                                        : "border-white/5 bg-white/[0.018] hover:border-white/10 hover:bg-white/[0.035]";
+                                const productAiSignalClass =
+                                  productAiDecision?.status === "blocker"
+                                    ? "bg-red-500"
+                                    : productAiDecision?.status === "warning"
+                                      ? "bg-amber-400"
+                                      : productAiDecision?.status === "ready"
+                                        ? "bg-green-400"
+                                        : null;
+
+                                return (
+                                  <div
+                                    key={product.id}
+                                    className={`rounded-[0.95rem] border px-2.5 py-2 transition-all duration-200 ${productCardClass}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-[8px] font-medium tracking-[0.1em] text-zinc-600">
+                                          {product.sku}
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-1.5">
+                                          <h3 className="truncate text-[12px] font-medium text-zinc-100">
+                                            {title}
+                                          </h3>
+                                          {quantity > 0 ? (
+                                            <span className="rounded-full border border-blue-400/25 bg-blue-500/[0.06] px-2 py-0.5 text-[8px] font-medium tracking-[0.14em] text-blue-300">
+                                              Seçili
+                                            </span>
+                                          ) : null}
+                                          {productAiDecision && productAiSignalClass ? (
+                                            <span
+                                              className={`inline-block h-2 w-2 shrink-0 rounded-full ${productAiSignalClass}`}
+                                              title={productAiDecision.reason}
+                                              aria-label={`${title} AI durumu: ${productAiDecision.status}`}
+                                            />
+                                          ) : null}
+                                        </div>
+                                      </div>
+
+                                      {quantity > 0 ? (
+                                        <div className="flex items-center gap-1 rounded-[0.8rem] border border-white/6 bg-black/38 p-1">
+                                          <button
+                                            onClick={() => handleRemoveItem(product.id)}
+                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-white/6 bg-white/[0.03] text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+                                          >
+                                            <Minus className="h-3.5 w-3.5" />
+                                          </button>
+                                          <span className="w-7 text-center text-[12px] font-mono font-bold text-zinc-100">
+                                            {quantity}
+                                          </span>
+                                          <button
+                                            onClick={() => handleAddItem(product)}
+                                            className="flex h-7 w-7 items-center justify-center rounded-md border border-white/6 bg-white/[0.03] text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+                                          >
+                                            <Plus className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleAddItem(product)}
+                                          className="rounded-[0.8rem] border border-white/6 bg-white/[0.03] px-3 py-1.5 text-[9px] font-medium tracking-[0.14em] text-zinc-200 transition-colors hover:bg-white/[0.08]"
+                                        >
+                                          Ekle
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="mt-1.5 flex items-center gap-2 text-[8px] text-zinc-500">
+                                      <span className="inline-flex items-center gap-1">
+                                        <Box className="h-3 w-3 text-zinc-600" />
+                                        {product.weightKg || 0} KG
+                                      </span>
+                                      <span className="inline-flex items-center gap-1">
+                                        <Zap className="h-3 w-3 text-amber-500" />
+                                        {Number(product.basePrice || 0).toLocaleString("tr-TR")} ₺
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </section>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-3xl font-mono font-bold text-white tracking-tighter">
-                      {cart
-                        .reduce(
-                          (sum, item) =>
-                            sum + Number(item.product.basePrice || 0) * item.quantity,
-                          0,
-                        )
-                        .toLocaleString("tr-TR")}
-                    </span>
-                    <span className="text-sm text-zinc-600 ml-1.5 font-sans tracking-widest">
-                      ₺
-                    </span>
-                  </div>
-                </div>
-                <button
-                  disabled={hasCriticalError || isSaving}
-                  onClick={async () => {
-                    setIsSaving(true);
-                    setSavedAiDecisionAggregate(null);
-                    setSavedAiDecisionProducts([]);
-                    setHasAiDecisionBundleError(false);
+                </aside>
 
-                    const totalPrice = cart.reduce(
-                      (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
-                      0,
-                    );
+                <section className="grid min-h-0 grid-rows-[1fr_166px] gap-2">
+                  <section className="min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
+                    <div className="flex h-full flex-col">
+                      <div className="border-b border-white/6 px-4 py-1.5">
+                        <h2 className="text-[10px] font-medium tracking-[0.18em] text-zinc-500">
+                          Önizleme
+                        </h2>
+                      </div>
 
-                    const result = await saveEngineeringBuild({
-                      vehicleId: activeVehicle.id,
-                      cart,
-                      stats,
-                      totalPrice,
-                    });
+                      <div className="relative flex flex-1 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),linear-gradient(180deg,#0c0c0e,#030303)]">
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_40%)]" />
+                        <div className="absolute left-5 top-5 z-10 max-w-md rounded-[1.1rem] border border-white/8 bg-black/30 px-4 py-3 backdrop-blur-sm">
+                          <p className="text-[9px] font-medium tracking-[0.18em] text-zinc-500">
+                            Proje Krokisi
+                          </p>
+                          <p className="mt-1 text-[1.15rem] font-medium tracking-[-0.03em] text-zinc-100">
+                            {selectedLayout.name}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-400">
+                            {selectedLayout.short}
+                          </p>
+                        </div>
+                        <div className="absolute inset-x-5 bottom-5 z-10 flex flex-wrap gap-2">
+                          {selectedLayout.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full border border-white/8 bg-black/30 px-2.5 py-1 text-[9px] font-medium tracking-[0.12em] text-zinc-300 backdrop-blur-sm"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {visibleSceneLayers.map((layer) => (
+                            <span
+                              key={layer.id}
+                              className="rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-2.5 py-1 text-[9px] font-medium tracking-[0.12em] text-blue-200 backdrop-blur-sm"
+                            >
+                              {layer.label}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="relative flex h-full w-full items-center justify-center px-4 py-5 lg:px-8">
+                          <div className="relative h-full w-full max-w-[62rem] [perspective:1800px]">
+                            <div className="absolute inset-0 rounded-[2.2rem] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" />
+                            <div className="absolute inset-[4%_4%_11%_4%] [transform:rotateX(56deg)_rotateZ(-41deg)]">
+                              {sceneLayers.map((layer) =>
+                                layer.visible ? (
+                                  <div
+                                    key={layer.id}
+                                    className={`absolute ${layer.className}`}
+                                    style={{
+                                      left: `${layer.x}%`,
+                                      top: `${layer.y}%`,
+                                      width: `${layer.w}%`,
+                                      height: `${layer.h}%`,
+                                      zIndex: layer.z,
+                                    }}
+                                  >
+                                    {["bed", "kitchen", "storage", "bathroom", "seat", "table"].includes(
+                                      layer.type,
+                                    ) ? (
+                                      <span className="absolute left-[10%] top-[12%] text-[9px] font-medium tracking-[0.1em] text-white/88">
+                                        {layer.label}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null,
+                              )}
+                            </div>
+                            <div className="absolute bottom-5 right-5 z-10 rounded-full border border-white/8 bg-black/30 px-3 py-1.5 text-[9px] text-zinc-400 backdrop-blur-sm">
+                              Teknik ürünler görsel önizlemede gösterilmez
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
-                    if (result.success) {
-                      setSavedAiDecisionAggregate(result.aiDecisionBundle?.aggregate ?? null);
-                      setSavedAiDecisionProducts(result.aiDecisionBundle?.products ?? []);
-                      setHasAiDecisionBundleError(!result.aiDecisionBundle);
-                      setIsApproved(true);
-                      setIsSaving(false);
+                  <section className="overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
+                    <div className="flex h-full items-center justify-between gap-4 px-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
+                            Özet
+                          </span>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[8px] font-medium tracking-[0.16em] ${
+                              normalizedAggregateAi
+                                ? normalizedAggregateAi.tone.badge
+                                : "border-white/6 bg-white/[0.03] text-zinc-500"
+                            }`}
+                          >
+                            YZ
+                          </span>
+                        </div>
 
-                      setTimeout(() => {
-                        window.location.href = `/offer/${result.shortCode}`;
-                      }, 1800);
+                        <div className="flex h-[84px] items-center gap-4 overflow-hidden">
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-medium tracking-[0.16em] text-zinc-500">
+                              Kütle
+                            </p>
+                            <p className="mt-1 text-[1.28rem] font-medium tracking-[-0.035em] text-zinc-50">
+                              {stats.weight.toLocaleString("tr-TR")}
+                              <span className="ml-1 text-[10px] tracking-[0.16em] text-zinc-600">
+                                KG
+                              </span>
+                            </p>
+                          </div>
 
-                      return;
-                    }
+                          <div className="h-8 w-px bg-white/6" />
 
-                    alert("Kayıt Hatası: " + result.error);
-                    setSavedAiDecisionAggregate(null);
-                    setSavedAiDecisionProducts([]);
-                    setHasAiDecisionBundleError(false);
-                    setIsSaving(false);
-                  }}
-                  className={`w-full py-5 rounded-[1.25rem] font-bold text-[11px] tracking-[0.3em] uppercase transition-all duration-500 flex items-center justify-center gap-3 border shadow-2xl ${
-                    hasCriticalError
-                      ? "bg-red-950/40 text-red-500 border-red-900 cursor-not-allowed"
-                      : isApproved
-                        ? "bg-green-600 text-white border-green-500"
-                        : "bg-white text-black border-white hover:bg-zinc-200 active:scale-[0.98]"
-                  }`}
-                >
-                  {hasCriticalError ? (
-                    <>
-                      <AlertOctagon className="h-5 w-5" /> Onay Kilitli
-                    </>
-                  ) : isSaving ? (
-                    <span className="animate-pulse">Atölye Verisi Yazılıyor...</span>
-                  ) : isApproved ? (
-                    <>
-                      <CheckCircle2 className="h-5 w-5" /> Kayıt Başarılı
-                    </>
-                  ) : (
-                    "Atölye Projesini Onayla"
-                  )}
-                </button>
-                {saveSuccessHint ? (
-                  <p className="mt-3 text-center text-[10px] leading-relaxed text-zinc-400">
-                    {saveSuccessHint}
-                  </p>
-                ) : null}
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-medium tracking-[0.16em] text-zinc-500">
+                              Güç
+                            </p>
+                            <p className="mt-1 text-[1.28rem] font-medium tracking-[-0.035em] text-zinc-50">
+                              {visiblePowerW.toLocaleString("tr-TR")}
+                              <span className="ml-1 text-[10px] tracking-[0.16em] text-zinc-600">
+                                W
+                              </span>
+                            </p>
+                          </div>
+
+                          <div className="h-8 w-px bg-white/6" />
+
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-medium tracking-[0.16em] text-zinc-500">
+                              Kalan Yük
+                            </p>
+                            <p className="mt-1 text-[1.28rem] font-medium tracking-[-0.035em] text-zinc-50">
+                              {payloadReserveKg.toLocaleString("tr-TR")}
+                              <span className="ml-1 text-[10px] tracking-[0.16em] text-zinc-600">
+                                KG
+                              </span>
+                            </p>
+                          </div>
+
+                          <div className="h-8 w-px bg-white/6" />
+
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-medium tracking-[0.16em] text-zinc-500">
+                              Risk
+                            </p>
+                            <p className="mt-1 text-[1.22rem] font-medium tracking-[-0.03em] text-zinc-50">
+                              {riskSummary.label}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex w-[292px] shrink-0 flex-col items-end justify-center gap-2.5 border-l border-white/6 pl-5">
+                        <div className="w-full">
+                          <p className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
+                            Bütçe
+                          </p>
+                          <div className="mt-1 flex items-end justify-between gap-3">
+                            <p className="text-[1.62rem] font-medium tracking-[-0.04em] text-zinc-50">
+                              {totalBudget.toLocaleString("tr-TR")}
+                              <span className="ml-1 text-[11px] tracking-[0.16em] text-zinc-600">
+                                ₺
+                              </span>
+                            </p>
+                            <span className="rounded-full border border-white/6 bg-white/[0.03] px-2 py-1 text-[8px] font-medium tracking-[0.14em] text-zinc-500">
+                              {totalSelectedUnits} kalem
+                            </span>
+                          </div>
+                          {saveSuccessHint ? (
+                            <p className="mt-1 text-[8px] leading-snug text-zinc-500">
+                              {saveSuccessHint}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="flex w-full items-center gap-2">
+                          <button
+                            disabled={hasCriticalError || isSaving}
+                            onClick={handleSaveProject}
+                            className={`flex-1 rounded-[0.85rem] border px-3 py-2 text-[8px] font-medium tracking-[0.18em] transition-all duration-200 ${
+                              hasCriticalError
+                                ? "cursor-not-allowed border-zinc-900 bg-zinc-950 text-zinc-700"
+                                : isApproved
+                                  ? "border-zinc-700 bg-zinc-100 text-black"
+                                  : "border-white/6 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.08]"
+                            }`}
+                          >
+                            {hasCriticalError
+                              ? "Kilitli"
+                              : isSaving
+                                ? "Kaydediliyor"
+                                : isApproved
+                                  ? "Kaydedildi"
+                                  : "Kaydet"}
+                          </button>
+
+                          <button
+                            disabled={hasCriticalError || isSaving}
+                            onClick={handleSaveProject}
+                            className={`flex-1 rounded-[0.85rem] border px-3 py-2 text-[8px] font-medium tracking-[0.18em] transition-all duration-200 ${
+                              hasCriticalError
+                                ? "cursor-not-allowed border-red-900 bg-red-950/30 text-red-500"
+                                : isApproved
+                                  ? "border-green-500 bg-green-600 text-white"
+                                  : "border-blue-400/30 bg-white text-black shadow-[0_8px_24px_rgba(255,255,255,0.08)] hover:bg-zinc-100"
+                            }`}
+                          >
+                            {hasCriticalError ? (
+                              "Bloke"
+                            ) : isSaving ? (
+                              "İşleniyor"
+                            ) : isApproved ? (
+                              "Devam Et"
+                            ) : (
+                              "Kaydet ve Devam Et"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </section>
               </div>
-            </aside>
+            </main>
           </div>
         </div>
       )}

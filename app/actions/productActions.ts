@@ -25,8 +25,8 @@ export async function createProduct(formData: FormData) {
       categoryId = existingCategories[0].id;
     } else {
       const [newCat] = await database.insert(categories).values({
-        name: "Genel Kategori",
-        slug: "genel-kategori",
+        name: "Karavan Donanımı",
+        slug: "karavan-donanimi",
         status: "active",
         sortOrder: 1,
       }).returning();

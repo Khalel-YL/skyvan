@@ -100,10 +100,10 @@ export function CategoriesList({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip>{category.slug}</Chip>
+                  <Chip>Slug {category.slug}</Chip>
                   <Chip>{category.icon || "İkon yok"}</Chip>
                   <Chip>Sıra {category.sortOrder}</Chip>
-                  <Chip>{category.id.slice(0, 8)}</Chip>
+                  <Chip>Kod {category.id.slice(0, 8)}</Chip>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">

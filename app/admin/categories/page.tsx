@@ -14,6 +14,7 @@ type CategoriesPageProps = {
     deleted?: string;
     archived?: string;
     seeded?: string;
+    synced?: string;
     categoryAction?: string;
     categoryCode?: string;
     q?: string;
@@ -169,8 +170,8 @@ export default async function CategoriesPage({
           ? "Silinmek istenen kategori bulunamadı."
         : params.categoryCode === "delete-failed"
           ? "Kategori kaldırma işlemi tamamlanamadı."
-          : params.categoryCode === "seed-failed"
-            ? "Seed kategoriler eklenirken beklenmeyen bir hata oluştu."
+        : params.categoryCode === "seed-failed"
+            ? "Çekirdek kategori seti senkronize edilirken beklenmeyen bir hata oluştu."
             : "Kategori işlemi sırasında beklenmeyen bir hata oluştu."
       : null;
 
@@ -179,7 +180,7 @@ export default async function CategoriesPage({
       <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Admin · Categories
+            Admin · Kategori Omurgası
           </div>
 
           <div>
@@ -187,7 +188,7 @@ export default async function CategoriesPage({
               Kategori Yönetimi
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-              Ürün ve paket omurgasını besleyen kategori kayıtlarını yönet.
+              Ürünlerin workshop, kural motoru ve ilerideki AI katmanıyla uyumlu kategori omurgasını yönet.
             </p>
           </div>
         </div>
@@ -199,7 +200,7 @@ export default async function CategoriesPage({
                 type="submit"
                 className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
               >
-                Seed Oluştur
+                Çekirdek Seti Senkronize Et
               </button>
             </form>
           ) : null}
@@ -229,8 +230,15 @@ export default async function CategoriesPage({
       {params.seeded ? (
         <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
           {params.seeded === "0"
-            ? "Seed kategoriler zaten mevcut."
+            ? "Çekirdek kategori seti zaten mevcut."
             : `${params.seeded} adet çekirdek kategori eklendi.`}
+          {params.synced ? ` ${params.synced} kategori güncellendi.` : ""}
+        </div>
+      ) : null}
+
+      {!params.seeded && params.synced ? (
+        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
+          {params.synced} kategori karavan omurgasına göre güncellendi.
         </div>
       ) : null}
 
@@ -261,9 +269,9 @@ export default async function CategoriesPage({
           <h3 className="text-lg font-semibold text-zinc-100">
             Henüz kategori tanımlı değil
           </h3>
-          <p className="mt-2 text-sm text-zinc-500">
-            Seed oluşturarak hızlı başlangıç yapabilirsin.
-          </p>
+            <p className="mt-2 text-sm text-zinc-500">
+            Çekirdek kategori setini senkronize ederek hızlı başlangıç yapabilirsin.
+            </p>
 
           {databaseReady ? (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -272,7 +280,7 @@ export default async function CategoriesPage({
                   type="submit"
                   className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
                 >
-                  Seed Oluştur
+                  Çekirdek Seti Senkronize Et
                 </button>
               </form>
 

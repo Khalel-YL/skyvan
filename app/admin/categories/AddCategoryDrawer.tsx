@@ -79,14 +79,14 @@ function CategoryDrawerForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="Kategori adı"
-          hint="Admin ve seçim ekranlarında görünen isim."
+          hint="Admin, workshop ve kural akışlarında görünen sektör adı."
           error={state.fieldErrors.name}
         >
           <input
             name="name"
             defaultValue={defaults.name}
             className={inputClassName}
-            placeholder="Kitchen"
+            placeholder="Mutfak Donanımı"
             aria-invalid={Boolean(state.fieldErrors.name)}
             disabled={isPending}
           />
@@ -101,7 +101,7 @@ function CategoryDrawerForm({
             name="slug"
             defaultValue={defaults.slug}
             className={inputClassName}
-            placeholder="kitchen"
+            placeholder="mutfak-donanimi"
             aria-invalid={Boolean(state.fieldErrors.slug)}
             disabled={isPending}
           />
@@ -111,7 +111,7 @@ function CategoryDrawerForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="İkon etiketi"
-          hint="Örnek: bolt, droplet, bed"
+          hint="Örnek: bolt, droplet, chef-hat, bed"
           error={state.fieldErrors.icon}
         >
           <input
@@ -193,8 +193,8 @@ function CategoryDrawerForm({
       </Field>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Parent-child category yapısını bu batch’te bilerek açmıyoruz.
-        Önce isim, slug, sıra ve durum omurgasını stabil tutuyoruz.
+        Üst kategori ve alt kategori yapısını bu batch'te bilerek genişletmiyoruz.
+        Önce ürün, workshop ve kural motoru için tek seviyeli omurgayı net tutuyoruz.
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -263,7 +263,7 @@ export default function AddCategoryDrawer({
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Categories
+                  Kategoriler
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
                   {isEdit ? "Kategori Düzenle" : "Yeni Kategori"}

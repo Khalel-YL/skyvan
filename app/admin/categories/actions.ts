@@ -31,6 +31,44 @@ type CategoryRecord = {
   updatedAt: Date | string;
 };
 
+type SeedCategory = {
+  name: string;
+  slug: string;
+  icon: string;
+  sortOrder: number;
+  legacySlugs: string[];
+  legacyNames: string[];
+};
+
+type CategorySyncCode =
+  | "audit-actor-failed"
+  | "duplicate-slug"
+  | "sync-failed";
+
+class CategorySyncError extends Error {
+  categoryCode: CategorySyncCode;
+  dbCode?: string;
+  detail?: string;
+  constraint?: string;
+
+  constructor(
+    categoryCode: CategorySyncCode,
+    message: string,
+    options?: {
+      dbCode?: string;
+      detail?: string;
+      constraint?: string;
+    },
+  ) {
+    super(message);
+    this.name = "CategorySyncError";
+    this.categoryCode = categoryCode;
+    this.dbCode = options?.dbCode;
+    this.detail = options?.detail;
+    this.constraint = options?.constraint;
+  }
+}
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -119,16 +157,153 @@ function createGenericError(message: string): CategoryFormState {
   };
 }
 
-const seedCategories = [
-  { name: "Electrical", slug: "electrical", icon: "bolt", sortOrder: 10 },
-  { name: "Water", slug: "water", icon: "droplet", sortOrder: 20 },
-  { name: "Furniture", slug: "furniture", icon: "sofa", sortOrder: 30 },
-  { name: "Kitchen", slug: "kitchen", icon: "chef-hat", sortOrder: 40 },
-  { name: "Bathroom", slug: "bathroom", icon: "bath", sortOrder: 50 },
-  { name: "Windows", slug: "windows", icon: "square", sortOrder: 60 },
-  { name: "Seating", slug: "seating", icon: "armchair", sortOrder: 70 },
-  { name: "Sleeping", slug: "sleeping", icon: "bed", sortOrder: 80 },
+const seedCategories: SeedCategory[] = [
+  {
+    name: "Elektrik ve Enerji",
+    slug: "elektrik-enerji",
+    icon: "bolt",
+    sortOrder: 10,
+    legacySlugs: ["electrical", "electric", "electrical-mode", "electrical-mod"],
+    legacyNames: ["Electrical"],
+  },
+  {
+    name: "Su Sistemi",
+    slug: "su-sistemi",
+    icon: "droplet",
+    sortOrder: 20,
+    legacySlugs: ["water"],
+    legacyNames: ["Water"],
+  },
+  {
+    name: "Mobilya ve Depolama",
+    slug: "mobilya-depolama",
+    icon: "sofa",
+    sortOrder: 30,
+    legacySlugs: ["furniture"],
+    legacyNames: ["Furniture"],
+  },
+  {
+    name: "Mutfak Donanımı",
+    slug: "mutfak-donanimi",
+    icon: "chef-hat",
+    sortOrder: 40,
+    legacySlugs: ["kitchen"],
+    legacyNames: ["Kitchen"],
+  },
+  {
+    name: "Banyo ve WC",
+    slug: "banyo-wc",
+    icon: "bath",
+    sortOrder: 50,
+    legacySlugs: ["bathroom"],
+    legacyNames: ["Bathroom"],
+  },
+  {
+    name: "Pencere ve Havalandırma",
+    slug: "pencere-havalandirma",
+    icon: "square",
+    sortOrder: 60,
+    legacySlugs: ["windows"],
+    legacyNames: ["Windows"],
+  },
+  {
+    name: "Oturma Alanı",
+    slug: "oturma-alani",
+    icon: "armchair",
+    sortOrder: 70,
+    legacySlugs: ["seating"],
+    legacyNames: ["Seating"],
+  },
+  {
+    name: "Uyku Alanı",
+    slug: "uyku-alani",
+    icon: "bed",
+    sortOrder: 80,
+    legacySlugs: ["sleeping"],
+    legacyNames: ["Sleeping"],
+  },
 ];
+
+const weakFallbackSlugs = new Set(["general", "genel-kategori"]);
+
+function getCategoryNameKey(value: string) {
+  return normalizeSlug(value);
+}
+
+function isWeakFallbackCategory(category: CategoryRecord) {
+  return (
+    weakFallbackSlugs.has(category.slug) ||
+    weakFallbackSlugs.has(getCategoryNameKey(category.name))
+  );
+}
+
+function getCategorySyncErrorDetails(error: unknown) {
+  if (error instanceof CategorySyncError) {
+    return {
+      categoryCode: error.categoryCode,
+      dbCode: error.dbCode,
+      message: error.message,
+      detail: error.detail,
+      constraint: error.constraint,
+    };
+  }
+
+  if (error instanceof AuditActorBindingError) {
+    return {
+      categoryCode: "audit-actor-failed" as const,
+      dbCode: undefined,
+      message: error.message,
+      detail: undefined,
+      constraint: undefined,
+    };
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    detail?: unknown;
+    constraint?: unknown;
+  };
+
+  const dbCode = typeof candidate?.code === "string" ? candidate.code : undefined;
+  const message =
+    typeof candidate?.message === "string"
+      ? candidate.message
+      : "Kategori senkronizasyonunda beklenmeyen hata.";
+  const detail =
+    typeof candidate?.detail === "string" ? candidate.detail : undefined;
+  const constraint =
+    typeof candidate?.constraint === "string" ? candidate.constraint : undefined;
+  const duplicateSlugDetected =
+    dbCode === "23505" ||
+    constraint?.includes("slug") ||
+    message.toLowerCase().includes("duplicate");
+
+  return {
+    categoryCode: duplicateSlugDetected
+      ? ("duplicate-slug" as const)
+      : ("sync-failed" as const),
+    dbCode,
+    message,
+    detail,
+    constraint,
+  };
+}
+
+function logCategorySyncError(error: unknown) {
+  const details = getCategorySyncErrorDetails(error);
+
+  console.error("createCategorySeeds error", {
+    categoryCode: details.categoryCode,
+    dbCode: details.dbCode,
+    message: details.message,
+    detail: details.detail,
+    constraint: details.constraint,
+    error,
+  });
+
+  return details.categoryCode;
+}
 
 async function getCategoryById(id: string): Promise<CategoryRecord | null> {
   const db = getDbOrThrow();
@@ -322,7 +497,7 @@ export async function saveCategory(
 
     if (error instanceof AuditActorBindingError) {
       return createGenericError(
-        "Session-bound audit actor çözülemediği için kategori kaydı güvenli şekilde tamamlanamadı.",
+        "Oturum audit kullanıcısı çözülemediği için kategori kaydı güvenli şekilde tamamlanamadı.",
       );
     }
 
@@ -487,42 +662,14 @@ export async function deleteCategory(id: string) {
 export async function createCategorySeeds() {
   const db = getDbOrThrow();
 
-  const existing = await db
-    .select({
-      slug: categories.slug,
-    })
-    .from(categories);
-
-  const existingSlugs = new Set(existing.map((item) => item.slug));
-
-  const missing = seedCategories.filter((item) => !existingSlugs.has(item.slug));
-
-  if (missing.length === 0) {
-    redirect(buildCategoriesRedirectUrl({ seeded: 0 }));
-  }
-
-  const now = new Date();
-
   try {
     const auditActor = await requireStrictAuditActor();
     let insertedRows: CategoryRecord[] = [];
+    let updatedRows: CategoryRecord[] = [];
 
     await db.transaction(async (tx) => {
-      insertedRows = (await tx
-        .insert(categories)
-        .values(
-          missing.map((item) => ({
-            id: uuidv4(),
-            name: item.name,
-            slug: item.slug,
-            icon: item.icon,
-            status: "active" as const,
-            sortOrder: item.sortOrder,
-            createdAt: now,
-            updatedAt: now,
-          })),
-        )
-        .returning({
+      const allCategories = (await tx
+        .select({
           id: categories.id,
           name: categories.name,
           slug: categories.slug,
@@ -531,40 +678,270 @@ export async function createCategorySeeds() {
           sortOrder: categories.sortOrder,
           createdAt: categories.createdAt,
           updatedAt: categories.updatedAt,
-        })) as CategoryRecord[];
+        })
+        .from(categories)) as CategoryRecord[];
+      const now = new Date();
 
-      for (const insertedCategory of insertedRows) {
-        await writeCategoryAudit({
-          database: tx,
-          actor: auditActor,
-          entityId: insertedCategory.id,
-          action: "create",
-          newState: insertedCategory,
+      const getCurrentCategories = () => [...allCategories];
+      const findCategoryBySlug = (slug: string) =>
+        allCategories.find((category) => category.slug === slug) ?? null;
+      const replaceCategory = (nextCategory: CategoryRecord) => {
+        const index = allCategories.findIndex((item) => item.id === nextCategory.id);
+
+        if (index >= 0) {
+          allCategories[index] = nextCategory;
+          return;
+        }
+
+        allCategories.push(nextCategory);
+      };
+
+      const findLegacyMatches = (seed: SeedCategory) => {
+        return getCurrentCategories().filter((category) => {
+          const categoryNameKey = getCategoryNameKey(category.name);
+          return (
+            seed.legacySlugs.includes(category.slug) ||
+            seed.legacyNames.some(
+              (legacyName) => getCategoryNameKey(legacyName) === categoryNameKey,
+            )
+          );
         });
+      };
+
+      for (const category of getCurrentCategories()) {
+        if (isWeakFallbackCategory(category)) {
+          console.error("createCategorySeeds safe mode skipped weak fallback category", {
+            categoryId: category.id,
+            slug: category.slug,
+            name: category.name,
+          });
+        }
+      }
+
+      for (const item of seedCategories) {
+        const canonicalCategory = findCategoryBySlug(item.slug);
+        const legacyMatches = findLegacyMatches(item);
+        const legacyCategory = legacyMatches[0] ?? null;
+
+        if (canonicalCategory) {
+          if (legacyMatches.some((category) => category.id !== canonicalCategory.id)) {
+            console.error("createCategorySeeds safe mode skipped duplicate legacy match", {
+              targetSlug: item.slug,
+              targetName: item.name,
+              duplicateCategoryIds: legacyMatches
+                .filter((category) => category.id !== canonicalCategory.id)
+                .map((category) => category.id),
+            });
+          }
+
+          const requiresCanonicalUpdate =
+            canonicalCategory.name !== item.name ||
+            (canonicalCategory.icon ?? "folder") !== item.icon ||
+            canonicalCategory.status !== "active" ||
+            canonicalCategory.sortOrder !== item.sortOrder;
+
+          if (!requiresCanonicalUpdate) {
+            continue;
+          }
+
+          const updatedCanonicalRows = (await tx
+            .update(categories)
+            .set({
+              name: item.name,
+              icon: item.icon,
+              status: "active",
+              sortOrder: item.sortOrder,
+              updatedAt: now,
+            })
+            .where(eq(categories.id, canonicalCategory.id))
+            .returning({
+              id: categories.id,
+              name: categories.name,
+              slug: categories.slug,
+              icon: categories.icon,
+              status: categories.status,
+              sortOrder: categories.sortOrder,
+              createdAt: categories.createdAt,
+              updatedAt: categories.updatedAt,
+            })) as CategoryRecord[];
+
+          const updatedCanonical = updatedCanonicalRows[0];
+
+          if (!updatedCanonical) {
+            console.error("createCategorySeeds safe mode skipped canonical update", {
+              categoryId: canonicalCategory.id,
+              slug: canonicalCategory.slug,
+            });
+            continue;
+          }
+
+          updatedRows.push(updatedCanonical);
+          replaceCategory(updatedCanonical);
+
+          await writeCategoryAudit({
+            database: tx,
+            actor: auditActor,
+            entityId: updatedCanonical.id,
+            action: "update",
+            previousState: canonicalCategory,
+            newState: updatedCanonical,
+          });
+
+          continue;
+        }
+
+        if (legacyMatches.length > 1) {
+          console.error("createCategorySeeds safe mode found multiple legacy candidates", {
+            targetSlug: item.slug,
+            targetName: item.name,
+            categoryIds: legacyMatches.map((category) => category.id),
+            legacySlugs: legacyMatches.map((category) => category.slug),
+          });
+        }
+
+        if (legacyCategory) {
+          const conflictingSlugHolder = findCategoryBySlug(item.slug);
+
+          if (conflictingSlugHolder && conflictingSlugHolder.id !== legacyCategory.id) {
+            console.error("createCategorySeeds safe mode skipped legacy normalization due to duplicate slug", {
+              legacyCategoryId: legacyCategory.id,
+              legacySlug: legacyCategory.slug,
+              targetSlug: item.slug,
+              conflictingCategoryId: conflictingSlugHolder.id,
+            });
+            continue;
+          }
+
+          const updatedLegacyRows = (await tx
+            .update(categories)
+            .set({
+              name: item.name,
+              slug: item.slug,
+              icon: item.icon,
+              status: "active",
+              sortOrder: item.sortOrder,
+              updatedAt: now,
+            })
+            .where(eq(categories.id, legacyCategory.id))
+            .returning({
+              id: categories.id,
+              name: categories.name,
+              slug: categories.slug,
+              icon: categories.icon,
+              status: categories.status,
+              sortOrder: categories.sortOrder,
+              createdAt: categories.createdAt,
+              updatedAt: categories.updatedAt,
+            })) as CategoryRecord[];
+
+          const updatedLegacyCategory = updatedLegacyRows[0];
+
+          if (!updatedLegacyCategory) {
+            console.error("createCategorySeeds safe mode skipped legacy update", {
+              legacyCategoryId: legacyCategory.id,
+              legacySlug: legacyCategory.slug,
+              targetSlug: item.slug,
+            });
+            continue;
+          }
+
+          updatedRows.push(updatedLegacyCategory);
+          replaceCategory(updatedLegacyCategory);
+
+          await writeCategoryAudit({
+            database: tx,
+            actor: auditActor,
+            entityId: updatedLegacyCategory.id,
+            action: "update",
+            previousState: legacyCategory,
+            newState: updatedLegacyCategory,
+          });
+
+          continue;
+        }
+
+        const duplicateSlugHolder = findCategoryBySlug(item.slug);
+
+        if (duplicateSlugHolder) {
+          console.error("createCategorySeeds safe mode skipped insert due to duplicate slug", {
+            targetSlug: item.slug,
+            targetName: item.name,
+            categoryId: duplicateSlugHolder.id,
+          });
+          continue;
+        }
+
+        try {
+          const created = (await tx
+            .insert(categories)
+            .values({
+              id: uuidv4(),
+              name: item.name,
+              slug: item.slug,
+              icon: item.icon,
+              status: "active" as const,
+              sortOrder: item.sortOrder,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .returning({
+              id: categories.id,
+              name: categories.name,
+              slug: categories.slug,
+              icon: categories.icon,
+              status: categories.status,
+              sortOrder: categories.sortOrder,
+              createdAt: categories.createdAt,
+              updatedAt: categories.updatedAt,
+            })) as CategoryRecord[];
+
+          const insertedCategory = created[0];
+
+          if (!insertedCategory) {
+            console.error("createCategorySeeds safe mode insert returned empty result", {
+              targetSlug: item.slug,
+              targetName: item.name,
+            });
+            continue;
+          }
+
+          insertedRows.push(insertedCategory);
+          replaceCategory(insertedCategory);
+
+          await writeCategoryAudit({
+            database: tx,
+            actor: auditActor,
+            entityId: insertedCategory.id,
+            action: "create",
+            newState: insertedCategory,
+          });
+        } catch (error) {
+          console.error("createCategorySeeds safe mode skipped insert", {
+            targetSlug: item.slug,
+            targetName: item.name,
+            error,
+          });
+        }
       }
     });
 
     revalidateCategories();
-    redirect(buildCategoriesRedirectUrl({ seeded: insertedRows.length }));
+    redirect(
+      buildCategoriesRedirectUrl({
+        seeded: insertedRows.length,
+        synced: updatedRows.length,
+      }),
+    );
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
     }
 
-    if (error instanceof AuditActorBindingError) {
-      redirect(
-        buildCategoriesRedirectUrl({
-          categoryAction: "error",
-          categoryCode: "seed-failed",
-        }),
-      );
-    }
-
-    console.error("createCategorySeeds error:", error);
+    const categoryCode = logCategorySyncError(error);
     redirect(
       buildCategoriesRedirectUrl({
         categoryAction: "error",
-        categoryCode: "seed-failed",
+        categoryCode,
       }),
     );
   }
