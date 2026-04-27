@@ -19,9 +19,15 @@ import {
   updateProductSchema,
 } from "./schema";
 import {
+  enrichCategoryOption,
   emptyToNull,
+  getDerivedCategoryFields,
+  generateProductSku,
   normalizeSku,
   normalizeSlug,
+  normalizeTargetLayer,
+  normalizeWorkshopEffect,
+  parseTechnicalSpecs,
   stringNumberToDbNumeric,
 } from "./mappers";
 import type {
@@ -45,6 +51,13 @@ type ProductAuditState = {
   name: string;
   slug: string;
   sku: string;
+  productType: string | null;
+  productSubType: string | null;
+  workshopEffect: string;
+  targetLayer: string | null;
+  meshKey: string | null;
+  materialKey: string | null;
+  technicalSpecs: Record<string, unknown>;
   shortDescription: string | null;
   description: string | null;
   imageUrl: string | null;
@@ -65,6 +78,13 @@ const productAuditSelection = {
   name: products.name,
   slug: products.slug,
   sku: products.sku,
+  productType: products.productType,
+  productSubType: products.productSubType,
+  workshopEffect: products.workshopEffect,
+  targetLayer: products.targetLayer,
+  meshKey: products.meshKey,
+  materialKey: products.materialKey,
+  technicalSpecs: products.technicalSpecs,
   shortDescription: products.shortDescription,
   description: products.description,
   imageUrl: products.imageUrl,
@@ -293,7 +313,7 @@ export async function getProductCategories(): Promise<CategoryOption[]> {
     .from(categories)
     .orderBy(asc(categories.name));
 
-  return rows;
+  return rows.map(enrichCategoryOption);
 }
 
 export async function getProducts(filtersInput?: Partial<ProductFilters>) {
@@ -333,8 +353,16 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
         name: products.name,
         slug: products.slug,
         sku: products.sku,
+        productType: products.productType,
+        productSubType: products.productSubType,
+        workshopEffect: products.workshopEffect,
+        targetLayer: products.targetLayer,
+        meshKey: products.meshKey,
+        materialKey: products.materialKey,
+        technicalSpecs: products.technicalSpecs,
         categoryId: products.categoryId,
         categoryName: categories.name,
+        categorySlug: categories.slug,
         shortDescription: products.shortDescription,
         description: products.description,
         imageUrl: products.imageUrl,
@@ -363,12 +391,25 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
     rows = await queryRows();
   }
 
-  return rows.map((row) => ({
-    ...row,
-    lifecycleNote: alignedProductIds.has(row.id)
-      ? "legacy_active_downgraded"
-      : null,
-  })) satisfies ProductListItem[];
+  return rows.map((row) => {
+    const categoryFields = getDerivedCategoryFields({
+      name: row.categoryName,
+      slug: row.categorySlug,
+    });
+
+    return {
+      ...row,
+      categorySlug: categoryFields.categorySlug,
+      categoryLabel: categoryFields.categoryLabel,
+      isVisual: categoryFields.isVisual,
+      workshopEffect: normalizeWorkshopEffect(row.workshopEffect),
+      targetLayer: normalizeTargetLayer(row.targetLayer),
+      technicalSpecs: row.technicalSpecs ?? {},
+      lifecycleNote: alignedProductIds.has(row.id)
+        ? "legacy_active_downgraded"
+        : null,
+    };
+  }) satisfies ProductListItem[];
 }
 
 export async function createProduct(
@@ -379,6 +420,13 @@ export async function createProduct(
     name: formData.get("name"),
     slug: formData.get("slug"),
     sku: formData.get("sku"),
+    productType: formData.get("productType"),
+    productSubType: formData.get("productSubType"),
+    workshopEffect: formData.get("workshopEffect"),
+    targetLayer: formData.get("targetLayer"),
+    meshKey: formData.get("meshKey"),
+    materialKey: formData.get("materialKey"),
+    technicalSpecs: formData.get("technicalSpecs"),
     categoryId: formData.get("categoryId"),
     shortDescription: formData.get("shortDescription"),
     description: formData.get("description"),
@@ -401,7 +449,10 @@ export async function createProduct(
 
   const data = parsed.data;
   const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
-  const normalizedSku = normalizeSku(data.sku.trim());
+  const normalizedSku = normalizeSku(data.sku || generateProductSku(data.name));
+  const workshopEffect = normalizeWorkshopEffect(data.workshopEffect);
+  const targetLayer = normalizeTargetLayer(data.targetLayer);
+  const technicalSpecs = parseTechnicalSpecs(data.technicalSpecs);
 
   const [category] = await db()
     .select({
@@ -472,6 +523,13 @@ export async function createProduct(
       name: data.name.trim(),
       slug: normalizedSlug,
       sku: normalizedSku,
+      productType: emptyToNull(data.productType),
+      productSubType: emptyToNull(data.productSubType),
+      workshopEffect,
+      targetLayer,
+      meshKey: emptyToNull(data.meshKey),
+      materialKey: emptyToNull(data.materialKey),
+      technicalSpecs,
       categoryId: data.categoryId,
       materialId: null,
       shortDescription: emptyToNull(data.shortDescription),
@@ -519,6 +577,13 @@ export async function updateProduct(
     name: formData.get("name"),
     slug: formData.get("slug"),
     sku: formData.get("sku"),
+    productType: formData.get("productType"),
+    productSubType: formData.get("productSubType"),
+    workshopEffect: formData.get("workshopEffect"),
+    targetLayer: formData.get("targetLayer"),
+    meshKey: formData.get("meshKey"),
+    materialKey: formData.get("materialKey"),
+    technicalSpecs: formData.get("technicalSpecs"),
     categoryId: formData.get("categoryId"),
     shortDescription: formData.get("shortDescription"),
     description: formData.get("description"),
@@ -541,7 +606,10 @@ export async function updateProduct(
 
   const data = parsed.data;
   const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
-  const normalizedSku = normalizeSku(data.sku.trim());
+  const normalizedSku = normalizeSku(data.sku || generateProductSku(data.name));
+  const workshopEffect = normalizeWorkshopEffect(data.workshopEffect);
+  const targetLayer = normalizeTargetLayer(data.targetLayer);
+  const technicalSpecs = parseTechnicalSpecs(data.technicalSpecs);
 
   const current = await getProductAuditStateById(data.id);
 
@@ -623,6 +691,13 @@ export async function updateProduct(
       name: data.name.trim(),
       slug: normalizedSlug,
       sku: normalizedSku,
+      productType: emptyToNull(data.productType),
+      productSubType: emptyToNull(data.productSubType),
+      workshopEffect,
+      targetLayer,
+      meshKey: emptyToNull(data.meshKey),
+      materialKey: emptyToNull(data.materialKey),
+      technicalSpecs,
       categoryId: data.categoryId,
       shortDescription: emptyToNull(data.shortDescription),
       description: emptyToNull(data.description),

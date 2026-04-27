@@ -1,10 +1,17 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { updateProduct } from "./actions";
-import { productToFormValues } from "./mappers";
+import {
+  categoryTypeOptions,
+  generateProductSku,
+  generateProductSlug,
+  productToFormValues,
+  targetLayerOptions,
+  workshopEffectOptions,
+} from "./mappers";
 import type {
   CategoryOption,
   ProductActionState,
@@ -22,8 +29,7 @@ function SubmitButton() {
   return (
     <button
       type="submit"
-      disabled={pending}
-      className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
+      className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
     >
       {pending ? "Kaydediliyor..." : "Kaydet"}
     </button>
@@ -127,6 +133,13 @@ function ProductFormFields({
     name: string;
     slug: string;
     sku: string;
+    productType: string;
+    productSubType: string;
+    workshopEffect: "none" | "layer" | "mesh" | "material";
+    targetLayer: string;
+    meshKey: string;
+    materialKey: string;
+    technicalSpecs: string;
     categoryId: string;
     shortDescription: string;
     description: string;
@@ -139,6 +152,30 @@ function ProductFormFields({
     status: "draft" | "active" | "archived";
   };
 }) {
+  const [name, setName] = useState(defaults.name);
+  const [slug, setSlug] = useState(defaults.slug);
+  const [sku, setSku] = useState(defaults.sku);
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [skuEdited, setSkuEdited] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(defaults.categoryId);
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === selectedCategoryId) ?? null,
+    [categories, selectedCategoryId],
+  );
+  const shouldAutoSlug = !defaults.slug.trim() && !slugEdited;
+  const shouldAutoSku = !defaults.sku.trim() && !skuEdited;
+  const handleNameChange = (nextName: string) => {
+    setName(nextName);
+
+    if (shouldAutoSlug || !slug.trim()) {
+      setSlug(generateProductSlug(nextName));
+    }
+
+    if (shouldAutoSku || !sku.trim()) {
+      setSku(generateProductSku(nextName));
+    }
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div>
@@ -147,7 +184,8 @@ function ProductFormFields({
         </label>
         <input
           name="name"
-          defaultValue={defaults.name}
+          value={name}
+          onChange={(event) => handleNameChange(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="name" />
@@ -159,7 +197,11 @@ function ProductFormFields({
         </label>
         <input
           name="slug"
-          defaultValue={defaults.slug}
+          value={slug}
+          onChange={(event) => {
+            setSlugEdited(true);
+            setSlug(event.target.value);
+          }}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="slug" />
@@ -171,7 +213,11 @@ function ProductFormFields({
         </label>
         <input
           name="sku"
-          defaultValue={defaults.sku}
+          value={sku}
+          onChange={(event) => {
+            setSkuEdited(true);
+            setSku(event.target.value);
+          }}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         />
         <FieldError errors={errors} name="sku" />
@@ -183,7 +229,8 @@ function ProductFormFields({
         </label>
         <select
           name="categoryId"
-          defaultValue={defaults.categoryId}
+          value={selectedCategoryId}
+          onChange={(event) => setSelectedCategoryId(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           {categories
@@ -195,11 +242,111 @@ function ProductFormFields({
             )
             .map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {category.categoryLabel}
               </option>
             ))}
         </select>
+        <CategoryDerivedInfo category={selectedCategory} />
         <FieldError errors={errors} name="categoryId" />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Ürün Tipi
+        </label>
+        <select
+          name="productType"
+          defaultValue={defaults.productType}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          <option value="">Tip seç</option>
+          {categoryTypeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Alt Tip
+        </label>
+        <input
+          name="productSubType"
+          defaultValue={defaults.productSubType}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Workshop Etkisi
+        </label>
+        <select
+          name="workshopEffect"
+          defaultValue={defaults.workshopEffect}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          {workshopEffectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Hedef Katman
+        </label>
+        <select
+          name="targetLayer"
+          defaultValue={defaults.targetLayer}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          <option value="">Katman yok</option>
+          {targetLayerOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Mesh Key
+        </label>
+        <input
+          name="meshKey"
+          defaultValue={defaults.meshKey}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Material Key
+        </label>
+        <input
+          name="materialKey"
+          defaultValue={defaults.materialKey}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Teknik Özellikler JSON
+        </label>
+        <textarea
+          name="technicalSpecs"
+          rows={3}
+          defaultValue={defaults.technicalSpecs}
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        />
+        <FieldError errors={errors} name="technicalSpecs" />
       </div>
 
       <div>
@@ -331,6 +478,19 @@ function ProductFormFields({
         </p>
         <FieldError errors={errors} name="status" />
       </div>
+    </div>
+  );
+}
+
+function CategoryDerivedInfo({ category }: { category: CategoryOption | null }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
+        Görsel kategori: {category?.isVisual ? "Evet" : "Hayır"}
+      </span>
+      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
+        3D hedef katman: {category?.targetLayer ?? "null"}
+      </span>
     </div>
   );
 }

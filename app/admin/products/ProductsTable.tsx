@@ -721,8 +721,44 @@ export async function ProductsTable({
 
                   <div className="flex flex-wrap items-center gap-2">
                     <InfoChip className="border-zinc-700 text-zinc-100">
-                      {product.categoryName}
+                      {product.categoryLabel}
                     </InfoChip>
+
+                    <InfoChip
+                      className={
+                        product.isVisual
+                          ? "border-emerald-900/60 bg-emerald-950/30 text-emerald-300"
+                          : "border-zinc-800 bg-zinc-900 text-zinc-500"
+                      }
+                    >
+                      {product.isVisual ? "Görsel" : "Görsel değil"}
+                    </InfoChip>
+
+                    <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                      Katman {product.targetLayer ?? "null"}
+                    </InfoChip>
+
+                    <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                      Etki {product.workshopEffect}
+                    </InfoChip>
+
+                    {product.productType ? (
+                      <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                        Tip {product.productType}
+                      </InfoChip>
+                    ) : null}
+
+                    {product.meshKey ? (
+                      <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                        Mesh {product.meshKey}
+                      </InfoChip>
+                    ) : null}
+
+                    {product.materialKey ? (
+                      <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                        Material {product.materialKey}
+                      </InfoChip>
+                    ) : null}
 
                     {product.sku ? <InfoChip>{product.sku}</InfoChip> : null}
 

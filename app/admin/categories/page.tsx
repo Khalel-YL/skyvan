@@ -170,6 +170,8 @@ export default async function CategoriesPage({
           ? "Silinmek istenen kategori bulunamadı."
         : params.categoryCode === "delete-failed"
           ? "Kategori kaldırma işlemi tamamlanamadı."
+        : params.categoryCode === "audit-actor-failed"
+          ? "Audit kullanıcısı çözülemediği için çekirdek kategori seti oluşturulamadı."
         : params.categoryCode === "seed-failed"
             ? "Çekirdek kategori seti senkronize edilirken beklenmeyen bir hata oluştu."
             : "Kategori işlemi sırasında beklenmeyen bir hata oluştu."

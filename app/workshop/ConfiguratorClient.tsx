@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { saveEngineeringBuild } from "./actions";
-import { getLayerFromCategory } from "./focusTargets";
 import ThreeDConfiguratorViewer from "./ThreeDConfiguratorViewer";
 
 type WorkshopProduct = {
@@ -23,7 +22,15 @@ type WorkshopProduct = {
   sku?: string | null;
   weightKg?: string | number | null;
   basePrice?: string | number | null;
+  productType?: string | null;
+  productSubType?: string | null;
+  workshopEffect?: "none" | "layer" | "mesh" | "material" | string | null;
+  targetLayer?: string | null;
+  meshKey?: string | null;
+  materialKey?: string | null;
+  technicalSpecs?: Record<string, unknown> | null;
   categoryId?: string | null;
+  categorySlug?: string | null;
   categoryName?: string | null;
 };
 
@@ -128,7 +135,7 @@ type VisualLayer = {
 type ProductVisualMeta =
   | {
       visual: false;
-      reason: "technical_hidden";
+      reason: "none" | "mesh_pending";
     }
   | {
       visual: true;
@@ -139,8 +146,10 @@ type ProductVisualMeta =
   | {
       visual: true;
       effectType: "layer";
-      targetLayer: "bed" | "kitchen" | "storage" | "bathroom" | "table" | "seat";
+      targetLayer: WorkshopTargetLayer;
     };
+
+type WorkshopTargetLayer = "bed" | "kitchen" | "storage" | "bathroom" | "table" | "seat";
 
 const vehicleGroupDefinitions: VehicleGroupDefinition[] = [
   {
@@ -302,134 +311,49 @@ function getModelSeriesLabel(model: WorkshopModel) {
   return displayName;
 }
 
-function getProductSearchText(product: WorkshopProduct) {
-  return [
-    product.title,
-    product.name,
-    product.categoryName,
-    product.sku,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
 function getProductVisualMeta(product: WorkshopProduct): ProductVisualMeta | null {
-  const text = getProductSearchText(product);
+  const targetLayer = normalizeWorkshopTargetLayer(product.targetLayer);
 
-  if (
-    text.includes("mppt") ||
-    text.includes("inverter") ||
-    text.includes("akü") ||
-    text.includes("aku") ||
-    text.includes("solar") ||
-    text.includes("panel") ||
-    text.includes("elektrik") ||
-    text.includes("victron") ||
-    text.includes("sigorta") ||
-    text.includes("fuse") ||
-    text.includes("kablo") ||
-    text.includes("cable") ||
-    text.includes("water") ||
-    text.includes("su tesisat") ||
-    text.includes("combiner")
-  ) {
+  if (product.workshopEffect === "layer" && targetLayer) {
     return {
-      visual: false,
-      reason: "technical_hidden",
+      visual: true,
+      effectType: "layer",
+      targetLayer,
     };
   }
 
-  if (
-    text.includes("ahşap") ||
-    text.includes("ahsap") ||
-    text.includes("wood") ||
-    text.includes("meşe") ||
-    text.includes("oak")
-  ) {
+  if (product.workshopEffect === "material" && product.materialKey) {
     return {
       visual: true,
       effectType: "material",
       target: "furniture",
-      material: "wood_oak",
+      material: product.materialKey,
     };
   }
 
-  if (text.includes("zemin") || text.includes("floor") || text.includes("vinil")) {
+  if (product.workshopEffect === "mesh") {
     return {
-      visual: true,
-      effectType: "material",
-      target: "floor",
-      material: "graphite_floor",
+      visual: false,
+      reason: "mesh_pending",
     };
   }
 
-  if (text.includes("duvar") || text.includes("wall") || text.includes("kaplama")) {
-    return {
-      visual: true,
-      effectType: "material",
-      target: "wall",
-      material: "soft_wall",
-    };
-  }
+  return {
+    visual: false,
+    reason: "none",
+  };
+}
 
-  if (text.includes("yatak") || text.includes("bed")) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "bed",
-    };
-  }
-
-  if (text.includes("mutfak") || text.includes("kitchen")) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "kitchen",
-    };
-  }
-
+function normalizeWorkshopTargetLayer(value?: string | null): WorkshopTargetLayer | null {
   if (
-    text.includes("dolap") ||
-    text.includes("depolama") ||
-    text.includes("cabinet") ||
-    text.includes("storage")
+    value === "bed" ||
+    value === "kitchen" ||
+    value === "storage" ||
+    value === "bathroom" ||
+    value === "table" ||
+    value === "seat"
   ) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "storage",
-    };
-  }
-
-  if (
-    text.includes("duş") ||
-    text.includes("dus") ||
-    text.includes("wc") ||
-    text.includes("banyo") ||
-    text.includes("bathroom")
-  ) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "bathroom",
-    };
-  }
-
-  if (text.includes("masa") || text.includes("table")) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "table",
-    };
-  }
-
-  if (text.includes("koltuk") || text.includes("seat") || text.includes("oturma")) {
-    return {
-      visual: true,
-      effectType: "layer",
-      targetLayer: "seat",
-    };
+    return value;
   }
 
   return null;
@@ -961,7 +885,7 @@ export default function ConfiguratorClient({
     wall: null,
   });
   const [activeFocusTargetId, setActiveFocusTargetId] =
-    useState<ReturnType<typeof getLayerFromCategory>>(null);
+    useState<WorkshopTargetLayer | null>(null);
   const [failedSceneAssets, setFailedSceneAssets] = useState<Record<string, boolean>>({});
   const [is3dFallbackActive, setIs3dFallbackActive] = useState(false);
   const availableModels = useMemo(() => dbModels ?? [], [dbModels]);
@@ -1129,7 +1053,8 @@ export default function ConfiguratorClient({
     setSavedAiDecisionAggregate(null);
     setSavedAiDecisionProducts([]);
     setHasAiDecisionBundleError(false);
-    const layer = getLayerFromCategory(product.categoryName);
+    const meta = getProductVisualMeta(product);
+    const layer = meta?.visual && meta.effectType === "layer" ? meta.targetLayer : null;
 
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);

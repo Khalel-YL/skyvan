@@ -159,83 +159,90 @@ function createGenericError(message: string): CategoryFormState {
 
 const seedCategories: SeedCategory[] = [
   {
-    name: "Elektrik ve Enerji",
-    slug: "elektrik-enerji",
-    icon: "bolt",
-    sortOrder: 10,
-    legacySlugs: ["electrical", "electric", "electrical-mode", "electrical-mod"],
-    legacyNames: ["Electrical"],
-  },
-  {
-    name: "Su Sistemi",
-    slug: "su-sistemi",
-    icon: "droplet",
-    sortOrder: 20,
-    legacySlugs: ["water"],
-    legacyNames: ["Water"],
-  },
-  {
-    name: "Mobilya ve Depolama",
-    slug: "mobilya-depolama",
-    icon: "sofa",
-    sortOrder: 30,
-    legacySlugs: ["furniture"],
-    legacyNames: ["Furniture"],
-  },
-  {
-    name: "Mutfak Donanımı",
-    slug: "mutfak-donanimi",
+    name: "Mutfak",
+    slug: "kitchen",
     icon: "chef-hat",
-    sortOrder: 40,
-    legacySlugs: ["kitchen"],
-    legacyNames: ["Kitchen"],
+    sortOrder: 10,
+    legacySlugs: ["kitchen", "mutfak", "mutfak-donanimi"],
+    legacyNames: ["Kitchen", "Mutfak Donanımı"],
   },
   {
-    name: "Banyo ve WC",
-    slug: "banyo-wc",
-    icon: "bath",
-    sortOrder: 50,
-    legacySlugs: ["bathroom"],
-    legacyNames: ["Bathroom"],
-  },
-  {
-    name: "Pencere ve Havalandırma",
-    slug: "pencere-havalandirma",
-    icon: "square",
-    sortOrder: 60,
-    legacySlugs: ["windows"],
-    legacyNames: ["Windows"],
-  },
-  {
-    name: "Oturma Alanı",
-    slug: "oturma-alani",
-    icon: "armchair",
-    sortOrder: 70,
-    legacySlugs: ["seating"],
-    legacyNames: ["Seating"],
-  },
-  {
-    name: "Uyku Alanı",
-    slug: "uyku-alani",
+    name: "Yatak",
+    slug: "bed",
     icon: "bed",
+    sortOrder: 20,
+    legacySlugs: ["bed", "yatak", "uyku-alani", "sleeping"],
+    legacyNames: ["Bed", "Sleeping", "Uyku Alanı"],
+  },
+  {
+    name: "Depolama",
+    slug: "storage",
+    icon: "archive",
+    sortOrder: 30,
+    legacySlugs: ["storage", "depolama", "mobilya-depolama", "furniture", "windows"],
+    legacyNames: ["Storage", "Furniture", "Mobilya ve Depolama"],
+  },
+  {
+    name: "Oturma",
+    slug: "seat",
+    icon: "armchair",
+    sortOrder: 40,
+    legacySlugs: ["seat", "oturma", "oturma-alani", "seating"],
+    legacyNames: ["Seat", "Seating", "Oturma Alanı"],
+  },
+  {
+    name: "Masa",
+    slug: "table",
+    icon: "table",
+    sortOrder: 50,
+    legacySlugs: ["table", "masa"],
+    legacyNames: ["Table"],
+  },
+  {
+    name: "Banyo",
+    slug: "bathroom",
+    icon: "bath",
+    sortOrder: 60,
+    legacySlugs: ["bathroom", "banyo", "banyo-wc"],
+    legacyNames: ["Bathroom", "Banyo ve WC"],
+  },
+  {
+    name: "Elektrik",
+    slug: "electrical",
+    icon: "bolt",
+    sortOrder: 70,
+    legacySlugs: [
+      "electrical",
+      "elektrik",
+      "elektrik-enerji",
+      "electric",
+      "electrical-mode",
+      "electrical-mod",
+    ],
+    legacyNames: ["Electrical", "Elektrik ve Enerji"],
+  },
+  {
+    name: "Su & Tesisat",
+    slug: "plumbing",
+    icon: "droplet",
     sortOrder: 80,
-    legacySlugs: ["sleeping"],
-    legacyNames: ["Sleeping"],
+    legacySlugs: ["plumbing", "su-sistemi", "water"],
+    legacyNames: ["Water", "Su Sistemi"],
+  },
+  {
+    name: "Isıtma & Klima",
+    slug: "climate",
+    icon: "thermometer",
+    sortOrder: 90,
+    legacySlugs: [
+      "climate",
+      "isitma-klima",
+      "heating-cooling",
+      "pencere-havalandirma",
+    ],
+    legacyNames: ["Climate", "Isıtma ve Klima", "Isıtma & Klima"],
   },
 ];
-
-const weakFallbackSlugs = new Set(["general", "genel-kategori"]);
-
-function getCategoryNameKey(value: string) {
-  return normalizeSlug(value);
-}
-
-function isWeakFallbackCategory(category: CategoryRecord) {
-  return (
-    weakFallbackSlugs.has(category.slug) ||
-    weakFallbackSlugs.has(getCategoryNameKey(category.name))
-  );
-}
 
 function getCategorySyncErrorDetails(error: unknown) {
   if (error instanceof CategorySyncError) {
@@ -664,11 +671,11 @@ export async function createCategorySeeds() {
 
   try {
     const auditActor = await requireStrictAuditActor();
-    let insertedRows: CategoryRecord[] = [];
-    let updatedRows: CategoryRecord[] = [];
+    const insertedRows: CategoryRecord[] = [];
+    const updatedRows: CategoryRecord[] = [];
 
-    await db.transaction(async (tx) => {
-      const allCategories = (await tx
+    for (const item of seedCategories) {
+      const [existingCategory] = (await db
         .select({
           id: categories.id,
           name: categories.name,
@@ -679,251 +686,77 @@ export async function createCategorySeeds() {
           createdAt: categories.createdAt,
           updatedAt: categories.updatedAt,
         })
-        .from(categories)) as CategoryRecord[];
+        .from(categories)
+        .where(eq(categories.slug, item.slug))
+        .limit(1)) as CategoryRecord[];
       const now = new Date();
 
-      const getCurrentCategories = () => [...allCategories];
-      const findCategoryBySlug = (slug: string) =>
-        allCategories.find((category) => category.slug === slug) ?? null;
-      const replaceCategory = (nextCategory: CategoryRecord) => {
-        const index = allCategories.findIndex((item) => item.id === nextCategory.id);
+      const upsertedRows = (await db
+        .insert(categories)
+        .values({
+          id: uuidv4(),
+          name: item.name,
+          slug: item.slug,
+          icon: item.icon,
+          status: "active" as const,
+          sortOrder: item.sortOrder,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: categories.slug,
+          set: {
+            name: item.name,
+            icon: item.icon,
+            status: "active",
+            sortOrder: item.sortOrder,
+            updatedAt: now,
+          },
+        })
+        .returning({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          icon: categories.icon,
+          status: categories.status,
+          sortOrder: categories.sortOrder,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        })) as CategoryRecord[];
 
-        if (index >= 0) {
-          allCategories[index] = nextCategory;
-          return;
-        }
+      const upsertedCategory = upsertedRows[0];
 
-        allCategories.push(nextCategory);
-      };
+      if (!upsertedCategory) {
+        throw new CategorySyncError(
+          "sync-failed",
+          `Kategori seed upsert sonucu boş döndü: ${item.slug}`,
+        );
+      }
 
-      const findLegacyMatches = (seed: SeedCategory) => {
-        return getCurrentCategories().filter((category) => {
-          const categoryNameKey = getCategoryNameKey(category.name);
-          return (
-            seed.legacySlugs.includes(category.slug) ||
-            seed.legacyNames.some(
-              (legacyName) => getCategoryNameKey(legacyName) === categoryNameKey,
-            )
-          );
+      if (existingCategory) {
+        updatedRows.push(upsertedCategory);
+
+        await writeCategoryAudit({
+          database: db,
+          actor: auditActor,
+          entityId: upsertedCategory.id,
+          action: "update",
+          previousState: existingCategory,
+          newState: upsertedCategory,
         });
-      };
-
-      for (const category of getCurrentCategories()) {
-        if (isWeakFallbackCategory(category)) {
-          console.error("createCategorySeeds safe mode skipped weak fallback category", {
-            categoryId: category.id,
-            slug: category.slug,
-            name: category.name,
-          });
-        }
+        continue;
       }
 
-      for (const item of seedCategories) {
-        const canonicalCategory = findCategoryBySlug(item.slug);
-        const legacyMatches = findLegacyMatches(item);
-        const legacyCategory = legacyMatches[0] ?? null;
+      insertedRows.push(upsertedCategory);
 
-        if (canonicalCategory) {
-          if (legacyMatches.some((category) => category.id !== canonicalCategory.id)) {
-            console.error("createCategorySeeds safe mode skipped duplicate legacy match", {
-              targetSlug: item.slug,
-              targetName: item.name,
-              duplicateCategoryIds: legacyMatches
-                .filter((category) => category.id !== canonicalCategory.id)
-                .map((category) => category.id),
-            });
-          }
-
-          const requiresCanonicalUpdate =
-            canonicalCategory.name !== item.name ||
-            (canonicalCategory.icon ?? "folder") !== item.icon ||
-            canonicalCategory.status !== "active" ||
-            canonicalCategory.sortOrder !== item.sortOrder;
-
-          if (!requiresCanonicalUpdate) {
-            continue;
-          }
-
-          const updatedCanonicalRows = (await tx
-            .update(categories)
-            .set({
-              name: item.name,
-              icon: item.icon,
-              status: "active",
-              sortOrder: item.sortOrder,
-              updatedAt: now,
-            })
-            .where(eq(categories.id, canonicalCategory.id))
-            .returning({
-              id: categories.id,
-              name: categories.name,
-              slug: categories.slug,
-              icon: categories.icon,
-              status: categories.status,
-              sortOrder: categories.sortOrder,
-              createdAt: categories.createdAt,
-              updatedAt: categories.updatedAt,
-            })) as CategoryRecord[];
-
-          const updatedCanonical = updatedCanonicalRows[0];
-
-          if (!updatedCanonical) {
-            console.error("createCategorySeeds safe mode skipped canonical update", {
-              categoryId: canonicalCategory.id,
-              slug: canonicalCategory.slug,
-            });
-            continue;
-          }
-
-          updatedRows.push(updatedCanonical);
-          replaceCategory(updatedCanonical);
-
-          await writeCategoryAudit({
-            database: tx,
-            actor: auditActor,
-            entityId: updatedCanonical.id,
-            action: "update",
-            previousState: canonicalCategory,
-            newState: updatedCanonical,
-          });
-
-          continue;
-        }
-
-        if (legacyMatches.length > 1) {
-          console.error("createCategorySeeds safe mode found multiple legacy candidates", {
-            targetSlug: item.slug,
-            targetName: item.name,
-            categoryIds: legacyMatches.map((category) => category.id),
-            legacySlugs: legacyMatches.map((category) => category.slug),
-          });
-        }
-
-        if (legacyCategory) {
-          const conflictingSlugHolder = findCategoryBySlug(item.slug);
-
-          if (conflictingSlugHolder && conflictingSlugHolder.id !== legacyCategory.id) {
-            console.error("createCategorySeeds safe mode skipped legacy normalization due to duplicate slug", {
-              legacyCategoryId: legacyCategory.id,
-              legacySlug: legacyCategory.slug,
-              targetSlug: item.slug,
-              conflictingCategoryId: conflictingSlugHolder.id,
-            });
-            continue;
-          }
-
-          const updatedLegacyRows = (await tx
-            .update(categories)
-            .set({
-              name: item.name,
-              slug: item.slug,
-              icon: item.icon,
-              status: "active",
-              sortOrder: item.sortOrder,
-              updatedAt: now,
-            })
-            .where(eq(categories.id, legacyCategory.id))
-            .returning({
-              id: categories.id,
-              name: categories.name,
-              slug: categories.slug,
-              icon: categories.icon,
-              status: categories.status,
-              sortOrder: categories.sortOrder,
-              createdAt: categories.createdAt,
-              updatedAt: categories.updatedAt,
-            })) as CategoryRecord[];
-
-          const updatedLegacyCategory = updatedLegacyRows[0];
-
-          if (!updatedLegacyCategory) {
-            console.error("createCategorySeeds safe mode skipped legacy update", {
-              legacyCategoryId: legacyCategory.id,
-              legacySlug: legacyCategory.slug,
-              targetSlug: item.slug,
-            });
-            continue;
-          }
-
-          updatedRows.push(updatedLegacyCategory);
-          replaceCategory(updatedLegacyCategory);
-
-          await writeCategoryAudit({
-            database: tx,
-            actor: auditActor,
-            entityId: updatedLegacyCategory.id,
-            action: "update",
-            previousState: legacyCategory,
-            newState: updatedLegacyCategory,
-          });
-
-          continue;
-        }
-
-        const duplicateSlugHolder = findCategoryBySlug(item.slug);
-
-        if (duplicateSlugHolder) {
-          console.error("createCategorySeeds safe mode skipped insert due to duplicate slug", {
-            targetSlug: item.slug,
-            targetName: item.name,
-            categoryId: duplicateSlugHolder.id,
-          });
-          continue;
-        }
-
-        try {
-          const created = (await tx
-            .insert(categories)
-            .values({
-              id: uuidv4(),
-              name: item.name,
-              slug: item.slug,
-              icon: item.icon,
-              status: "active" as const,
-              sortOrder: item.sortOrder,
-              createdAt: now,
-              updatedAt: now,
-            })
-            .returning({
-              id: categories.id,
-              name: categories.name,
-              slug: categories.slug,
-              icon: categories.icon,
-              status: categories.status,
-              sortOrder: categories.sortOrder,
-              createdAt: categories.createdAt,
-              updatedAt: categories.updatedAt,
-            })) as CategoryRecord[];
-
-          const insertedCategory = created[0];
-
-          if (!insertedCategory) {
-            console.error("createCategorySeeds safe mode insert returned empty result", {
-              targetSlug: item.slug,
-              targetName: item.name,
-            });
-            continue;
-          }
-
-          insertedRows.push(insertedCategory);
-          replaceCategory(insertedCategory);
-
-          await writeCategoryAudit({
-            database: tx,
-            actor: auditActor,
-            entityId: insertedCategory.id,
-            action: "create",
-            newState: insertedCategory,
-          });
-        } catch (error) {
-          console.error("createCategorySeeds safe mode skipped insert", {
-            targetSlug: item.slug,
-            targetName: item.name,
-            error,
-          });
-        }
-      }
-    });
+      await writeCategoryAudit({
+        database: db,
+        actor: auditActor,
+        entityId: upsertedCategory.id,
+        action: "create",
+        newState: upsertedCategory,
+      });
+    }
 
     revalidateCategories();
     redirect(
@@ -935,6 +768,17 @@ export async function createCategorySeeds() {
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
+    }
+
+    console.error("createCategorySeeds full failure", error);
+
+    if (error instanceof AuditActorBindingError) {
+      redirect(
+        buildCategoriesRedirectUrl({
+          categoryAction: "error",
+          categoryCode: "audit-actor-failed",
+        }),
+      );
     }
 
     const categoryCode = logCategorySyncError(error);

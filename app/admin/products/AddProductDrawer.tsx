@@ -1,9 +1,16 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { createProduct } from "./actions";
+import {
+  categoryTypeOptions,
+  generateProductSku,
+  generateProductSlug,
+  targetLayerOptions,
+  workshopEffectOptions,
+} from "./mappers";
 import type { CategoryOption, ProductActionState } from "./types";
 
 const initialState: ProductActionState = {
@@ -17,8 +24,7 @@ function SubmitButton() {
   return (
     <button
       type="submit"
-      disabled={pending}
-      className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-50"
+      className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
     >
       {pending ? "Kaydediliyor..." : "Ürün Ekle"}
     </button>
@@ -119,6 +125,28 @@ function ProductFormFields({
   categories: CategoryOption[];
   errors?: Record<string, string[]>;
 }) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [sku, setSku] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [skuEdited, setSkuEdited] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === selectedCategoryId) ?? null,
+    [categories, selectedCategoryId],
+  );
+  const handleNameChange = (nextName: string) => {
+    setName(nextName);
+
+    if (!slugEdited) {
+      setSlug(generateProductSlug(nextName));
+    }
+
+    if (!skuEdited) {
+      setSku(generateProductSku(nextName));
+    }
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div>
@@ -127,6 +155,8 @@ function ProductFormFields({
         </label>
         <input
           name="name"
+          value={name}
+          onChange={(event) => handleNameChange(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="name" />
@@ -138,6 +168,11 @@ function ProductFormFields({
         </label>
         <input
           name="slug"
+          value={slug}
+          onChange={(event) => {
+            setSlugEdited(true);
+            setSlug(event.target.value);
+          }}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="slug" />
@@ -149,6 +184,11 @@ function ProductFormFields({
         </label>
         <input
           name="sku"
+          value={sku}
+          onChange={(event) => {
+            setSkuEdited(true);
+            setSku(event.target.value);
+          }}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="sku" />
@@ -160,6 +200,8 @@ function ProductFormFields({
         </label>
         <select
           name="categoryId"
+          value={selectedCategoryId}
+          onChange={(event) => setSelectedCategoryId(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="">Kategori seç</option>
@@ -167,11 +209,106 @@ function ProductFormFields({
             .filter((item) => item.status === "active" || item.status == null)
             .map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {category.categoryLabel}
               </option>
             ))}
         </select>
+        <CategoryDerivedInfo category={selectedCategory} />
         <FieldError errors={errors} name="categoryId" />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Ürün Tipi
+        </label>
+        <select
+          name="productType"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          <option value="">Tip seç</option>
+          {categoryTypeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Alt Tip
+        </label>
+        <input
+          name="productSubType"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Workshop Etkisi
+        </label>
+        <select
+          name="workshopEffect"
+          defaultValue="none"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          {workshopEffectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Hedef Katman
+        </label>
+        <select
+          name="targetLayer"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          <option value="">Katman yok</option>
+          {targetLayerOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Mesh Key
+        </label>
+        <input
+          name="meshKey"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Material Key
+        </label>
+        <input
+          name="materialKey"
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Teknik Özellikler JSON
+        </label>
+        <textarea
+          name="technicalSpecs"
+          rows={3}
+          placeholder='{"voltage":"12V"}'
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+        />
+        <FieldError errors={errors} name="technicalSpecs" />
       </div>
 
       <div>
@@ -294,6 +431,19 @@ function ProductFormFields({
         </p>
         <FieldError errors={errors} name="status" />
       </div>
+    </div>
+  );
+}
+
+function CategoryDerivedInfo({ category }: { category: CategoryOption | null }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
+        Görsel kategori: {category?.isVisual ? "Evet" : "Hayır"}
+      </span>
+      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
+        3D hedef katman: {category?.targetLayer ?? "null"}
+      </span>
     </div>
   );
 }

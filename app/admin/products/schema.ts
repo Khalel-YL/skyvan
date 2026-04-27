@@ -30,11 +30,40 @@ const optionalNonNegativeNumberString = z
   }, "Negatif olmayan geçerli bir sayı girin.");
 
 export const productStatusSchema = z.enum(["draft", "active", "archived"]);
+export const workshopEffectSchema = z.enum(["none", "layer", "mesh", "material"]);
+
+const optionalGeneratedText = (message: string) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || value.length >= 2, message);
 
 export const createProductSchema = z.object({
   name: z.string().trim().min(2, "Ürün adı en az 2 karakter olmalı."),
-  slug: z.string().trim().min(2, "Slug en az 2 karakter olmalı."),
-  sku: z.string().trim().min(2, "SKU en az 2 karakter olmalı."),
+  slug: optionalGeneratedText("Slug en az 2 karakter olmalı."),
+  sku: optionalGeneratedText("SKU en az 2 karakter olmalı."),
+  productType: z.string().trim().optional().or(z.literal("")),
+  productSubType: z.string().trim().optional().or(z.literal("")),
+  workshopEffect: workshopEffectSchema,
+  targetLayer: z.string().trim().optional().or(z.literal("")),
+  meshKey: z.string().trim().optional().or(z.literal("")),
+  materialKey: z.string().trim().optional().or(z.literal("")),
+  technicalSpecs: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => {
+      if (!value) return true;
+      try {
+        JSON.parse(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "Teknik özellikler geçerli JSON olmalı."),
   categoryId: z.string().trim().min(1, "Kategori seçimi zorunlu."),
   shortDescription: z.string().trim().optional().or(z.literal("")),
   description: z.string().trim().optional().or(z.literal("")),

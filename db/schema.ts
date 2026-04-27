@@ -134,6 +134,16 @@ export const products = pgTable(
     slug: text("slug").notNull().unique(),
     sku: text("sku").notNull().unique(),
 
+    productType: text("product_type"),
+    productSubType: text("product_sub_type"),
+    workshopEffect: text("workshop_effect").notNull().default("none"),
+    targetLayer: text("target_layer"),
+    meshKey: text("mesh_key"),
+    materialKey: text("material_key"),
+    technicalSpecs: jsonb("technical_specs").$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+
     shortDescription: text("short_description"),
     description: text("description"),
 

@@ -1,34 +1,23 @@
 import type { VisualMeshLayer } from "./meshMap";
 
 export const CATEGORY_TO_LAYER_MAP: Record<string, VisualMeshLayer | null> = {
-  mutfak: "kitchen",
   kitchen: "kitchen",
-
-  banyo: "bathroom",
-  bathroom: "bathroom",
-
-  oturma: "seat",
-  seat: "seat",
-
-  yatak: "bed",
   bed: "bed",
-
-  depolama: "storage",
   storage: "storage",
-
-  masa: "table",
+  seat: "seat",
   table: "table",
-
+  bathroom: "bathroom",
   electrical: null,
-  "electrical mod": null,
+  plumbing: null,
+  climate: null,
 };
 
-export function getLayerFromCategory(categoryName?: string | null): VisualMeshLayer | null {
-  if (!categoryName) {
+export function getLayerFromCategory(categorySlug?: string | null): VisualMeshLayer | null {
+  if (!categorySlug) {
     return null;
   }
 
-  const normalized = categoryName.toLowerCase().trim();
+  const normalized = categorySlug.toLowerCase().trim();
 
   return CATEGORY_TO_LAYER_MAP[normalized] ?? null;
 }

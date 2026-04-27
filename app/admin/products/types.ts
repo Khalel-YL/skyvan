@@ -1,5 +1,7 @@
 export type ProductStatus = "draft" | "active" | "archived";
 
+export type WorkshopEffect = "none" | "layer" | "mesh" | "material";
+
 export type ProductFilterStatus = ProductStatus | "all";
 
 export type ProductFilters = {
@@ -12,16 +14,39 @@ export type CategoryOption = {
   id: string;
   name: string;
   slug: string;
+  categorySlug: string;
+  categoryLabel: string;
+  isVisual: boolean;
+  targetLayer: ProductTargetLayer;
   status?: string | null;
 };
+
+export type ProductTargetLayer =
+  | "kitchen"
+  | "bed"
+  | "storage"
+  | "seat"
+  | "table"
+  | "bathroom"
+  | null;
 
 export type ProductListItem = {
   id: string;
   name: string;
   slug: string;
   sku: string;
+  productType: string | null;
+  productSubType: string | null;
+  workshopEffect: WorkshopEffect;
+  targetLayer: ProductTargetLayer;
+  meshKey: string | null;
+  materialKey: string | null;
+  technicalSpecs: Record<string, unknown>;
   categoryId: string;
   categoryName: string;
+  categorySlug: string;
+  categoryLabel: string;
+  isVisual: boolean;
   shortDescription: string | null;
   description: string | null;
   imageUrl: string | null;
@@ -43,6 +68,13 @@ export type ProductFormValues = {
   name: string;
   slug: string;
   sku: string;
+  productType: string;
+  productSubType: string;
+  workshopEffect: WorkshopEffect;
+  targetLayer: string;
+  meshKey: string;
+  materialKey: string;
+  technicalSpecs: string;
   categoryId: string;
   shortDescription: string;
   description: string;
