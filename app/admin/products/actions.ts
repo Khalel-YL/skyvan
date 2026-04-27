@@ -27,6 +27,7 @@ import {
   normalizeSlug,
   normalizeTargetLayer,
   normalizeWorkshopEffect,
+  normalizeWorkshopVisibility,
   parseTechnicalSpecs,
   stringNumberToDbNumeric,
 } from "./mappers";
@@ -34,6 +35,7 @@ import type {
   CategoryOption,
   ProductActionState,
   ProductFilters,
+  ProductFormValues,
   ProductListItem,
   ProductStatus,
 } from "./types";
@@ -54,6 +56,7 @@ type ProductAuditState = {
   productType: string | null;
   productSubType: string | null;
   workshopEffect: string;
+  workshopVisibility: string;
   targetLayer: string | null;
   meshKey: string | null;
   materialKey: string | null;
@@ -81,6 +84,7 @@ const productAuditSelection = {
   productType: products.productType,
   productSubType: products.productSubType,
   workshopEffect: products.workshopEffect,
+  workshopVisibility: products.workshopVisibility,
   targetLayer: products.targetLayer,
   meshKey: products.meshKey,
   materialKey: products.materialKey,
@@ -108,6 +112,53 @@ function revalidateProductPaths(productId?: string) {
 
   revalidatePath(`/admin/products/${productId}/documents`);
   revalidatePath(`/admin/products/${productId}/sources`);
+}
+
+function getProductFormValues(formData: FormData): ProductFormValues {
+  return {
+    name: String(formData.get("name") ?? ""),
+    slug: String(formData.get("slug") ?? ""),
+    sku: String(formData.get("sku") ?? ""),
+    productType: String(formData.get("productType") ?? ""),
+    productSubType: String(formData.get("productSubType") ?? ""),
+    workshopEffect: normalizeWorkshopEffect(String(formData.get("workshopEffect") ?? "")),
+    workshopVisibility: normalizeWorkshopVisibility(
+      String(formData.get("workshopVisibility") ?? ""),
+    ),
+    targetLayer: String(formData.get("targetLayer") ?? ""),
+    meshKey: String(formData.get("meshKey") ?? ""),
+    materialKey: String(formData.get("materialKey") ?? ""),
+    technicalSpecs: String(formData.get("technicalSpecs") ?? ""),
+    categoryId: String(formData.get("categoryId") ?? ""),
+    shortDescription: String(formData.get("shortDescription") ?? ""),
+    description: String(formData.get("description") ?? ""),
+    imageUrl: String(formData.get("imageUrl") ?? ""),
+    datasheetUrl: String(formData.get("datasheetUrl") ?? ""),
+    basePrice: String(formData.get("basePrice") ?? ""),
+    weightKg: String(formData.get("weightKg") ?? ""),
+    powerDrawWatts: String(formData.get("powerDrawWatts") ?? ""),
+    powerSupplyWatts: String(formData.get("powerSupplyWatts") ?? ""),
+    status:
+      formData.get("status") === "active" ||
+      formData.get("status") === "archived" ||
+      formData.get("status") === "draft"
+        ? (formData.get("status") as ProductStatus)
+        : "draft",
+  };
+}
+
+function buildProductErrorState(
+  message: string,
+  fieldErrors?: Record<string, string[]>,
+  values?: ProductFormValues,
+): ProductActionState {
+  return {
+    ok: false,
+    message,
+    fieldErrors,
+    errors: fieldErrors,
+    values,
+  };
 }
 
 async function getAiReadyKnowledgeProductIds(productIds: string[]) {
@@ -253,16 +304,15 @@ async function getProductActivationError(params: {
   previousStatus?: ProductStatus | null;
   nextStatus: ProductStatus;
 }) {
-  if (params.nextStatus !== "active") {
+  const isActivating =
+    params.nextStatus === "active" && params.previousStatus !== "active";
+
+  if (!isActivating) {
     return null;
   }
 
   if (!params.productId) {
-    return "Yeni ürün doğrudan aktif açılamaz. Önce ürün kaydını oluşturup AI-ready bilgi hazırlığını tamamlayın.";
-  }
-
-  if (params.previousStatus === "active") {
-    return null;
+    return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI-ready knowledge kaydı oluşturun.";
   }
 
   const hasReadyKnowledge = await hasAiReadyKnowledgeForProduct(params.productId);
@@ -303,17 +353,22 @@ async function writeProductAudit(input: {
 }
 
 export async function getProductCategories(): Promise<CategoryOption[]> {
-  const rows = await db()
-    .select({
-      id: categories.id,
-      name: categories.name,
-      slug: categories.slug,
-      status: categories.status,
-    })
-    .from(categories)
-    .orderBy(asc(categories.name));
+  try {
+    const rows = await db()
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        status: categories.status,
+      })
+      .from(categories)
+      .orderBy(asc(categories.name));
 
-  return rows.map(enrichCategoryOption);
+    return rows.map(enrichCategoryOption);
+  } catch (error) {
+    console.error("getProductCategories failed", error);
+    return [];
+  }
 }
 
 export async function getProducts(filtersInput?: Partial<ProductFilters>) {
@@ -356,6 +411,7 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
         productType: products.productType,
         productSubType: products.productSubType,
         workshopEffect: products.workshopEffect,
+        workshopVisibility: products.workshopVisibility,
         targetLayer: products.targetLayer,
         meshKey: products.meshKey,
         materialKey: products.materialKey,
@@ -403,6 +459,7 @@ export async function getProducts(filtersInput?: Partial<ProductFilters>) {
       categoryLabel: categoryFields.categoryLabel,
       isVisual: categoryFields.isVisual,
       workshopEffect: normalizeWorkshopEffect(row.workshopEffect),
+      workshopVisibility: normalizeWorkshopVisibility(row.workshopVisibility),
       targetLayer: normalizeTargetLayer(row.targetLayer),
       technicalSpecs: row.technicalSpecs ?? {},
       lifecycleNote: alignedProductIds.has(row.id)
@@ -416,6 +473,7 @@ export async function createProduct(
   _prevState: ProductActionState,
   formData: FormData
 ): Promise<ProductActionState> {
+  const values = getProductFormValues(formData);
   const parsed = createProductSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug"),
@@ -423,6 +481,7 @@ export async function createProduct(
     productType: formData.get("productType"),
     productSubType: formData.get("productSubType"),
     workshopEffect: formData.get("workshopEffect"),
+    workshopVisibility: formData.get("workshopVisibility"),
     targetLayer: formData.get("targetLayer"),
     meshKey: formData.get("meshKey"),
     materialKey: formData.get("materialKey"),
@@ -440,17 +499,18 @@ export async function createProduct(
   });
 
   if (!parsed.success) {
-    return {
-      ok: false,
-      message: "Form doğrulaması başarısız.",
-      errors: parsed.error.flatten().fieldErrors,
-    };
+    return buildProductErrorState(
+      "Form doğrulaması başarısız.",
+      parsed.error.flatten().fieldErrors,
+      values,
+    );
   }
 
   const data = parsed.data;
   const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
   const normalizedSku = normalizeSku(data.sku || generateProductSku(data.name));
   const workshopEffect = normalizeWorkshopEffect(data.workshopEffect);
+  const workshopVisibility = normalizeWorkshopVisibility(data.workshopVisibility);
   const targetLayer = normalizeTargetLayer(data.targetLayer);
   const technicalSpecs = parseTechnicalSpecs(data.technicalSpecs);
 
@@ -464,17 +524,15 @@ export async function createProduct(
     .limit(1);
 
   if (!category) {
-    return {
-      ok: false,
-      message: "Seçilen kategori bulunamadı.",
-    };
+    return buildProductErrorState("Seçilen kategori bulunamadı.", undefined, values);
   }
 
   if (category.status !== "active") {
-    return {
-      ok: false,
-      message: "Yalnızca aktif kategoriye ürün eklenebilir.",
-    };
+    return buildProductErrorState(
+      "Yalnızca aktif kategoriye ürün eklenebilir.",
+      undefined,
+      values,
+    );
   }
 
   const [slugConflict] = await db()
@@ -484,11 +542,11 @@ export async function createProduct(
     .limit(1);
 
   if (slugConflict) {
-    return {
-      ok: false,
-      message: "Bu slug zaten kullanılıyor.",
-      errors: { slug: ["Bu slug zaten kullanılıyor."] },
-    };
+    return buildProductErrorState(
+      "Bu slug zaten kullanılıyor.",
+      { slug: ["Bu slug zaten kullanılıyor."] },
+      values,
+    );
   }
 
   const [skuConflict] = await db()
@@ -498,11 +556,11 @@ export async function createProduct(
     .limit(1);
 
   if (skuConflict) {
-    return {
-      ok: false,
-      message: "Bu SKU zaten kullanılıyor.",
-      errors: { sku: ["Bu SKU zaten kullanılıyor."] },
-    };
+    return buildProductErrorState(
+      "Bu SKU zaten kullanılıyor.",
+      { sku: ["Bu SKU zaten kullanılıyor."] },
+      values,
+    );
   }
 
   const activationError = await getProductActivationError({
@@ -510,11 +568,11 @@ export async function createProduct(
   });
 
   if (activationError) {
-    return {
-      ok: false,
-      message: activationError,
-      errors: { status: [activationError] },
-    };
+    return buildProductErrorState(
+      activationError,
+      { status: [activationError] },
+      values,
+    );
   }
 
   const createdRows = await db()
@@ -526,6 +584,7 @@ export async function createProduct(
       productType: emptyToNull(data.productType),
       productSubType: emptyToNull(data.productSubType),
       workshopEffect,
+      workshopVisibility,
       targetLayer,
       meshKey: emptyToNull(data.meshKey),
       materialKey: emptyToNull(data.materialKey),
@@ -548,10 +607,11 @@ export async function createProduct(
   const createdProduct = (createdRows[0] as ProductAuditState | undefined) ?? null;
 
   if (!createdProduct) {
-    return {
-      ok: false,
-      message: "Ürün oluşturulurken beklenmeyen bir hata oluştu.",
-    };
+    return buildProductErrorState(
+      "Ürün oluşturulurken beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
+    );
   }
 
   await writeProductAudit({
@@ -572,6 +632,7 @@ export async function updateProduct(
   _prevState: ProductActionState,
   formData: FormData
 ): Promise<ProductActionState> {
+  const values = getProductFormValues(formData);
   const parsed = updateProductSchema.safeParse({
     id: formData.get("id"),
     name: formData.get("name"),
@@ -580,6 +641,7 @@ export async function updateProduct(
     productType: formData.get("productType"),
     productSubType: formData.get("productSubType"),
     workshopEffect: formData.get("workshopEffect"),
+    workshopVisibility: formData.get("workshopVisibility"),
     targetLayer: formData.get("targetLayer"),
     meshKey: formData.get("meshKey"),
     materialKey: formData.get("materialKey"),
@@ -597,27 +659,25 @@ export async function updateProduct(
   });
 
   if (!parsed.success) {
-    return {
-      ok: false,
-      message: "Form doğrulaması başarısız.",
-      errors: parsed.error.flatten().fieldErrors,
-    };
+    return buildProductErrorState(
+      "Form doğrulaması başarısız.",
+      parsed.error.flatten().fieldErrors,
+      values,
+    );
   }
 
   const data = parsed.data;
   const normalizedSlug = normalizeSlug((data.slug || data.name).trim());
   const normalizedSku = normalizeSku(data.sku || generateProductSku(data.name));
   const workshopEffect = normalizeWorkshopEffect(data.workshopEffect);
+  const workshopVisibility = normalizeWorkshopVisibility(data.workshopVisibility);
   const targetLayer = normalizeTargetLayer(data.targetLayer);
   const technicalSpecs = parseTechnicalSpecs(data.technicalSpecs);
 
   const current = await getProductAuditStateById(data.id);
 
   if (!current) {
-    return {
-      ok: false,
-      message: "Güncellenecek ürün bulunamadı.",
-    };
+    return buildProductErrorState("Güncellenecek ürün bulunamadı.", undefined, values);
   }
 
   const [category] = await db()
@@ -630,17 +690,15 @@ export async function updateProduct(
     .limit(1);
 
   if (!category) {
-    return {
-      ok: false,
-      message: "Seçilen kategori bulunamadı.",
-    };
+    return buildProductErrorState("Seçilen kategori bulunamadı.", undefined, values);
   }
 
   if (category.status !== "active") {
-    return {
-      ok: false,
-      message: "Ürün yalnızca aktif kategoriye bağlanabilir.",
-    };
+    return buildProductErrorState(
+      "Ürün yalnızca aktif kategoriye bağlanabilir.",
+      undefined,
+      values,
+    );
   }
 
   const [slugConflict] = await db()
@@ -650,11 +708,11 @@ export async function updateProduct(
     .limit(1);
 
   if (slugConflict) {
-    return {
-      ok: false,
-      message: "Bu slug başka bir üründe kullanılıyor.",
-      errors: { slug: ["Bu slug başka bir üründe kullanılıyor."] },
-    };
+    return buildProductErrorState(
+      "Bu slug başka bir üründe kullanılıyor.",
+      { slug: ["Bu slug başka bir üründe kullanılıyor."] },
+      values,
+    );
   }
 
   const [skuConflict] = await db()
@@ -664,11 +722,11 @@ export async function updateProduct(
     .limit(1);
 
   if (skuConflict) {
-    return {
-      ok: false,
-      message: "Bu SKU başka bir üründe kullanılıyor.",
-      errors: { sku: ["Bu SKU başka bir üründe kullanılıyor."] },
-    };
+    return buildProductErrorState(
+      "Bu SKU başka bir üründe kullanılıyor.",
+      { sku: ["Bu SKU başka bir üründe kullanılıyor."] },
+      values,
+    );
   }
 
   const activationError = await getProductActivationError({
@@ -678,11 +736,11 @@ export async function updateProduct(
   });
 
   if (activationError) {
-    return {
-      ok: false,
-      message: activationError,
-      errors: { status: [activationError] },
-    };
+    return buildProductErrorState(
+      activationError,
+      { status: [activationError] },
+      values,
+    );
   }
 
   const updatedRows = await db()
@@ -694,6 +752,7 @@ export async function updateProduct(
       productType: emptyToNull(data.productType),
       productSubType: emptyToNull(data.productSubType),
       workshopEffect,
+      workshopVisibility,
       targetLayer,
       meshKey: emptyToNull(data.meshKey),
       materialKey: emptyToNull(data.materialKey),
@@ -716,10 +775,11 @@ export async function updateProduct(
   const updatedProduct = (updatedRows[0] as ProductAuditState | undefined) ?? null;
 
   if (!updatedProduct) {
-    return {
-      ok: false,
-      message: "Ürün güncellenirken beklenmeyen bir hata oluştu.",
-    };
+    return buildProductErrorState(
+      "Ürün güncellenirken beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
+    );
   }
 
   await writeProductAudit({

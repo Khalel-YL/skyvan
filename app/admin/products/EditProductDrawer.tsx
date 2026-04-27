@@ -5,12 +5,13 @@ import { useFormStatus } from "react-dom";
 
 import { updateProduct } from "./actions";
 import {
-  categoryTypeOptions,
+  categoryTypeOptionsBySlug,
   generateProductSku,
   generateProductSlug,
   productToFormValues,
   targetLayerOptions,
   workshopEffectOptions,
+  workshopVisibilityOptions,
 } from "./mappers";
 import type {
   CategoryOption,
@@ -45,6 +46,7 @@ export function EditProductDrawer({
 }) {
   const [state, formAction] = useActionState(updateProduct, initialState);
   const form = productToFormValues(product);
+  const formValues = state.values ?? form;
   const dialogId = `edit-product-dialog-${product.id}`;
 
   useEffect(() => {
@@ -93,9 +95,10 @@ export function EditProductDrawer({
           </div>
 
           <ProductFormFields
+            key={JSON.stringify(formValues)}
             categories={categories}
-            errors={state.errors}
-            defaults={form}
+            errors={state.fieldErrors ?? state.errors}
+            defaults={formValues}
           />
 
           <div className="mt-5 flex items-center justify-between gap-4">
@@ -136,6 +139,7 @@ function ProductFormFields({
     productType: string;
     productSubType: string;
     workshopEffect: "none" | "layer" | "mesh" | "material";
+    workshopVisibility: "selectable_visual" | "selectable_hidden" | "ai_package_only";
     targetLayer: string;
     meshKey: string;
     materialKey: string;
@@ -158,10 +162,19 @@ function ProductFormFields({
   const [slugEdited, setSlugEdited] = useState(false);
   const [skuEdited, setSkuEdited] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(defaults.categoryId);
+  const [productType, setProductType] = useState(defaults.productType);
+  const [workshopVisibility, setWorkshopVisibility] = useState(
+    defaults.workshopVisibility,
+  );
+  const [workshopEffect, setWorkshopEffect] = useState(defaults.workshopEffect);
+  const [targetLayer, setTargetLayer] = useState(defaults.targetLayer);
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
   );
+  const productTypeOptions = selectedCategory
+    ? categoryTypeOptionsBySlug[selectedCategory.categorySlug] ?? []
+    : [];
   const shouldAutoSlug = !defaults.slug.trim() && !slugEdited;
   const shouldAutoSku = !defaults.sku.trim() && !skuEdited;
   const handleNameChange = (nextName: string) => {
@@ -174,6 +187,31 @@ function ProductFormFields({
     if (shouldAutoSku || !sku.trim()) {
       setSku(generateProductSku(nextName));
     }
+  };
+  const handleCategoryChange = (categoryId: string) => {
+    const nextCategory =
+      categories.find((category) => category.id === categoryId) ?? null;
+
+    setSelectedCategoryId(categoryId);
+    setProductType("");
+
+    if (!nextCategory) {
+      setWorkshopVisibility("selectable_visual");
+      setWorkshopEffect("none");
+      setTargetLayer("");
+      return;
+    }
+
+    if (nextCategory.isVisual) {
+      setWorkshopVisibility("selectable_visual");
+      setWorkshopEffect("layer");
+      setTargetLayer(nextCategory.targetLayer ?? "");
+      return;
+    }
+
+    setWorkshopVisibility("selectable_hidden");
+    setWorkshopEffect("none");
+    setTargetLayer("");
   };
 
   return (
@@ -230,7 +268,7 @@ function ProductFormFields({
         <select
           name="categoryId"
           value={selectedCategoryId}
-          onChange={(event) => setSelectedCategoryId(event.target.value)}
+          onChange={(event) => handleCategoryChange(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           {categories
@@ -256,11 +294,14 @@ function ProductFormFields({
         </label>
         <select
           name="productType"
-          defaultValue={defaults.productType}
+          value={productType}
+          onChange={(event) => setProductType(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
-          <option value="">Tip seç</option>
-          {categoryTypeOptions.map((option) => (
+          <option value="">
+            {selectedCategory ? "Tip seç" : "Önce kategori seç"}
+          </option>
+          {productTypeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -285,10 +326,40 @@ function ProductFormFields({
         </label>
         <select
           name="workshopEffect"
-          defaultValue={defaults.workshopEffect}
+          value={workshopEffect}
+          onChange={(event) =>
+            setWorkshopEffect(
+              event.target.value as "none" | "layer" | "mesh" | "material",
+            )
+          }
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           {workshopEffectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Workshop Görünürlüğü
+        </label>
+        <select
+          name="workshopVisibility"
+          value={workshopVisibility}
+          onChange={(event) =>
+            setWorkshopVisibility(
+              event.target.value as
+                | "selectable_visual"
+                | "selectable_hidden"
+                | "ai_package_only",
+            )
+          }
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          {workshopVisibilityOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -302,7 +373,8 @@ function ProductFormFields({
         </label>
         <select
           name="targetLayer"
-          defaultValue={defaults.targetLayer}
+          value={targetLayer}
+          onChange={(event) => setTargetLayer(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="">Katman yok</option>

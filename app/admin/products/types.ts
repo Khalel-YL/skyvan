@@ -2,6 +2,11 @@ export type ProductStatus = "draft" | "active" | "archived";
 
 export type WorkshopEffect = "none" | "layer" | "mesh" | "material";
 
+export type WorkshopVisibility =
+  | "selectable_visual"
+  | "selectable_hidden"
+  | "ai_package_only";
+
 export type ProductFilterStatus = ProductStatus | "all";
 
 export type ProductFilters = {
@@ -38,6 +43,7 @@ export type ProductListItem = {
   productType: string | null;
   productSubType: string | null;
   workshopEffect: WorkshopEffect;
+  workshopVisibility: WorkshopVisibility;
   targetLayer: ProductTargetLayer;
   meshKey: string | null;
   materialKey: string | null;
@@ -71,6 +77,7 @@ export type ProductFormValues = {
   productType: string;
   productSubType: string;
   workshopEffect: WorkshopEffect;
+  workshopVisibility: WorkshopVisibility;
   targetLayer: string;
   meshKey: string;
   materialKey: string;
@@ -90,5 +97,7 @@ export type ProductFormValues = {
 export type ProductActionState = {
   ok: boolean;
   message: string;
+  fieldErrors?: Record<string, string[]>;
   errors?: Record<string, string[]>;
+  values?: ProductFormValues;
 };

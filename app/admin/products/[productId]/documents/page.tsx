@@ -85,12 +85,24 @@ export default async function ProductDocumentsPage({
     );
   }
 
-  const [documents, groundedExplanation, decisionSignal] = await Promise.all([
-    getProductDocuments(productId, filters),
+  const summaryDocumentsPromise = getProductDocuments(productId, { status: "all" });
+  const filteredDocumentsPromise =
+    filters.status === "all"
+      ? summaryDocumentsPromise
+      : getProductDocuments(productId, filters);
+
+  const [
+    documents,
+    summaryDocuments,
+    groundedExplanation,
+    decisionSignal,
+  ] = await Promise.all([
+    filteredDocumentsPromise,
+    summaryDocumentsPromise,
     getProductGroundedExplanation({ productId }),
     getProductAiDecisionSignal({ productId }),
   ]);
-  const summary = buildProductDocumentsSummary(documents);
+  const summary = buildProductDocumentsSummary(summaryDocuments);
 
   const statusHref = (status: "all" | "active" | "archived") =>
     `/admin/products/${productId}/documents?status=${status}`;

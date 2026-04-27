@@ -68,7 +68,7 @@ export const productDocumentFiltersSchema = z.object({
   status: z
     .enum(["all", "active", "archived"])
     .optional()
-    .default("active"),
+    .default("all"),
 });
 
 export type CreateProductDocumentInput = z.infer<

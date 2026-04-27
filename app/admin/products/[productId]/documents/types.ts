@@ -34,17 +34,20 @@ export type ProductDocumentListItem = {
 };
 
 export type ProductDocumentFormValues = {
-  type: ProductDocumentType;
+  type: string;
   title: string;
   url: string;
   note: string;
   sortOrder: string;
+  status?: string;
 };
 
 export type ProductDocumentActionState = {
   ok: boolean;
   message: string;
+  fieldErrors?: Record<string, string[]>;
   errors?: Record<string, string[]>;
+  values?: ProductDocumentFormValues;
 };
 
 export type ProductDocumentsSummary = {

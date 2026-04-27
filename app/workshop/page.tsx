@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
 import { categories, models, products } from "@/db/schema";
@@ -20,6 +20,7 @@ export default async function DesignPage() {
       productType: products.productType,
       productSubType: products.productSubType,
       workshopEffect: products.workshopEffect,
+      workshopVisibility: products.workshopVisibility,
       targetLayer: products.targetLayer,
       meshKey: products.meshKey,
       materialKey: products.materialKey,
@@ -30,7 +31,12 @@ export default async function DesignPage() {
     })
     .from(products)
     .innerJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.status, "active"));
+    .where(
+      and(
+        eq(products.status, "active"),
+        ne(products.workshopVisibility, "ai_package_only"),
+      ),
+    );
   const dbProducts = dbProductRows.map((product) => ({
     ...product,
     targetLayer: product.targetLayer ?? getLayerFromCategory(product.categorySlug),

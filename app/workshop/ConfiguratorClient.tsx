@@ -22,9 +22,17 @@ type WorkshopProduct = {
   sku?: string | null;
   weightKg?: string | number | null;
   basePrice?: string | number | null;
+  powerDrawWatts?: string | number | null;
+  powerSupplyWatts?: string | number | null;
   productType?: string | null;
   productSubType?: string | null;
   workshopEffect?: "none" | "layer" | "mesh" | "material" | string | null;
+  workshopVisibility?:
+    | "selectable_visual"
+    | "selectable_hidden"
+    | "ai_package_only"
+    | string
+    | null;
   targetLayer?: string | null;
   meshKey?: string | null;
   materialKey?: string | null;
@@ -150,6 +158,15 @@ type ProductVisualMeta =
     };
 
 type WorkshopTargetLayer = "bed" | "kitchen" | "storage" | "bathroom" | "table" | "seat";
+
+const workshopTargetLayerLabels: Record<WorkshopTargetLayer, string> = {
+  bathroom: "Banyo",
+  bed: "Yatak",
+  kitchen: "Mutfak",
+  seat: "Oturma",
+  storage: "Depolama",
+  table: "Masa",
+};
 
 const vehicleGroupDefinitions: VehicleGroupDefinition[] = [
   {
@@ -312,6 +329,16 @@ function getModelSeriesLabel(model: WorkshopModel) {
 }
 
 function getProductVisualMeta(product: WorkshopProduct): ProductVisualMeta | null {
+  if (
+    product.workshopVisibility === "ai_package_only" ||
+    product.workshopVisibility === "selectable_hidden"
+  ) {
+    return {
+      visual: false,
+      reason: "none",
+    };
+  }
+
   const targetLayer = normalizeWorkshopTargetLayer(product.targetLayer);
 
   if (product.workshopEffect === "layer" && targetLayer) {
@@ -342,6 +369,10 @@ function getProductVisualMeta(product: WorkshopProduct): ProductVisualMeta | nul
     visual: false,
     reason: "none",
   };
+}
+
+function isManuallySelectableProduct(product: WorkshopProduct) {
+  return product.workshopVisibility !== "ai_package_only";
 }
 
 function normalizeWorkshopTargetLayer(value?: string | null): WorkshopTargetLayer | null {
@@ -889,6 +920,10 @@ export default function ConfiguratorClient({
   const [failedSceneAssets, setFailedSceneAssets] = useState<Record<string, boolean>>({});
   const [is3dFallbackActive, setIs3dFallbackActive] = useState(false);
   const availableModels = useMemo(() => dbModels ?? [], [dbModels]);
+  const manualProducts = useMemo(
+    () => (dbProducts ?? []).filter(isManuallySelectableProduct),
+    [dbProducts],
+  );
   const savedAiDecisionProductsById = useMemo(
     () =>
       new Map(
@@ -944,7 +979,7 @@ export default function ConfiguratorClient({
       }
     >();
 
-    dbProducts.forEach((product) => {
+    manualProducts.forEach((product) => {
       const categoryId = product.categoryId?.trim() || "default-category";
       const categoryName = product.categoryName?.trim() || "Donanım Kalemleri";
       const existingCategory = categoryMap.get(categoryId);
@@ -962,7 +997,7 @@ export default function ConfiguratorClient({
     });
 
     return Array.from(categoryMap.values());
-  }, [dbProducts]);
+  }, [manualProducts]);
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
@@ -1180,7 +1215,54 @@ export default function ConfiguratorClient({
   const payloadReserveKg = Math.max(maxAllowedWeight - stats.weight, 0);
   const visiblePowerW = stats.solarW > 0 ? stats.solarW : stats.inverterW;
   const threeDModelUrl = "/models/skyvan/default-van.glb";
-  const totalSelectedUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartSummary = useMemo(() => {
+    let totalQuantity = 0;
+    let visualQuantity = 0;
+    let technicalQuantity = 0;
+    let packageOnlyQuantity = 0;
+    let totalPowerSupplyWatts = 0;
+    let totalPowerDrawWatts = 0;
+    const visualEffectPairs = new Map<string, string>();
+
+    cart.forEach((item) => {
+      const { product, quantity } = item;
+      totalQuantity += quantity;
+      totalPowerSupplyWatts += Number(product.powerSupplyWatts || 0) * quantity;
+      totalPowerDrawWatts += Number(product.powerDrawWatts || 0) * quantity;
+
+      if (product.workshopVisibility === "selectable_visual") {
+        visualQuantity += quantity;
+
+        if (product.workshopEffect && product.workshopEffect !== "none") {
+          const targetLayer = normalizeWorkshopTargetLayer(product.targetLayer);
+
+          if (targetLayer) {
+            const pairLabel = `${workshopTargetLayerLabels[targetLayer]} / ${product.workshopEffect}`;
+            visualEffectPairs.set(`${targetLayer}:${product.workshopEffect}`, pairLabel);
+          }
+        }
+      }
+
+      if (product.workshopVisibility === "selectable_hidden") {
+        technicalQuantity += quantity;
+      }
+
+      if (product.workshopVisibility === "ai_package_only") {
+        packageOnlyQuantity += quantity;
+      }
+    });
+
+    return {
+      totalQuantity,
+      visualQuantity,
+      technicalQuantity,
+      packageOnlyQuantity,
+      totalPowerSupplyWatts,
+      totalPowerDrawWatts,
+      netPowerWatts: totalPowerSupplyWatts - totalPowerDrawWatts,
+      visualEffectSummary: Array.from(visualEffectPairs.values()).join(", ") || "Yok",
+    };
+  }, [cart]);
   const totalBudget = cart.reduce(
     (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
     0,
@@ -1788,7 +1870,7 @@ export default function ConfiguratorClient({
                   </div>
                 </aside>
 
-                <section className="grid min-h-0 grid-rows-[1fr_166px] gap-2">
+                <section className="grid min-h-0 grid-rows-[1fr_176px] gap-2">
                   <section className="min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
                     <div className="flex h-full flex-col">
                       <div className="border-b border-white/6 px-4 py-1.5">
@@ -1978,7 +2060,7 @@ export default function ConfiguratorClient({
                         </div>
                       </div>
 
-                      <div className="flex w-[292px] shrink-0 flex-col items-end justify-center gap-2.5 border-l border-white/6 pl-5">
+                      <div className="flex h-full w-[336px] shrink-0 flex-col items-end justify-between gap-2 border-l border-white/6 py-3 pl-4">
                         <div className="w-full">
                           <p className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
                             Bütçe
@@ -1991,7 +2073,33 @@ export default function ConfiguratorClient({
                               </span>
                             </p>
                             <span className="rounded-full border border-white/6 bg-white/[0.03] px-2 py-1 text-[8px] font-medium tracking-[0.14em] text-zinc-500">
-                              {totalSelectedUnits} kalem
+                              {cartSummary.totalQuantity} kalem
+                            </span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-1">
+                            <span className="rounded-[0.5rem] border border-white/6 bg-white/[0.03] px-2 py-0.5 text-[8px] font-medium text-zinc-400">
+                              Görsel:{" "}
+                              <strong className="font-medium text-zinc-100">
+                                {cartSummary.visualQuantity}
+                              </strong>
+                            </span>
+                            <span className="rounded-[0.5rem] border border-white/6 bg-white/[0.03] px-2 py-0.5 text-[8px] font-medium text-zinc-400">
+                              Teknik:{" "}
+                              <strong className="font-medium text-zinc-100">
+                                {cartSummary.technicalQuantity}
+                              </strong>
+                            </span>
+                            <span className="rounded-[0.5rem] border border-white/6 bg-white/[0.03] px-2 py-0.5 text-[8px] font-medium text-zinc-400">
+                              Net Güç:{" "}
+                              <strong className="font-medium text-zinc-100">
+                                {cartSummary.netPowerWatts.toLocaleString("tr-TR")} W
+                              </strong>
+                            </span>
+                            <span className="truncate rounded-[0.5rem] border border-white/6 bg-white/[0.03] px-2 py-0.5 text-[8px] font-medium text-zinc-400">
+                              3D Etki:{" "}
+                              <strong className="font-medium text-zinc-100">
+                                {cartSummary.visualEffectSummary}
+                              </strong>
                             </span>
                           </div>
                           {saveSuccessHint ? (
@@ -2001,46 +2109,24 @@ export default function ConfiguratorClient({
                           ) : null}
                         </div>
 
-                        <div className="flex w-full items-center gap-2">
+                        <div className="flex w-full justify-end">
                           <button
                             disabled={hasCriticalError || isSaving}
                             onClick={handleSaveProject}
-                            className={`flex-1 rounded-[0.85rem] border px-3 py-2 text-[8px] font-medium tracking-[0.18em] transition-all duration-200 ${
+                            className={`min-w-[164px] rounded-[0.82rem] border px-5 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
                               hasCriticalError
-                                ? "cursor-not-allowed border-zinc-900 bg-zinc-950 text-zinc-700"
+                                ? "cursor-not-allowed border-red-900 bg-red-950/35 text-red-500"
                                 : isApproved
-                                  ? "border-zinc-700 bg-zinc-100 text-black"
-                                  : "border-white/6 bg-white/[0.03] text-zinc-100 hover:bg-white/[0.08]"
-                            }`}
-                          >
-                            {hasCriticalError
-                              ? "Kilitli"
-                              : isSaving
-                                ? "Kaydediliyor"
-                                : isApproved
-                                  ? "Kaydedildi"
-                                  : "Kaydet"}
-                          </button>
-
-                          <button
-                            disabled={hasCriticalError || isSaving}
-                            onClick={handleSaveProject}
-                            className={`flex-1 rounded-[0.85rem] border px-3 py-2 text-[8px] font-medium tracking-[0.18em] transition-all duration-200 ${
-                              hasCriticalError
-                                ? "cursor-not-allowed border-red-900 bg-red-950/30 text-red-500"
-                                : isApproved
-                                  ? "border-green-500 bg-green-600 text-white"
-                                  : "border-blue-400/30 bg-white text-black shadow-[0_8px_24px_rgba(255,255,255,0.08)] hover:bg-zinc-100"
+                                  ? "border-green-400 bg-green-500 text-white shadow-[0_10px_28px_rgba(34,197,94,0.22)] hover:bg-green-400"
+                                  : "border-blue-300/50 bg-zinc-50 text-black shadow-[0_12px_30px_rgba(255,255,255,0.16)] hover:bg-white hover:shadow-[0_14px_34px_rgba(255,255,255,0.22)]"
                             }`}
                           >
                             {hasCriticalError ? (
                               "Bloke"
                             ) : isSaving ? (
                               "İşleniyor"
-                            ) : isApproved ? (
-                              "Devam Et"
                             ) : (
-                              "Kaydet ve Devam Et"
+                              "Devam Et"
                             )}
                           </button>
                         </div>

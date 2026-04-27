@@ -4,13 +4,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import {
-  type AuditInsertDatabase,
-  AuditActorBindingError,
-  type StrictAuditActor,
-  requireStrictAuditActor,
-  writeStrictAuditLogInTransaction,
-} from "@/app/lib/admin/audit";
+import { writeAdminAudit } from "@/app/lib/admin/audit";
 import { getDbOrThrow } from "@/db/db";
 import {
   aiDocumentChunks,
@@ -36,6 +30,7 @@ import {
 import type {
   ProductDocumentActionState,
   ProductDocumentFilters,
+  ProductDocumentFormValues,
   ProductDocumentListItem,
   ProductDocumentType,
   ProductDocumentsPageProduct,
@@ -45,9 +40,7 @@ type KnowledgeDocType = "datasheet" | "manual" | "rulebook";
 type KnowledgeParsingStatus = "pending" | "processing" | "completed" | "failed";
 
 type LockableDatabase = Pick<ReturnType<typeof getDbOrThrow>, "execute">;
-type TransactionDatabase = Parameters<
-  Parameters<ReturnType<typeof getDbOrThrow>["transaction"]>[0]
->[0];
+type DocumentWriteDatabase = ReturnType<typeof getDbOrThrow>;
 
 type ProductDocumentIngestionRecord = {
   id: string;
@@ -110,12 +103,26 @@ function isValidUuid(value: string) {
 
 function buildErrorState(
   message: string,
-  errors?: Record<string, string[]>,
+  fieldErrors?: Record<string, string[]>,
+  values?: ProductDocumentFormValues,
 ): ProductDocumentActionState {
   return {
     ok: false,
     message,
-    errors,
+    fieldErrors,
+    errors: fieldErrors,
+    values,
+  };
+}
+
+function getProductDocumentFormValues(formData: FormData): ProductDocumentFormValues {
+  return {
+    type: String(formData.get("type") ?? ""),
+    title: String(formData.get("title") ?? ""),
+    url: String(formData.get("url") ?? ""),
+    note: String(formData.get("note") ?? ""),
+    sortOrder: String(formData.get("sortOrder") ?? ""),
+    status: String(formData.get("status") ?? ""),
   };
 }
 
@@ -422,25 +429,23 @@ async function lockKnowledgeIngestion(
 }
 
 async function writeKnowledgeAudit(input: {
-  database: AuditInsertDatabase;
-  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "update";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  await writeStrictAuditLogInTransaction(input.database, {
+  await writeAdminAudit({
     entityType: "ai_knowledge_document",
+    logLabel: "ai_knowledge_document",
     entityId: input.entityId,
     action: input.action,
     previousState: input.previousState,
     newState: input.newState,
-    actor: input.actor,
   });
 }
 
-async function deleteKnowledgeChunksInTransaction(
-  database: TransactionDatabase,
+async function deleteKnowledgeChunks(
+  database: DocumentWriteDatabase,
   documentId: string,
 ) {
   const existingChunkRows = await database
@@ -463,9 +468,8 @@ async function deleteKnowledgeChunksInTransaction(
     .where(eq(aiDocumentChunks.documentId, documentId));
 }
 
-async function syncKnowledgeFromProductDocumentInTransaction(input: {
-  database: TransactionDatabase;
-  actor: StrictAuditActor;
+async function syncKnowledgeFromProductDocument(input: {
+  database: DocumentWriteDatabase;
   document: ProductDocumentRecord;
   previousDocument?: ProductDocumentRecord | null;
 }) {
@@ -541,7 +545,7 @@ async function syncKnowledgeFromProductDocumentInTransaction(input: {
     (sourceIdentityChanged || sourceReactivated || input.document.status !== "active");
 
   if (shouldResetLifecycle && existingKnowledgeDocument) {
-    await deleteKnowledgeChunksInTransaction(
+    await deleteKnowledgeChunks(
       input.database,
       existingKnowledgeDocument.id,
     );
@@ -606,8 +610,6 @@ async function syncKnowledgeFromProductDocumentInTransaction(input: {
     }
 
     await writeKnowledgeAudit({
-      database: input.database,
-      actor: input.actor,
       entityId: updatedKnowledgeDocument.id,
       action: "update",
       previousState: buildKnowledgeAuditState(existingKnowledgeDocument, {
@@ -654,8 +656,6 @@ async function syncKnowledgeFromProductDocumentInTransaction(input: {
   }
 
   await writeKnowledgeAudit({
-    database: input.database,
-    actor: input.actor,
     entityId: insertedKnowledgeDocument.id,
     action: "create",
     newState: buildKnowledgeAuditState(insertedKnowledgeDocument, {
@@ -668,20 +668,18 @@ async function syncKnowledgeFromProductDocumentInTransaction(input: {
 }
 
 async function writeProductDocumentAudit(input: {
-  database: AuditInsertDatabase;
-  actor: StrictAuditActor;
   entityId: string;
   action: "create" | "update";
   previousState?: unknown;
   newState?: unknown;
 }) {
-  await writeStrictAuditLogInTransaction(input.database, {
+  await writeAdminAudit({
     entityType: "product_document",
+    logLabel: "product_document",
     entityId: input.entityId,
     action: input.action,
     previousState: input.previousState,
     newState: input.newState,
-    actor: input.actor,
   });
 }
 
@@ -776,7 +774,7 @@ export async function getProductDocuments(
   }
 
   const filters = productDocumentFiltersSchema.parse({
-    status: filtersInput?.status ?? "active",
+    status: filtersInput?.status ?? "all",
   });
 
   const whereClauses = [eq(productDocuments.productId, productId)];
@@ -874,6 +872,21 @@ export async function createProductDocument(
   _prevState: ProductDocumentActionState,
   formData: FormData,
 ): Promise<ProductDocumentActionState> {
+  const input = {
+    productId: String(formData.get("productId") ?? ""),
+    title: String(formData.get("title") ?? ""),
+    url: String(formData.get("url") ?? ""),
+    type: String(formData.get("type") ?? ""),
+  };
+
+  console.log("DEBUG DOCUMENT INPUT", {
+    productId: input.productId,
+    title: input.title,
+    url: input.url,
+    type: input.type,
+  });
+
+  const values = getProductDocumentFormValues(formData);
   const parsed = createProductDocumentSchema.safeParse({
     productId: formData.get("productId"),
     type: formData.get("type"),
@@ -887,6 +900,7 @@ export async function createProductDocument(
     return buildErrorState(
       "Belge oluşturulamadı. Form alanlarını kontrol edin.",
       parsed.error.flatten().fieldErrors,
+      values,
     );
   }
 
@@ -896,16 +910,16 @@ export async function createProductDocument(
   if (!normalizedUrl) {
     return buildErrorState("Belge linki geçersiz.", {
       url: ["Geçerli bir belge linki girin."],
-    });
+    }, values);
   }
 
   const product = await getProductBase(data.productId);
 
   if (!product) {
-    return buildErrorState("Belge eklenecek ürün bulunamadı.");
+    return buildErrorState("Belge eklenecek ürün bulunamadı.", undefined, values);
   }
 
-  const [duplicate] = await db()
+  const [existingDocument] = await db()
     .select({
       id: productDocuments.id,
     })
@@ -913,86 +927,84 @@ export async function createProductDocument(
     .where(
       and(
         eq(productDocuments.productId, data.productId),
-        eq(productDocuments.type, data.type),
         eq(productDocuments.url, normalizedUrl),
       ),
     )
     .limit(1);
 
-  if (duplicate) {
+  console.log("DUPLICATE CHECK RESULT", existingDocument);
+
+  if (existingDocument) {
     return buildErrorState("Aynı tipte ve aynı linkte belge zaten mevcut.", {
       url: ["Bu ürün için aynı tipte aynı belge zaten kayıtlı."],
-    });
+    }, values);
   }
 
+  let createdDocument: ProductDocumentRecord | null = null;
+
   try {
-    const auditActor = await requireStrictAuditActor();
-    let createdDocument: ProductDocumentRecord | null = null;
+    console.log("INSERTING DOCUMENT INTO DB");
 
-    await db().transaction(async (tx) => {
-      const insertedRows = await tx
-        .insert(productDocuments)
-        .values({
-          productId: data.productId,
-          type: data.type,
-          title: data.title.trim(),
-          url: normalizedUrl,
-          note: emptyToNull(data.note),
-          sortOrder: stringIntegerToNumber(data.sortOrder) ?? 0,
-          status: "draft",
-          updatedAt: new Date(),
-        })
-        .returning({
-          id: productDocuments.id,
-          productId: productDocuments.productId,
-          type: productDocuments.type,
-          title: productDocuments.title,
-          url: productDocuments.url,
-          note: productDocuments.note,
-          sortOrder: productDocuments.sortOrder,
-          status: productDocuments.status,
-          createdAt: productDocuments.createdAt,
-          updatedAt: productDocuments.updatedAt,
-        });
-
-      createdDocument = (insertedRows[0] as ProductDocumentRecord | undefined) ?? null;
-
-      if (!createdDocument) {
-        return;
-      }
-
-      await writeProductDocumentAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: createdDocument.id,
-        action: "create",
-        newState: buildProductDocumentAuditState(createdDocument),
+    const insertedRows = await db()
+      .insert(productDocuments)
+      .values({
+        productId: data.productId,
+        type: data.type,
+        title: data.title.trim(),
+        url: normalizedUrl,
+        note: emptyToNull(data.note),
+        sortOrder: stringIntegerToNumber(data.sortOrder) ?? 0,
+        status: "draft",
+        updatedAt: new Date(),
+      })
+      .returning({
+        id: productDocuments.id,
+        productId: productDocuments.productId,
+        type: productDocuments.type,
+        title: productDocuments.title,
+        url: productDocuments.url,
+        note: productDocuments.note,
+        sortOrder: productDocuments.sortOrder,
+        status: productDocuments.status,
+        createdAt: productDocuments.createdAt,
+        updatedAt: productDocuments.updatedAt,
       });
 
-      await syncKnowledgeFromProductDocumentInTransaction({
-        database: tx,
-        actor: auditActor,
-        document: createdDocument,
-      });
-    });
-
-    if (!createdDocument) {
-      return buildErrorState("Belge kaydı sırasında beklenmeyen bir hata oluştu.");
-    }
+    createdDocument = (insertedRows[0] as ProductDocumentRecord | undefined) ?? null;
+    console.log("DOCUMENT INSERT SUCCESS");
   } catch (error) {
-    if (error instanceof AuditActorBindingError) {
-      return buildErrorState(
-        "Session-bound audit actor çözülemediği için belge güvenli şekilde kaydedilemedi.",
-      );
-    }
+    console.error("DOCUMENT INSERT FAILED", error);
+    console.error("saveProductDocument error", error);
 
     if (isPgUniqueViolation(error)) {
       return buildErrorState("Aynı tipte ve aynı linkte belge zaten mevcut.", {
         url: ["Bu ürün için aynı tipte aynı belge zaten kayıtlı."],
-      });
+      }, values);
     }
 
-    return buildErrorState("Belge kaydı sırasında beklenmeyen bir hata oluştu.");
+    return buildErrorState(
+      "Belge kaydı sırasında beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
+    );
+  }
+
+  if (!createdDocument) {
+    return buildErrorState(
+      "Belge kaydı sırasında beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
+    );
+  }
+
+  try {
+    await writeProductDocumentAudit({
+      entityId: createdDocument.id,
+      action: "create",
+      newState: buildProductDocumentAuditState(createdDocument),
+    });
+  } catch (error) {
+    console.error("saveProductDocument audit error", error);
   }
 
   revalidateProductDocumentPaths(data.productId);
@@ -1007,6 +1019,7 @@ export async function updateProductDocument(
   _prevState: ProductDocumentActionState,
   formData: FormData,
 ): Promise<ProductDocumentActionState> {
+  const values = getProductDocumentFormValues(formData);
   const parsed = updateProductDocumentSchema.safeParse({
     id: formData.get("id"),
     productId: formData.get("productId"),
@@ -1021,6 +1034,7 @@ export async function updateProductDocument(
     return buildErrorState(
       "Belge güncellenemedi. Form alanlarını kontrol edin.",
       parsed.error.flatten().fieldErrors,
+      values,
     );
   }
 
@@ -1030,7 +1044,7 @@ export async function updateProductDocument(
   if (!normalizedUrl) {
     return buildErrorState("Belge linki geçersiz.", {
       url: ["Geçerli bir belge linki girin."],
-    });
+    }, values);
   }
 
   const [current] = await db()
@@ -1043,7 +1057,7 @@ export async function updateProductDocument(
     .limit(1);
 
   if (!current || current.productId !== data.productId) {
-    return buildErrorState("Güncellenecek belge bulunamadı.");
+    return buildErrorState("Güncellenecek belge bulunamadı.", undefined, values);
   }
 
   const currentDuplicateKey = buildDocumentDuplicateKey(data.type, normalizedUrl);
@@ -1074,104 +1088,100 @@ export async function updateProductDocument(
   if (hasDuplicate) {
     return buildErrorState("Aynı tipte ve aynı linkte belge zaten mevcut.", {
       url: ["Bu ürün için aynı tipte aynı belge zaten kayıtlı."],
-    });
+    }, values);
   }
 
+  const [currentDocumentRow] = await db()
+    .select({
+      id: productDocuments.id,
+      productId: productDocuments.productId,
+      type: productDocuments.type,
+      title: productDocuments.title,
+      url: productDocuments.url,
+      note: productDocuments.note,
+      sortOrder: productDocuments.sortOrder,
+      status: productDocuments.status,
+      createdAt: productDocuments.createdAt,
+      updatedAt: productDocuments.updatedAt,
+    })
+    .from(productDocuments)
+    .where(eq(productDocuments.id, data.id))
+    .limit(1);
+
+  const currentDocument =
+    (currentDocumentRow as ProductDocumentRecord | undefined) ?? null;
+
+  if (!currentDocument || currentDocument.productId !== data.productId) {
+    return buildErrorState("Güncellenecek belge bulunamadı.", undefined, values);
+  }
+
+  let updatedDocument: ProductDocumentRecord | null = null;
+
   try {
-    const auditActor = await requireStrictAuditActor();
-    let updatedDocument: ProductDocumentRecord | null = null;
-
-    await db().transaction(async (tx) => {
-      const currentRows = await tx
-        .select({
-          id: productDocuments.id,
-          productId: productDocuments.productId,
-          type: productDocuments.type,
-          title: productDocuments.title,
-          url: productDocuments.url,
-          note: productDocuments.note,
-          sortOrder: productDocuments.sortOrder,
-          status: productDocuments.status,
-          createdAt: productDocuments.createdAt,
-          updatedAt: productDocuments.updatedAt,
-        })
-        .from(productDocuments)
-        .where(eq(productDocuments.id, data.id))
-        .limit(1);
-
-      const currentDocument =
-        (currentRows[0] as ProductDocumentRecord | undefined) ?? null;
-
-      if (!currentDocument || currentDocument.productId !== data.productId) {
-        return;
-      }
-
-      const updatedRows = await tx
-        .update(productDocuments)
-        .set({
-          type: data.type,
-          title: data.title.trim(),
-          url: normalizedUrl,
-          note: emptyToNull(data.note),
-          sortOrder: stringIntegerToNumber(data.sortOrder) ?? 0,
-          updatedAt: new Date(),
-        })
-        .where(eq(productDocuments.id, data.id))
-        .returning({
-          id: productDocuments.id,
-          productId: productDocuments.productId,
-          type: productDocuments.type,
-          title: productDocuments.title,
-          url: productDocuments.url,
-          note: productDocuments.note,
-          sortOrder: productDocuments.sortOrder,
-          status: productDocuments.status,
-          createdAt: productDocuments.createdAt,
-          updatedAt: productDocuments.updatedAt,
-        });
-
-      updatedDocument = (updatedRows[0] as ProductDocumentRecord | undefined) ?? null;
-
-      if (!updatedDocument) {
-        return;
-      }
-
-      await writeProductDocumentAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: updatedDocument.id,
-        action: "update",
-        previousState: buildProductDocumentAuditState(currentDocument),
-        newState: buildProductDocumentAuditState(updatedDocument),
+    const updatedRows = await db()
+      .update(productDocuments)
+      .set({
+        type: data.type,
+        title: data.title.trim(),
+        url: normalizedUrl,
+        note: emptyToNull(data.note),
+        sortOrder: stringIntegerToNumber(data.sortOrder) ?? 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(productDocuments.id, data.id))
+      .returning({
+        id: productDocuments.id,
+        productId: productDocuments.productId,
+        type: productDocuments.type,
+        title: productDocuments.title,
+        url: productDocuments.url,
+        note: productDocuments.note,
+        sortOrder: productDocuments.sortOrder,
+        status: productDocuments.status,
+        createdAt: productDocuments.createdAt,
+        updatedAt: productDocuments.updatedAt,
       });
 
-      await syncKnowledgeFromProductDocumentInTransaction({
-        database: tx,
-        actor: auditActor,
-        document: updatedDocument,
-        previousDocument: currentDocument,
-      });
-    });
-
-    if (!updatedDocument) {
-      return buildErrorState("Belge güncellenirken beklenmeyen bir hata oluştu.");
-    }
+    updatedDocument = (updatedRows[0] as ProductDocumentRecord | undefined) ?? null;
   } catch (error) {
-    if (error instanceof AuditActorBindingError) {
-      return buildErrorState(
-        "Session-bound audit actor çözülemediği için belge güvenli şekilde güncellenemedi.",
-      );
-    }
+    console.error("saveProductDocument error", error);
 
     if (isPgUniqueViolation(error)) {
       return buildErrorState("Aynı tipte ve aynı linkte belge zaten mevcut.", {
         url: ["Bu ürün için aynı tipte aynı belge zaten kayıtlı."],
-      });
+      }, values);
     }
 
     return buildErrorState(
       "Belge güncellenirken beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
     );
+  }
+
+  if (!updatedDocument) {
+    return buildErrorState(
+      "Belge güncellenirken beklenmeyen bir hata oluştu.",
+      undefined,
+      values,
+    );
+  }
+
+  try {
+    await writeProductDocumentAudit({
+      entityId: updatedDocument.id,
+      action: "update",
+      previousState: buildProductDocumentAuditState(currentDocument),
+      newState: buildProductDocumentAuditState(updatedDocument),
+    });
+
+    await syncKnowledgeFromProductDocument({
+      database: db(),
+      document: updatedDocument,
+      previousDocument: currentDocument,
+    });
+  } catch (error) {
+    console.error("saveProductDocument audit error", error);
   }
 
   revalidateProductDocumentPaths(data.productId);
@@ -1200,105 +1210,84 @@ async function updateProductDocumentStatus(input: {
     return buildErrorState(input.invalidMessage);
   }
 
+  const [currentRow] = await db()
+    .select({
+      id: productDocuments.id,
+      productId: productDocuments.productId,
+      type: productDocuments.type,
+      title: productDocuments.title,
+      url: productDocuments.url,
+      note: productDocuments.note,
+      sortOrder: productDocuments.sortOrder,
+      status: productDocuments.status,
+      createdAt: productDocuments.createdAt,
+      updatedAt: productDocuments.updatedAt,
+    })
+    .from(productDocuments)
+    .where(eq(productDocuments.id, input.documentId))
+    .limit(1);
+
+  const currentDocument = (currentRow as ProductDocumentRecord | undefined) ?? null;
+
+  if (!currentDocument || currentDocument.productId !== input.productId) {
+    return buildErrorState(input.missingMessage);
+  }
+
+  if (currentDocument.status === input.nextStatus) {
+    return {
+      ok: true,
+      message: input.unchangedMessage,
+    };
+  }
+
+  let updatedDocument: ProductDocumentRecord | null = null;
+
   try {
-    const auditActor = await requireStrictAuditActor();
-    let updatedDocument: ProductDocumentRecord | null = null;
-    let resultState: ProductDocumentActionState | null = null;
-
-    await db().transaction(async (tx) => {
-      const currentRows = await tx
-        .select({
-          id: productDocuments.id,
-          productId: productDocuments.productId,
-          type: productDocuments.type,
-          title: productDocuments.title,
-          url: productDocuments.url,
-          note: productDocuments.note,
-          sortOrder: productDocuments.sortOrder,
-          status: productDocuments.status,
-          createdAt: productDocuments.createdAt,
-          updatedAt: productDocuments.updatedAt,
-        })
-        .from(productDocuments)
-        .where(eq(productDocuments.id, input.documentId))
-        .limit(1);
-
-      const currentDocument =
-        (currentRows[0] as ProductDocumentRecord | undefined) ?? null;
-
-      if (!currentDocument || currentDocument.productId !== input.productId) {
-        resultState = buildErrorState(input.missingMessage);
-        return;
-      }
-
-      if (currentDocument.status === input.nextStatus) {
-        resultState = {
-          ok: true,
-          message: input.unchangedMessage,
-        };
-        return;
-      }
-
-      const updatedRows = await tx
-        .update(productDocuments)
-        .set({
-          status: input.nextStatus,
-          updatedAt: new Date(),
-        })
-        .where(eq(productDocuments.id, input.documentId))
-        .returning({
-          id: productDocuments.id,
-          productId: productDocuments.productId,
-          type: productDocuments.type,
-          title: productDocuments.title,
-          url: productDocuments.url,
-          note: productDocuments.note,
-          sortOrder: productDocuments.sortOrder,
-          status: productDocuments.status,
-          createdAt: productDocuments.createdAt,
-          updatedAt: productDocuments.updatedAt,
-        });
-
-      updatedDocument = (updatedRows[0] as ProductDocumentRecord | undefined) ?? null;
-
-      if (!updatedDocument) {
-        resultState = buildErrorState("Belge durumu güvenli şekilde güncellenemedi.");
-        return;
-      }
-
-      await writeProductDocumentAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: updatedDocument.id,
-        action: "update",
-        previousState: buildProductDocumentAuditState(currentDocument),
-        newState: buildProductDocumentAuditState(updatedDocument),
+    const updatedRows = await db()
+      .update(productDocuments)
+      .set({
+        status: input.nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(productDocuments.id, input.documentId))
+      .returning({
+        id: productDocuments.id,
+        productId: productDocuments.productId,
+        type: productDocuments.type,
+        title: productDocuments.title,
+        url: productDocuments.url,
+        note: productDocuments.note,
+        sortOrder: productDocuments.sortOrder,
+        status: productDocuments.status,
+        createdAt: productDocuments.createdAt,
+        updatedAt: productDocuments.updatedAt,
       });
 
-      await syncKnowledgeFromProductDocumentInTransaction({
-        database: tx,
-        actor: auditActor,
-        document: updatedDocument,
-        previousDocument: currentDocument,
-      });
-    });
-
-    if (resultState) {
-      return resultState;
-    }
-
-    if (!updatedDocument) {
-      return buildErrorState("Belge durumu güvenli şekilde güncellenemedi.");
-    }
+    updatedDocument = (updatedRows[0] as ProductDocumentRecord | undefined) ?? null;
   } catch (error) {
-    if (error instanceof AuditActorBindingError) {
-      return buildErrorState(
-        "Session-bound audit actor çözülemediği için belge durumu güvenli şekilde değiştirilemedi.",
-      );
-    }
-
     console.error("updateProductDocumentStatus error:", error);
     return buildErrorState("Belge durumu değiştirilirken beklenmeyen bir hata oluştu.");
+  }
+
+  if (!updatedDocument) {
+    return buildErrorState("Belge durumu güvenli şekilde güncellenemedi.");
+  }
+
+  try {
+    await writeProductDocumentAudit({
+      entityId: updatedDocument.id,
+      action: "update",
+      previousState: buildProductDocumentAuditState(currentDocument),
+      newState: buildProductDocumentAuditState(updatedDocument),
+    });
+
+    await syncKnowledgeFromProductDocument({
+      database: db(),
+      document: updatedDocument,
+      previousDocument: currentDocument,
+    });
+  } catch (error) {
+    console.error("updateProductDocumentStatus audit error:", error);
   }
 
   revalidateProductDocumentPaths(input.productId);
@@ -1399,12 +1388,8 @@ export async function ingestProductDocumentToAi(
   );
 
   const database = db();
-  let strictAuditActor: StrictAuditActor | null = null;
 
   try {
-    strictAuditActor = await requireStrictAuditActor();
-    const activeAuditActor = strictAuditActor;
-
     const extractedText = await fetchDocumentText(sourceDocument);
     const generatedChunks = buildGeneratedChunks(extractedText);
 
@@ -1417,10 +1402,9 @@ export async function ingestProductDocumentToAi(
     let completedKnowledgeDocument: KnowledgeDocumentRecord | null = null;
     let createdKnowledgeDocument = false;
 
-    await database.transaction(async (tx) => {
-      await lockKnowledgeIngestion(tx, canonicalKey);
+    await lockKnowledgeIngestion(database, canonicalKey);
 
-      const existingRows = await tx
+    const existingRows = await database
         .select({
           id: aiKnowledgeDocuments.id,
           productId: aiKnowledgeDocuments.productId,
@@ -1446,7 +1430,7 @@ export async function ingestProductDocumentToAi(
       let processingKnowledgeDocument: KnowledgeDocumentRecord;
 
       if (existingKnowledgeDocument) {
-        const updatedRows = await tx
+        const updatedRows = await database
           .update(aiKnowledgeDocuments)
           .set({
             productId: sourceDocument.productId,
@@ -1478,8 +1462,6 @@ export async function ingestProductDocumentToAi(
         }
 
         await writeKnowledgeAudit({
-          database: tx,
-          actor: activeAuditActor,
           entityId: nextKnowledgeDocument.id,
           action: "update",
           previousState: buildKnowledgeAuditState(existingKnowledgeDocument, {
@@ -1494,7 +1476,7 @@ export async function ingestProductDocumentToAi(
 
         processingKnowledgeDocument = nextKnowledgeDocument;
       } else {
-        const insertedRows = await tx
+        const insertedRows = await database
           .insert(aiKnowledgeDocuments)
           .values({
             productId: sourceDocument.productId,
@@ -1525,8 +1507,6 @@ export async function ingestProductDocumentToAi(
         }
 
         await writeKnowledgeAudit({
-          database: tx,
-          actor: activeAuditActor,
           entityId: nextKnowledgeDocument.id,
           action: "create",
           newState: buildKnowledgeAuditState(nextKnowledgeDocument, {
@@ -1539,9 +1519,9 @@ export async function ingestProductDocumentToAi(
         createdKnowledgeDocument = true;
       }
 
-      await deleteKnowledgeChunksInTransaction(tx, processingKnowledgeDocument.id);
+      await deleteKnowledgeChunks(database, processingKnowledgeDocument.id);
 
-      const insertedChunks = await tx
+      const insertedChunks = await database
         .insert(aiDocumentChunks)
         .values(
           generatedChunks.map((chunk) => ({
@@ -1564,7 +1544,7 @@ export async function ingestProductDocumentToAi(
         throw new Error("Tüm AI chunk kayıtları oluşturulamadı.");
       }
 
-      const updatedRows = await tx
+      const updatedRows = await database
         .update(aiKnowledgeDocuments)
         .set({
           productId: sourceDocument.productId,
@@ -1596,8 +1576,6 @@ export async function ingestProductDocumentToAi(
       }
 
       await writeKnowledgeAudit({
-        database: tx,
-        actor: activeAuditActor,
         entityId: nextCompletedKnowledgeDocument.id,
         action: "update",
         previousState: buildKnowledgeAuditState(processingKnowledgeDocument, {
@@ -1618,7 +1596,6 @@ export async function ingestProductDocumentToAi(
       });
 
       completedKnowledgeDocument = nextCompletedKnowledgeDocument;
-    });
 
     if (!completedKnowledgeDocument) {
       throw new Error("AI ingestion completed kaydı doğrulanamadı.");
@@ -1633,24 +1610,14 @@ export async function ingestProductDocumentToAi(
         : "Belge AI knowledge katmanında yeniden işlendi.",
     };
   } catch (error) {
-    if (error instanceof AuditActorBindingError) {
-      return buildErrorState(
-        "Session-bound audit actor çözülemediği için AI ingestion güvenli şekilde başlatılamadı.",
-      );
-    }
-
     const failureMessage = buildReadableErrorMessage(error);
 
     console.error("ingestProductDocumentToAi error:", error);
 
     try {
-      const failureAuditActor =
-        strictAuditActor ?? (await requireStrictAuditActor());
+      await lockKnowledgeIngestion(database, canonicalKey);
 
-      await database.transaction(async (tx) => {
-        await lockKnowledgeIngestion(tx, canonicalKey);
-
-        const rows = await tx
+      const rows = await database
           .select({
             id: aiKnowledgeDocuments.id,
             productId: aiKnowledgeDocuments.productId,
@@ -1674,7 +1641,7 @@ export async function ingestProductDocumentToAi(
           (rows[0] as KnowledgeDocumentRecord | undefined) ?? null;
 
         if (currentKnowledgeDocument) {
-          const failedRows = await tx
+          const failedRows = await database
             .update(aiKnowledgeDocuments)
             .set({
               productId: sourceDocument.productId,
@@ -1706,8 +1673,6 @@ export async function ingestProductDocumentToAi(
           }
 
           await writeKnowledgeAudit({
-            database: tx,
-            actor: failureAuditActor,
             entityId: failedKnowledgeDocument.id,
             action: "update",
             previousState: buildKnowledgeAuditState(currentKnowledgeDocument, {
@@ -1719,11 +1684,9 @@ export async function ingestProductDocumentToAi(
               sourceType: sourceDocument.type,
             }),
           });
+        } else {
 
-          return;
-        }
-
-        const insertedRows = await tx
+        const insertedRows = await database
           .insert(aiKnowledgeDocuments)
           .values({
             productId: sourceDocument.productId,
@@ -1754,8 +1717,6 @@ export async function ingestProductDocumentToAi(
         }
 
         await writeKnowledgeAudit({
-          database: tx,
-          actor: failureAuditActor,
           entityId: failedKnowledgeDocument.id,
           action: "create",
           newState: buildKnowledgeAuditState(failedKnowledgeDocument, {
@@ -1763,7 +1724,7 @@ export async function ingestProductDocumentToAi(
             sourceType: sourceDocument.type,
           }),
         });
-      });
+        }
     } catch (failureUpdateError) {
       console.error(
         "ingestProductDocumentToAi failed-status update error:",

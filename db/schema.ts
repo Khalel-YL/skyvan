@@ -137,6 +137,9 @@ export const products = pgTable(
     productType: text("product_type"),
     productSubType: text("product_sub_type"),
     workshopEffect: text("workshop_effect").notNull().default("none"),
+    workshopVisibility: text("workshop_visibility")
+      .notNull()
+      .default("selectable_visual"),
     targetLayer: text("target_layer"),
     meshKey: text("mesh_key"),
     materialKey: text("material_key"),

@@ -5,11 +5,12 @@ import { useFormStatus } from "react-dom";
 
 import { createProduct } from "./actions";
 import {
-  categoryTypeOptions,
+  categoryTypeOptionsBySlug,
   generateProductSku,
   generateProductSlug,
   targetLayerOptions,
   workshopEffectOptions,
+  workshopVisibilityOptions,
 } from "./mappers";
 import type { CategoryOption, ProductActionState } from "./types";
 
@@ -91,7 +92,12 @@ export function AddProductDrawer({ categories }: Props) {
             </button>
           </div>
 
-          <ProductFormFields categories={categories} errors={state.errors} />
+          <ProductFormFields
+            key={JSON.stringify(state.values ?? {})}
+            categories={categories}
+            errors={state.fieldErrors ?? state.errors}
+            values={state.values}
+          />
 
           <div className="mt-5 flex items-center justify-between gap-4">
             <p className={`text-sm ${state.ok ? "text-green-400" : "text-red-400"}`}>
@@ -121,20 +127,34 @@ function FieldError({
 function ProductFormFields({
   categories,
   errors,
+  values,
 }: {
   categories: CategoryOption[];
   errors?: Record<string, string[]>;
+  values?: ProductActionState["values"];
 }) {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [sku, setSku] = useState("");
+  const [name, setName] = useState(values?.name ?? "");
+  const [slug, setSlug] = useState(values?.slug ?? "");
+  const [sku, setSku] = useState(values?.sku ?? "");
   const [slugEdited, setSlugEdited] = useState(false);
   const [skuEdited, setSkuEdited] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    values?.categoryId ?? "",
+  );
+  const [productType, setProductType] = useState(values?.productType ?? "");
+  const [workshopVisibility, setWorkshopVisibility] =
+    useState(values?.workshopVisibility ?? "selectable_visual");
+  const [workshopEffect, setWorkshopEffect] = useState(
+    values?.workshopEffect ?? "none",
+  );
+  const [targetLayer, setTargetLayer] = useState(values?.targetLayer ?? "");
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
   );
+  const productTypeOptions = selectedCategory
+    ? categoryTypeOptionsBySlug[selectedCategory.categorySlug] ?? []
+    : [];
   const handleNameChange = (nextName: string) => {
     setName(nextName);
 
@@ -145,6 +165,31 @@ function ProductFormFields({
     if (!skuEdited) {
       setSku(generateProductSku(nextName));
     }
+  };
+  const handleCategoryChange = (categoryId: string) => {
+    const nextCategory =
+      categories.find((category) => category.id === categoryId) ?? null;
+
+    setSelectedCategoryId(categoryId);
+    setProductType("");
+
+    if (!nextCategory) {
+      setWorkshopVisibility("selectable_visual");
+      setWorkshopEffect("none");
+      setTargetLayer("");
+      return;
+    }
+
+    if (nextCategory.isVisual) {
+      setWorkshopVisibility("selectable_visual");
+      setWorkshopEffect("layer");
+      setTargetLayer(nextCategory.targetLayer ?? "");
+      return;
+    }
+
+    setWorkshopVisibility("selectable_hidden");
+    setWorkshopEffect("none");
+    setTargetLayer("");
   };
 
   return (
@@ -201,7 +246,7 @@ function ProductFormFields({
         <select
           name="categoryId"
           value={selectedCategoryId}
-          onChange={(event) => setSelectedCategoryId(event.target.value)}
+          onChange={(event) => handleCategoryChange(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="">Kategori seç</option>
@@ -223,10 +268,14 @@ function ProductFormFields({
         </label>
         <select
           name="productType"
+          value={productType}
+          onChange={(event) => setProductType(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
-          <option value="">Tip seç</option>
-          {categoryTypeOptions.map((option) => (
+          <option value="">
+            {selectedCategory ? "Tip seç" : "Önce kategori seç"}
+          </option>
+          {productTypeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -240,6 +289,7 @@ function ProductFormFields({
         </label>
         <input
           name="productSubType"
+          defaultValue={values?.productSubType ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
       </div>
@@ -250,10 +300,40 @@ function ProductFormFields({
         </label>
         <select
           name="workshopEffect"
-          defaultValue="none"
+          value={workshopEffect}
+          onChange={(event) =>
+            setWorkshopEffect(
+              event.target.value as "none" | "layer" | "mesh" | "material",
+            )
+          }
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           {workshopEffectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-zinc-300">
+          Workshop Görünürlüğü
+        </label>
+        <select
+          name="workshopVisibility"
+          value={workshopVisibility}
+          onChange={(event) =>
+            setWorkshopVisibility(
+              event.target.value as
+                | "selectable_visual"
+                | "selectable_hidden"
+                | "ai_package_only",
+            )
+          }
+          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+        >
+          {workshopVisibilityOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -267,6 +347,8 @@ function ProductFormFields({
         </label>
         <select
           name="targetLayer"
+          value={targetLayer}
+          onChange={(event) => setTargetLayer(event.target.value)}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="">Katman yok</option>
@@ -284,6 +366,7 @@ function ProductFormFields({
         </label>
         <input
           name="meshKey"
+          defaultValue={values?.meshKey ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
       </div>
@@ -294,6 +377,7 @@ function ProductFormFields({
         </label>
         <input
           name="materialKey"
+          defaultValue={values?.materialKey ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
       </div>
@@ -305,6 +389,7 @@ function ProductFormFields({
         <textarea
           name="technicalSpecs"
           rows={3}
+          defaultValue={values?.technicalSpecs ?? ""}
           placeholder='{"voltage":"12V"}'
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
@@ -320,6 +405,7 @@ function ProductFormFields({
           type="number"
           step="0.01"
           min="0"
+          defaultValue={values?.basePrice ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="basePrice" />
@@ -334,6 +420,7 @@ function ProductFormFields({
           type="number"
           step="0.001"
           min="0"
+          defaultValue={values?.weightKg ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="weightKg" />
@@ -348,6 +435,7 @@ function ProductFormFields({
           type="number"
           step="1"
           min="0"
+          defaultValue={values?.powerDrawWatts ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="powerDrawWatts" />
@@ -362,6 +450,7 @@ function ProductFormFields({
           type="number"
           step="1"
           min="0"
+          defaultValue={values?.powerSupplyWatts ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="powerSupplyWatts" />
@@ -374,6 +463,7 @@ function ProductFormFields({
         <textarea
           name="shortDescription"
           rows={2}
+          defaultValue={values?.shortDescription ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="shortDescription" />
@@ -386,6 +476,7 @@ function ProductFormFields({
         <textarea
           name="description"
           rows={4}
+          defaultValue={values?.description ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="description" />
@@ -397,6 +488,7 @@ function ProductFormFields({
         </label>
         <input
           name="imageUrl"
+          defaultValue={values?.imageUrl ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="imageUrl" />
@@ -408,6 +500,7 @@ function ProductFormFields({
         </label>
         <input
           name="datasheetUrl"
+          defaultValue={values?.datasheetUrl ?? ""}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
         />
         <FieldError errors={errors} name="datasheetUrl" />
@@ -419,7 +512,7 @@ function ProductFormFields({
         </label>
         <select
           name="status"
-          defaultValue="draft"
+          defaultValue={values?.status ?? "draft"}
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
         >
           <option value="draft">Taslak</option>

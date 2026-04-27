@@ -13,7 +13,11 @@ import {
 
 import { DeleteProductDialog } from "./DeleteProductDialog";
 import { EditProductDrawer } from "./EditProductDrawer";
-import { formatMetric, formatMoney, formatWatts } from "./mappers";
+import {
+  formatMetric,
+  formatMoney,
+  formatWatts,
+} from "./mappers";
 import { ProductStatusBadge } from "./ProductStatusBadge";
 import type { CategoryOption, ProductListItem, ProductStatus } from "./types";
 
@@ -410,6 +414,18 @@ function formatShortId(value: string) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
+function getWorkshopVisibilityLabel(value: ProductListItem["workshopVisibility"]) {
+  if (value === "selectable_hidden") {
+    return "Görünmeyen Seçilebilir";
+  }
+
+  if (value === "ai_package_only") {
+    return "AI/Paket";
+  }
+
+  return "Workshop’ta Görsel";
+}
+
 function InfoChip({
   children,
   className = "",
@@ -740,6 +756,10 @@ export async function ProductsTable({
 
                     <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
                       Etki {product.workshopEffect}
+                    </InfoChip>
+
+                    <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
+                      {getWorkshopVisibilityLabel(product.workshopVisibility)}
                     </InfoChip>
 
                     {product.productType ? (

@@ -3,14 +3,70 @@ import type {
   ProductFormValues,
   ProductListItem,
   ProductTargetLayer,
+  WorkshopVisibility,
   WorkshopEffect,
 } from "./types";
 
-export const categoryTypeOptions = [
-  { value: "visual-module", label: "Görsel modül" },
-  { value: "technical-system", label: "Teknik sistem" },
-  { value: "material-finish", label: "Malzeme / yüzey" },
-] as const;
+export const categoryTypeOptionsBySlug: Record<
+  string,
+  Array<{ value: string; label: string }>
+> = {
+  kitchen: [
+    { value: "ocak", label: "ocak" },
+    { value: "evye", label: "evye" },
+    { value: "buzdolabı", label: "buzdolabı" },
+    { value: "tezgah", label: "tezgah" },
+    { value: "musluk", label: "musluk" },
+  ],
+  bed: [
+    { value: "sabit_yatak", label: "sabit_yatak" },
+    { value: "katlanır_yatak", label: "katlanır_yatak" },
+    { value: "minder", label: "minder" },
+  ],
+  storage: [
+    { value: "üst_dolap", label: "üst_dolap" },
+    { value: "alt_dolap", label: "alt_dolap" },
+    { value: "çekmece", label: "çekmece" },
+    { value: "gardırop", label: "gardırop" },
+  ],
+  seat: [
+    { value: "koltuk", label: "koltuk" },
+    { value: "bank", label: "bank" },
+    { value: "minder", label: "minder" },
+  ],
+  table: [
+    { value: "masa", label: "masa" },
+    { value: "katlanır_masa", label: "katlanır_masa" },
+  ],
+  bathroom: [
+    { value: "duş", label: "duş" },
+    { value: "wc", label: "wc" },
+    { value: "lavabo", label: "lavabo" },
+  ],
+  electrical: [
+    { value: "solar", label: "solar" },
+    { value: "akü", label: "akü" },
+    { value: "inverter", label: "inverter" },
+    { value: "mppt", label: "mppt" },
+    { value: "sigorta", label: "sigorta" },
+    { value: "kablo", label: "kablo" },
+  ],
+  plumbing: [
+    { value: "temiz_su_tankı", label: "temiz_su_tankı" },
+    { value: "gri_su_tankı", label: "gri_su_tankı" },
+    { value: "pompa", label: "pompa" },
+    { value: "hidrofor", label: "hidrofor" },
+    { value: "vana", label: "vana" },
+    { value: "hortum", label: "hortum" },
+  ],
+  climate: [
+    { value: "webasto", label: "webasto" },
+    { value: "klima", label: "klima" },
+    { value: "fan", label: "fan" },
+    { value: "havalandırma", label: "havalandırma" },
+    { value: "kombi", label: "kombi" },
+  ],
+};
 
 export const workshopEffectOptions: Array<{
   value: WorkshopEffect;
@@ -20,6 +76,15 @@ export const workshopEffectOptions: Array<{
   { value: "layer", label: "Katman" },
   { value: "mesh", label: "Mesh" },
   { value: "material", label: "Malzeme" },
+];
+
+export const workshopVisibilityOptions: Array<{
+  value: WorkshopVisibility;
+  label: string;
+}> = [
+  { value: "selectable_visual", label: "Workshop’ta Görsel" },
+  { value: "selectable_hidden", label: "Workshop’ta Görünmeyen Seçilebilir" },
+  { value: "ai_package_only", label: "Sadece AI/Paket" },
 ];
 
 export const targetLayerOptions: Array<{
@@ -139,6 +204,20 @@ export function normalizeWorkshopEffect(value?: string | null): WorkshopEffect {
   return "none";
 }
 
+export function normalizeWorkshopVisibility(
+  value?: string | null
+): WorkshopVisibility {
+  if (
+    value === "selectable_visual" ||
+    value === "selectable_hidden" ||
+    value === "ai_package_only"
+  ) {
+    return value;
+  }
+
+  return "selectable_visual";
+}
+
 export function normalizeTargetLayer(value?: string | null): ProductTargetLayer {
   if (
     value === "kitchen" ||
@@ -192,6 +271,7 @@ export function productToFormValues(product: ProductListItem): ProductFormValues
     productType: product.productType ?? "",
     productSubType: product.productSubType ?? "",
     workshopEffect: product.workshopEffect ?? "none",
+    workshopVisibility: product.workshopVisibility ?? "selectable_visual",
     targetLayer: product.targetLayer ?? "",
     meshKey: product.meshKey ?? "",
     materialKey: product.materialKey ?? "",

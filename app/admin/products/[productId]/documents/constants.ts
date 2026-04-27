@@ -46,5 +46,5 @@ export const REQUIRED_PRODUCT_DOCUMENT_TYPES = [
 ] as const;
 
 export const DEFAULT_PRODUCT_DOCUMENT_FILTERS = {
-  status: "active",
+  status: "all",
 } as const;

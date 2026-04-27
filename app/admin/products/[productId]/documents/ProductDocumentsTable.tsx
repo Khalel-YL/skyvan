@@ -72,6 +72,56 @@ function getTransitionButtonClassName(tone: "success" | "warning") {
   return "border-blue-800 bg-blue-950 text-blue-300 hover:border-blue-700";
 }
 
+function ActivateProductDocumentForm({
+  document,
+}: {
+  document: ProductDocumentListItem;
+}) {
+  async function submitAction() {
+    "use server";
+
+    await activateProductDocument(document.id, document.productId);
+  }
+
+  return (
+    <form action={submitAction}>
+      <button
+        type="submit"
+        className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
+          "success",
+        )}`}
+      >
+        Aktifleştir
+      </button>
+    </form>
+  );
+}
+
+function SetDraftProductDocumentForm({
+  document,
+}: {
+  document: ProductDocumentListItem;
+}) {
+  async function submitAction() {
+    "use server";
+
+    await setDraftProductDocument(document.id, document.productId);
+  }
+
+  return (
+    <form action={submitAction}>
+      <button
+        type="submit"
+        className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
+          "warning",
+        )}`}
+      >
+        Taslağa Al
+      </button>
+    </form>
+  );
+}
+
 export function ProductDocumentsTable({
   documents,
   emptyTitle = "Belge bulunamadı",
@@ -159,23 +209,7 @@ export function ProductDocumentsTable({
                   <div className="flex flex-wrap items-center gap-2">
                     {document.status === "draft" ? (
                       <>
-                        <form
-                          action={async () => {
-                            await activateProductDocument(
-                              document.id,
-                              document.productId,
-                            );
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
-                              "success",
-                            )}`}
-                          >
-                            Aktifleştir
-                          </button>
-                        </form>
+                        <ActivateProductDocumentForm document={document} />
                         <EditProductDocumentDrawer document={document} />
                         <ArchiveProductDocumentDialog document={document} />
                       </>
@@ -183,23 +217,7 @@ export function ProductDocumentsTable({
 
                     {document.status === "active" ? (
                       <>
-                        <form
-                          action={async () => {
-                            await setDraftProductDocument(
-                              document.id,
-                              document.productId,
-                            );
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${getTransitionButtonClassName(
-                              "warning",
-                            )}`}
-                          >
-                            Taslağa Al
-                          </button>
-                        </form>
+                        <SetDraftProductDocumentForm document={document} />
                         <EditProductDocumentDrawer document={document} />
                         <ArchiveProductDocumentDialog document={document} />
                         <AiIngestProductDocumentButton document={document} />

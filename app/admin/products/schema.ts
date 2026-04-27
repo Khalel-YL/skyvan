@@ -31,6 +31,11 @@ const optionalNonNegativeNumberString = z
 
 export const productStatusSchema = z.enum(["draft", "active", "archived"]);
 export const workshopEffectSchema = z.enum(["none", "layer", "mesh", "material"]);
+export const workshopVisibilitySchema = z.enum([
+  "selectable_visual",
+  "selectable_hidden",
+  "ai_package_only",
+]);
 
 const optionalGeneratedText = (message: string) =>
   z
@@ -47,6 +52,7 @@ export const createProductSchema = z.object({
   productType: z.string().trim().optional().or(z.literal("")),
   productSubType: z.string().trim().optional().or(z.literal("")),
   workshopEffect: workshopEffectSchema,
+  workshopVisibility: workshopVisibilitySchema,
   targetLayer: z.string().trim().optional().or(z.literal("")),
   meshKey: z.string().trim().optional().or(z.literal("")),
   materialKey: z.string().trim().optional().or(z.literal("")),
