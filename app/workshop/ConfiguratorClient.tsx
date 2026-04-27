@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Box,
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { saveEngineeringBuild } from "./actions";
+import { getLayerFromCategory } from "./focusTargets";
+import ThreeDConfiguratorViewer from "./ThreeDConfiguratorViewer";
 
 type WorkshopProduct = {
   id: string;
@@ -114,6 +116,13 @@ type VisualLayer = {
   visible: boolean;
   materialTarget?: "surface" | "furniture" | "floor" | "wall";
   className: string;
+
+  /**
+   * Optional future visual asset layer.
+   * CSS fallback remains mandatory because asset files may not exist yet.
+   */
+  assetUrl?: string;
+  fallbackClassName?: string;
 };
 
 type ProductVisualMeta =
@@ -602,8 +611,13 @@ function renderLayoutSchematic(
   );
 }
 
+function getIsometricAssetBasePath(modelSlug?: string | null) {
+  return `/visuals/isometric/${modelSlug || "default"}`;
+}
+
 function getIsometricSceneLayers(input: {
   layout: ProjectLayoutTemplate;
+  modelSlug?: string | null;
   activeVisualLayers: Record<string, boolean>;
   activeMaterials: {
     furniture: string | null;
@@ -611,6 +625,7 @@ function getIsometricSceneLayers(input: {
     wall: string | null;
   };
 }) {
+  const assetBasePath = getIsometricAssetBasePath(input.modelSlug);
   const layoutLayers = getLayoutDrivenVisualLayers(input.layout);
   const isLayerVisible = (layerId: keyof typeof layoutLayers | string) =>
     Boolean(layoutLayers[layerId] || input.activeVisualLayers[layerId]);
@@ -634,6 +649,7 @@ function getIsometricSceneLayers(input: {
       h: 11,
       z: 1,
       visible: true,
+      assetUrl: `${assetBasePath}/shadow.png`,
       className:
         "rounded-[50%] bg-[radial-gradient(circle,rgba(0,0,0,0.52),rgba(0,0,0,0.02)_72%)] blur-3xl",
     }),
@@ -647,6 +663,7 @@ function getIsometricSceneLayers(input: {
       h: 70,
       z: 5,
       visible: true,
+      assetUrl: `${assetBasePath}/shell.png`,
       className:
         "rounded-[3.35rem] border border-white/12 bg-[linear-gradient(180deg,rgba(42,42,46,0.96),rgba(13,13,15,0.99))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-24px_34px_rgba(0,0,0,0.2),0_36px_90px_rgba(0,0,0,0.4)] before:absolute before:inset-[1.7%] before:rounded-[3rem] before:border before:border-white/6 before:content-['']",
     }),
@@ -660,6 +677,7 @@ function getIsometricSceneLayers(input: {
       h: 22,
       z: 6,
       visible: true,
+      assetUrl: `${assetBasePath}/light.png`,
       className:
         "rounded-[50%] bg-[radial-gradient(circle,rgba(255,255,255,0.18),rgba(255,255,255,0.01)_72%)] blur-3xl",
     }),
@@ -673,6 +691,7 @@ function getIsometricSceneLayers(input: {
       h: 9,
       z: 8,
       visible: true,
+      assetUrl: `${assetBasePath}/cutaway-rim.png`,
       className:
         "rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(86,86,94,0.42),rgba(34,34,39,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
     }),
@@ -687,6 +706,7 @@ function getIsometricSceneLayers(input: {
       z: 10,
       visible: true,
       materialTarget: "wall",
+      assetUrl: `${assetBasePath}/wall-left.png`,
       className:
         "rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(112,112,118,0.34),rgba(44,44,49,0.18))] shadow-[inset_3px_0_12px_rgba(255,255,255,0.05),inset_0_-14px_22px_rgba(0,0,0,0.24),0_10px_22px_rgba(0,0,0,0.14)] before:absolute before:right-[6%] before:top-[8%] before:bottom-[8%] before:w-[12%] before:rounded-full before:bg-black/18 before:content-[''] " +
         wallMaterial,
@@ -702,6 +722,7 @@ function getIsometricSceneLayers(input: {
       z: 10,
       visible: true,
       materialTarget: "wall",
+      assetUrl: `${assetBasePath}/wall-right.png`,
       className:
         "rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(112,112,118,0.34),rgba(44,44,49,0.18))] shadow-[inset_-3px_0_12px_rgba(255,255,255,0.05),inset_0_-14px_22px_rgba(0,0,0,0.24),0_10px_22px_rgba(0,0,0,0.14)] before:absolute before:left-[6%] before:top-[8%] before:bottom-[8%] before:w-[12%] before:rounded-full before:bg-black/18 before:content-[''] " +
         wallMaterial,
@@ -717,6 +738,7 @@ function getIsometricSceneLayers(input: {
       z: 12,
       visible: true,
       materialTarget: "wall",
+      assetUrl: `${assetBasePath}/wall-back.png`,
       className:
         "rounded-[1.65rem] border border-white/8 bg-[linear-gradient(180deg,rgba(126,126,136,0.28),rgba(46,46,50,0.18))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-8px_14px_rgba(0,0,0,0.18)] before:absolute before:inset-x-[6%] before:bottom-[18%] before:h-[8%] before:rounded-full before:bg-black/16 before:content-[''] " +
         wallMaterial,
@@ -732,6 +754,7 @@ function getIsometricSceneLayers(input: {
       z: 15,
       visible: true,
       materialTarget: "wall",
+      assetUrl: `${assetBasePath}/cabin-boundary.png`,
       className:
         "rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(90,90,96,0.32),rgba(40,40,44,0.18))] shadow-[0_10px_14px_rgba(0,0,0,0.14)]",
     }),
@@ -745,6 +768,7 @@ function getIsometricSceneLayers(input: {
       h: 18,
       z: 13,
       visible: true,
+      assetUrl: `${assetBasePath}/window-left.png`,
       className:
         "rounded-[1.05rem] border border-sky-200/18 bg-[linear-gradient(180deg,rgba(148,184,207,0.18),rgba(71,85,105,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm before:absolute before:inset-[14%] before:rounded-[0.8rem] before:border before:border-white/10 before:content-['']",
     }),
@@ -758,6 +782,7 @@ function getIsometricSceneLayers(input: {
       h: 18,
       z: 13,
       visible: true,
+      assetUrl: `${assetBasePath}/window-right.png`,
       className:
         "rounded-[1.05rem] border border-sky-200/18 bg-[linear-gradient(180deg,rgba(148,184,207,0.18),rgba(71,85,105,0.06))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm before:absolute before:inset-[14%] before:rounded-[0.8rem] before:border before:border-white/10 before:content-['']",
     }),
@@ -771,6 +796,7 @@ function getIsometricSceneLayers(input: {
       h: 16,
       z: 14,
       visible: true,
+      assetUrl: `${assetBasePath}/door.png`,
       className:
         "rounded-[1.4rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] before:absolute before:right-[16%] before:top-[18%] before:h-[12%] before:w-[8%] before:rounded-full before:bg-white/30 before:content-['']",
     }),
@@ -785,6 +811,7 @@ function getIsometricSceneLayers(input: {
       z: 20,
       visible: true,
       materialTarget: "floor",
+      assetUrl: `${assetBasePath}/floor.png`,
       className:
         "rounded-[2.15rem] border border-white/8 bg-[linear-gradient(180deg,rgba(94,74,57,0.46),rgba(41,31,25,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-16px_30px_rgba(0,0,0,0.26),0_16px_34px_rgba(0,0,0,0.18)] before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.015)_1px,transparent_1px)] before:bg-[size:28px_28px] before:opacity-60 before:content-[''] after:absolute after:inset-[2.6%] after:rounded-[1.75rem] after:border after:border-black/12 after:content-[''] " +
         floorMaterial,
@@ -800,6 +827,7 @@ function getIsometricSceneLayers(input: {
       z: 30,
       visible: isLayerVisible("bed"),
       materialTarget: "furniture",
+      assetUrl: `${assetBasePath}/bed.png`,
       className:
         "rounded-[1.35rem] border border-slate-200/12 bg-[linear-gradient(180deg,rgba(187,196,206,0.92),rgba(109,122,138,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_22px_32px_rgba(0,0,0,0.24)] before:absolute before:inset-x-[6%] before:bottom-[-12%] before:h-[24%] before:rounded-[1rem] before:bg-[linear-gradient(180deg,rgba(88,64,45,0.72),rgba(45,31,24,0.92))] before:shadow-[0_12px_20px_rgba(0,0,0,0.18)] before:content-[''] after:absolute after:left-[10%] after:right-[10%] after:top-[10%] after:h-[28%] after:rounded-[1rem] after:bg-white/18 after:content-[''] " +
         (isLayerHighlighted("bed")
@@ -818,6 +846,7 @@ function getIsometricSceneLayers(input: {
       z: 32,
       visible: isLayerVisible("kitchen"),
       materialTarget: "furniture",
+      assetUrl: `${assetBasePath}/kitchen.png`,
       className:
         "rounded-[1.15rem] border border-stone-200/12 bg-[linear-gradient(180deg,rgba(141,120,96,0.86),rgba(83,63,49,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.24)] before:absolute before:inset-x-[4%] before:top-[-7%] before:h-[16%] before:rounded-[0.9rem] before:bg-[linear-gradient(180deg,rgba(220,220,223,0.84),rgba(122,122,128,0.62))] before:shadow-[0_8px_16px_rgba(0,0,0,0.16)] before:content-[''] after:absolute after:left-[12%] after:top-[16%] after:h-[16%] after:w-[18%] after:rounded-full after:border after:border-black/12 after:bg-black/16 after:content-[''] " +
         (isLayerHighlighted("kitchen")
@@ -836,6 +865,7 @@ function getIsometricSceneLayers(input: {
       z: 31,
       visible: isLayerVisible("storage"),
       materialTarget: "furniture",
+      assetUrl: `${assetBasePath}/storage.png`,
       className:
         "rounded-[1.1rem] border border-white/10 bg-[linear-gradient(180deg,rgba(126,120,112,0.8),rgba(67,61,58,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_30px_rgba(0,0,0,0.24)] before:absolute before:left-[8%] before:right-[8%] before:top-[8%] before:h-[18%] before:rounded-[0.8rem] before:bg-[linear-gradient(180deg,rgba(160,140,116,0.42),rgba(77,58,38,0.26))] before:content-[''] after:absolute after:right-[-8%] after:top-[10%] after:bottom-[10%] after:w-[12%] after:rounded-full after:bg-black/14 after:blur-[1px] after:content-[''] " +
         (isLayerHighlighted("storage")
@@ -853,6 +883,7 @@ function getIsometricSceneLayers(input: {
       h: 16,
       z: 33,
       visible: isLayerVisible("bathroom"),
+      assetUrl: `${assetBasePath}/bathroom.png`,
       className:
         "rounded-[1.2rem] border border-sky-100/14 bg-[linear-gradient(180deg,rgba(141,174,186,0.8),rgba(74,104,114,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.24)] before:absolute before:left-[16%] before:top-[16%] before:h-[22%] before:w-[22%] before:rounded-full before:bg-white/22 before:content-[''] after:absolute after:right-[14%] after:bottom-[16%] after:h-[14%] after:w-[24%] after:rounded-full after:bg-black/10 after:content-[''] " +
         (isLayerHighlighted("bathroom")
@@ -870,6 +901,7 @@ function getIsometricSceneLayers(input: {
       z: 34,
       visible: isLayerVisible("seat"),
       materialTarget: "furniture",
+      assetUrl: `${assetBasePath}/seat.png`,
       className:
         "rounded-[1.3rem] border border-emerald-100/10 bg-[linear-gradient(180deg,rgba(112,135,118,0.84),rgba(63,86,74,0.74))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_22px_34px_rgba(0,0,0,0.22)] before:absolute before:inset-x-[8%] before:top-[8%] before:h-[34%] before:rounded-[1rem] before:bg-white/10 before:content-[''] " +
         (isLayerHighlighted("seat")
@@ -888,6 +920,7 @@ function getIsometricSceneLayers(input: {
       z: 35,
       visible: isLayerVisible("table"),
       materialTarget: "furniture",
+      assetUrl: `${assetBasePath}/table.png`,
       className:
         "rounded-[0.95rem] border border-stone-100/12 bg-[linear-gradient(180deg,rgba(149,126,103,0.88),rgba(97,76,61,0.76))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_28px_rgba(0,0,0,0.22)] before:absolute before:left-[18%] before:right-[18%] before:bottom-[-22%] before:h-[30%] before:rounded-full before:bg-black/16 before:content-[''] " +
         (isLayerHighlighted("table")
@@ -927,6 +960,10 @@ export default function ConfiguratorClient({
     floor: null,
     wall: null,
   });
+  const [activeFocusTargetId, setActiveFocusTargetId] =
+    useState<ReturnType<typeof getLayerFromCategory>>(null);
+  const [failedSceneAssets, setFailedSceneAssets] = useState<Record<string, boolean>>({});
+  const [is3dFallbackActive, setIs3dFallbackActive] = useState(false);
   const availableModels = useMemo(() => dbModels ?? [], [dbModels]);
   const savedAiDecisionProductsById = useMemo(
     () =>
@@ -1092,6 +1129,7 @@ export default function ConfiguratorClient({
     setSavedAiDecisionAggregate(null);
     setSavedAiDecisionProducts([]);
     setHasAiDecisionBundleError(false);
+    const layer = getLayerFromCategory(product.categoryName);
 
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
@@ -1104,6 +1142,14 @@ export default function ConfiguratorClient({
         : [...prev, { product, quantity: 1 }];
 
       applyVisualStateFromCart(nextCart);
+
+      if (layer) {
+        setActiveVisualLayers((current) => ({
+          ...current,
+          [layer]: true,
+        }));
+        setActiveFocusTargetId(layer);
+      }
 
       return nextCart;
     });
@@ -1130,6 +1176,10 @@ export default function ConfiguratorClient({
       return nextCart;
     });
   };
+
+  const handle3DModelLoadError = useCallback(() => {
+    setIs3dFallbackActive(true);
+  }, []);
 
   const normalizedAggregateAi = useMemo(() => {
     if (!savedAiDecisionAggregate) {
@@ -1204,6 +1254,7 @@ export default function ConfiguratorClient({
 
   const payloadReserveKg = Math.max(maxAllowedWeight - stats.weight, 0);
   const visiblePowerW = stats.solarW > 0 ? stats.solarW : stats.inverterW;
+  const threeDModelUrl = "/models/skyvan/default-van.glb";
   const totalSelectedUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalBudget = cart.reduce(
     (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
@@ -1239,10 +1290,11 @@ export default function ConfiguratorClient({
 
     return getIsometricSceneLayers({
       layout: selectedLayout,
+      modelSlug: activeVehicle?.slug ?? null,
       activeVisualLayers,
       activeMaterials,
     });
-  }, [selectedLayout, activeVisualLayers, activeMaterials]);
+  }, [selectedLayout, activeVehicle?.slug, activeVisualLayers, activeMaterials]);
   const visibleSceneLayers = useMemo(
     () =>
       sceneLayers.filter(
@@ -1329,6 +1381,9 @@ export default function ConfiguratorClient({
       floor: null,
       wall: null,
     });
+    setActiveFocusTargetId(null);
+    setFailedSceneAssets({});
+    setIs3dFallbackActive(false);
   };
 
   return (
@@ -1831,6 +1886,15 @@ export default function ConfiguratorClient({
                             {selectedLayout.short}
                           </p>
                         </div>
+                        <div
+                          className={`absolute right-5 top-5 z-10 rounded-full border px-3 py-1.5 text-[9px] font-medium tracking-[0.14em] backdrop-blur-sm ${
+                            is3dFallbackActive
+                              ? "border-amber-400/25 bg-amber-500/[0.08] text-amber-200"
+                              : "border-blue-400/20 bg-blue-500/[0.08] text-blue-200"
+                          }`}
+                        >
+                          {is3dFallbackActive ? "2.5D Fallback" : "3D Preview"}
+                        </div>
                         <div className="absolute inset-x-5 bottom-5 z-10 flex flex-wrap gap-2">
                           {selectedLayout.tags.map((tag) => (
                             <span
@@ -1850,37 +1914,68 @@ export default function ConfiguratorClient({
                           ))}
                         </div>
                         <div className="relative flex h-full w-full items-center justify-center px-4 py-5 lg:px-8">
-                          <div className="relative h-full w-full max-w-[62rem] [perspective:1800px]">
-                            <div className="absolute inset-0 rounded-[2.2rem] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" />
-                            <div className="absolute inset-[4%_4%_11%_4%] [transform:rotateX(56deg)_rotateZ(-41deg)]">
-                              {sceneLayers.map((layer) =>
-                                layer.visible ? (
-                                  <div
-                                    key={layer.id}
-                                    className={`absolute ${layer.className}`}
-                                    style={{
-                                      left: `${layer.x}%`,
-                                      top: `${layer.y}%`,
-                                      width: `${layer.w}%`,
-                                      height: `${layer.h}%`,
-                                      zIndex: layer.z,
-                                    }}
-                                  >
-                                    {["bed", "kitchen", "storage", "bathroom", "seat", "table"].includes(
-                                      layer.type,
-                                    ) ? (
-                                      <span className="absolute left-[10%] top-[12%] text-[9px] font-medium tracking-[0.1em] text-white/88">
-                                        {layer.label}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                ) : null,
-                              )}
+                          {!is3dFallbackActive ? (
+                            <ThreeDConfiguratorViewer
+                              modelUrl={threeDModelUrl}
+                              activeVisualLayers={activeVisualLayers}
+                              activeMaterials={activeMaterials}
+                              onModelLoadError={handle3DModelLoadError}
+                              activeFocusTargetId={activeFocusTargetId}
+                            />
+                          ) : (
+                            <div className="relative h-full w-full max-w-[62rem] [perspective:1800px]">
+                              <div className="absolute inset-0 rounded-[2.2rem] border border-white/6 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))]" />
+
+                              <div className="absolute inset-[4%_4%_11%_4%] [transform:rotateX(56deg)_rotateZ(-41deg)]">
+                                {sceneLayers.map((layer) => {
+                                  const shouldRenderAsset =
+                                    layer.assetUrl && !failedSceneAssets[layer.id];
+
+                                  return layer.visible ? (
+                                    <div
+                                      key={layer.id}
+                                      className={`absolute ${layer.className}`}
+                                      style={{
+                                        left: `${layer.x}%`,
+                                        top: `${layer.y}%`,
+                                        width: `${layer.w}%`,
+                                        height: `${layer.h}%`,
+                                        zIndex: layer.z,
+                                      }}
+                                    >
+                                      {shouldRenderAsset ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={layer.assetUrl}
+                                          alt=""
+                                          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                                          onError={() =>
+                                            setFailedSceneAssets((prev) => ({
+                                              ...prev,
+                                              [layer.id]: true,
+                                            }))
+                                          }
+                                        />
+                                      ) : null}
+
+                                      {[
+                                        "bed",
+                                        "kitchen",
+                                        "storage",
+                                        "bathroom",
+                                        "seat",
+                                        "table",
+                                      ].includes(layer.type) && (
+                                        <span className="absolute left-[10%] top-[12%] text-[9px] text-white/80">
+                                          {layer.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
                             </div>
-                            <div className="absolute bottom-5 right-5 z-10 rounded-full border border-white/8 bg-black/30 px-3 py-1.5 text-[9px] text-zinc-400 backdrop-blur-sm">
-                              Teknik ürünler görsel önizlemede gösterilmez
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
