@@ -228,46 +228,10 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
 
 function TextBlock({
   block,
-  page,
 }: {
   block: Extract<PublicBlock, { type: "text" }>;
   page: PublicPageContent;
 }) {
-  if (isAiBlock(block)) {
-    return (
-      <SectionShell className="bg-[var(--public-bg-soft)]">
-        <div className="grid gap-8 rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-6 md:grid-cols-[0.42fr_0.58fr] md:p-10">
-          <div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--public-accent)] text-[var(--public-accent-text)]">
-              <Cpu className="h-5 w-5" />
-            </div>
-            <h2 className="mt-6 text-2xl font-semibold tracking-tight text-[var(--public-text)] md:text-4xl">
-              {block.heading}
-            </h2>
-          </div>
-          <div>
-            <p className="whitespace-pre-line text-base leading-8 text-[var(--public-muted)]">
-              {block.body ?? block.content}
-            </p>
-            <div className="mt-6 grid gap-2 sm:grid-cols-2">
-              {(page.locale === "tr"
-                ? ["Açıklar", "Uyarır", "Yönlendirir", "Hazırlar"]
-                : ["Explains", "Warns", "Guides", "Prepares"]
-              ).map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-[var(--public-border)] bg-[var(--public-surface-strong)] px-4 py-2 text-sm text-[var(--public-muted)]"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SectionShell>
-    );
-  }
-
   return (
     <SectionShell>
       <div className="grid gap-6 md:grid-cols-[0.42fr_0.58fr] md:items-start">
@@ -308,6 +272,28 @@ function FeatureListBlock({
             "Human approval and technical discipline stay central.",
             "Clarified context moves toward a controlled beginning.",
           ];
+    const aiContext =
+      page.locale === "tr"
+        ? {
+            label: "Bağlam görünürlüğü",
+            items: [
+              "Rota ve kullanım senaryosu netleştirilir.",
+              "Eksik bilgiler erken görünür hale gelir.",
+              "Teknik riskler karar öncesi işaretlenir.",
+              "Final karar insan onayıyla kalır.",
+            ],
+            disclaimer: "Bu panel karar vermez; yalnızca hazırlık bağlamını görünür kılar.",
+          }
+        : {
+            label: "Context visibility",
+            items: [
+              "Route and usage scenario are clarified.",
+              "Missing inputs become visible early.",
+              "Technical risks are surfaced before decisions.",
+              "Final approval stays human-led.",
+            ],
+            disclaimer: "This panel does not decide; it only makes preparation context visible.",
+          };
 
     return (
       <SectionShell className="bg-[var(--public-bg-soft)]">
@@ -347,6 +333,35 @@ function FeatureListBlock({
                   </p>
                 </div>
               ))}
+            </div>
+            <div className="public-ai-context-panel mt-4 grid gap-5 rounded-[1.5rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:grid-cols-[0.34fr_0.66fr] md:p-5">
+              <div className="min-w-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--public-accent)] text-[var(--public-accent-text)]">
+                  <Cpu className="h-4 w-4" />
+                </div>
+                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)]">
+                  {aiContext.label}
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--public-text)]">
+                  Skyvan AI
+                </h3>
+              </div>
+              <div className="min-w-0">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {aiContext.items.map((item) => (
+                    <div
+                      key={item}
+                      className="public-ai-context-item flex gap-2 rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface)] p-3"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--public-text)]" />
+                      <p className="text-sm leading-6 text-[var(--public-muted)]">{item}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="public-ai-context-disclaimer mt-4 rounded-2xl border border-[var(--public-border)] bg-[var(--public-bg)]/30 px-4 py-3 text-xs leading-6 text-[var(--public-muted)]">
+                  {aiContext.disclaimer}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -458,7 +473,7 @@ function StatsBlock({ block }: { block: Extract<PublicBlock, { type: "stats" }> 
 function CtaBlock({ block, page }: { block: Extract<PublicBlock, { type: "cta" }>; page: PublicPageContent }) {
   return (
     <SectionShell>
-      <div className="rounded-[2rem] border border-[var(--public-border-strong)] bg-[var(--public-accent)] p-8 text-[var(--public-accent-text)] md:p-12">
+      <div className="public-final-cta rounded-[2rem] border border-[var(--public-border-strong)] bg-[var(--public-accent)] p-8 text-[var(--public-accent-text)] md:p-12">
         <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
           <div>
             <h2 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">
@@ -504,9 +519,11 @@ function renderBlock(block: PublicBlock, page: PublicPageContent, index: number)
 }
 
 export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
+  const visibleBlocks = page.blocks.filter((block) => !(block.type === "text" && isAiBlock(block)));
+
   return (
     <div>
-      {page.blocks.map((block, index) => renderBlock(block, page, index))}
+      {visibleBlocks.map((block, index) => renderBlock(block, page, index))}
     </div>
   );
 }
