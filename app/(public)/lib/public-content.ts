@@ -24,7 +24,7 @@ type LocalizedPageRow = typeof localizedContent.$inferSelect;
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://skyvan.com.tr").replace(/\/+$/g, "");
 const HOME_SLUGS: Record<PublicLocale, string[]> = {
-  tr: ["anasayfa", "home", "homepage"],
+  tr: ["ana-sayfa", "anasayfa", "home", "homepage"],
   en: ["home", "homepage", "anasayfa"],
 };
 
@@ -42,6 +42,10 @@ function getContentObject(value: unknown): Record<string, unknown> | null {
 
 function isPublishedContent(value: unknown) {
   return getContentObject(value)?.isPublished === true;
+}
+
+function isHomeSlug(locale: PublicLocale, slug: string) {
+  return HOME_SLUGS[locale].includes(slug);
 }
 
 function normalizeItems(value: unknown) {
@@ -259,30 +263,80 @@ export async function getPublicPage(locale: PublicLocale, slug?: string | null) 
   return adminPage ?? getFallbackPage(locale, normalizedSlug);
 }
 
+export async function getPublicSlugPage(locale: PublicLocale, slug: string) {
+  const normalizedSlug = asString(slug);
+
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const adminPage = await fetchPublishedAdminPage(locale, normalizedSlug);
+
+  if (adminPage) {
+    return adminPage;
+  }
+
+  if (fallbackSlugs.includes(normalizedSlug)) {
+    return getFallbackPage(locale, normalizedSlug);
+  }
+
+  return null;
+}
+
 export function getPublicUrl(locale: PublicLocale, slug?: string | null) {
   return `${SITE_URL}${getLocalizedPath(locale, slug)}`;
 }
 
-export function buildAlternates(locale: PublicLocale, slug?: string | null) {
+async function publicRouteExists(locale: PublicLocale, slug: string) {
+  if (!slug) {
+    return true;
+  }
+
+  if (fallbackSlugs.includes(slug)) {
+    return true;
+  }
+
+  return Boolean(await fetchPublishedAdminPage(locale, slug));
+}
+
+export async function buildRouteLanguages(locale: PublicLocale, slug?: string | null) {
   const normalizedSlug = asString(slug);
+  const languages: Record<string, string> = {
+    [locale]: getPublicUrl(locale, normalizedSlug),
+  };
+
+  for (const alternateLocale of PUBLIC_LOCALES) {
+    if (alternateLocale === locale) {
+      continue;
+    }
+
+    if (await publicRouteExists(alternateLocale, normalizedSlug)) {
+      languages[alternateLocale] = getPublicUrl(alternateLocale, normalizedSlug);
+    }
+  }
+
+  languages["x-default"] = languages.tr ?? languages[locale];
+
+  return languages;
+}
+
+export async function buildAlternates(locale: PublicLocale, slug?: string | null) {
+  const normalizedSlug = asString(slug);
+  const languages = await buildRouteLanguages(locale, normalizedSlug);
 
   return {
     canonical: getPublicUrl(locale, normalizedSlug),
-    languages: {
-      tr: getPublicUrl("tr", normalizedSlug),
-      en: getPublicUrl("en", normalizedSlug),
-      "x-default": getPublicUrl("tr", normalizedSlug),
-    },
+    languages,
   };
 }
 
-export function buildPublicMetadata(page: PublicPageContent): Metadata {
+export async function buildPublicMetadata(page: PublicPageContent): Promise<Metadata> {
   const url = getPublicUrl(page.locale, page.slug);
 
   return {
     title: page.seoTitle,
     description: page.seoDescription,
-    alternates: buildAlternates(page.locale, page.slug),
+    alternates: await buildAlternates(page.locale, page.slug),
     robots: {
       index: true,
       follow: true,
@@ -332,7 +386,15 @@ export async function listPublishedAdminPublicPages() {
       .where(eq(localizedContent.entityType, "page"));
 
     return rows
-      .filter((row) => isPublicLocale(row.locale) && isPublishedContent(row.contentJson) && asString(row.slug))
+      .filter((row) => {
+        if (!isPublicLocale(row.locale) || !isPublishedContent(row.contentJson)) {
+          return false;
+        }
+
+        const slug = asString(row.slug);
+
+        return Boolean(slug) && !isHomeSlug(row.locale, slug);
+      })
       .map((row) => ({
         locale: row.locale as PublicLocale,
         slug: asString(row.slug),

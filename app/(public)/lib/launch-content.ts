@@ -58,23 +58,23 @@ const trHome: FallbackInput = {
   blocks: [
     {
       type: "hero",
-      heading: "Karavan kararı, iyi hazırlanmış bir sistemle başlar.",
-      subtext: "Skyvan, hayal edilen yolculuğu rota, yaşam düzeni, risk ve üretim hazırlığı üzerinden daha net düşünmeyi sağlar.",
+      heading: "Karavan kararı, güven veren bir hazırlıkla başlar.",
+      subtext: "Skyvan; rota, yaşam düzeni, teknik risk ve üretim hazırlığını aynı sakin karar sisteminde netleştirir.",
       body:
-        "Skyvan bir deneyimi varmış gibi göstermez. Karar öncesi bağlamı düzenler, belirsizliği azaltır ve üretime yaklaşan her adımı daha anlaşılır hale getirir.",
+        "Burada canlı bir demo ya da satış akışı varmış gibi davranmayız. Skyvan, karar öncesi bağlamı düzenler; neyin hazır, neyin onay beklediğini açıkça gösterir.",
       ctaLabel: "Proje Başlat",
       ctaHref: "/tr/proje-baslat",
     },
     {
       type: "text",
-      heading: "Özgürlük hissi, net kararlarla başlar",
+      heading: "Özgürlük hissi, güvenilir kararlarla başlar",
       body:
-        "İyi bir karavan yalnızca yatak, mutfak veya depolama seçimi değildir. Nerede duracağını, nasıl yaşayacağını ve hangi detayların seni rahat ettireceğini birlikte düşünür.",
+        "İyi bir karavan yalnızca yatak, mutfak veya depolama seçimi değildir. Nerede duracağını, nasıl yaşayacağını, hangi teknik sınırların konforunu etkilediğini ve hangi kararların üretime hazır olduğunu birlikte düşünür.",
     },
     {
       type: "feature-list",
       heading: "Skyvan nasıl düşünür?",
-      subtext: "Karavan fikri, acele seçimlere değil; bağlamı açık, riski görünür ve üretime hazırlanabilir bir karar akışına dönüşür.",
+      subtext: "Karavan fikri; acele seçimlerden uzak, bağlamı açık, riski görünür ve üretime hazırlanabilir bir karar akışına dönüşür.",
       items: [
         "Veri",
         "Senaryo",
@@ -88,34 +88,34 @@ const trHome: FallbackInput = {
       type: "text",
       heading: "Skyvan AI kararın yerini almaz",
       body:
-        "Skyvan AI bir chatbot değildir.\nKararı senin yerine vermez.\nKarar öncesi bağlamı açıklar, riskleri görünür kılar ve hazırlığı güçlendirir.",
+        "Skyvan AI bir chatbot değildir.\nFinal teknik, ticari veya üretim kararı vermez.\nKarar öncesi bağlamı açıklar, riskleri görünür kılar ve insan onayını daha bilinçli hale getirir.",
     },
     {
       type: "feature-list",
       heading: "Kendi Karavanını Tasarla — Çok Yakında",
       subtext:
-        "Skyvan Workshop henüz aktif bir configurator değildir. Bu bölüm yalnızca yaklaşan tasarım deneyiminin sakin ve dürüst duyurusudur.",
+        "Skyvan Workshop henüz aktif bir configurator değildir. Bu alan, yaklaşan tasarım deneyiminin net sınırlarla konumlanan dürüst duyurusudur.",
       items: [
-        "Bugün seçim, fiyatlandırma, form veya lead kaydı başlatmaz.",
-        "Çok yakında rota, konfor ve yaşam alışkanlıklarını daha net düşünmeye yardımcı olacak.",
-        "Açıldığında bile kararın yerine geçmeyen, hazırlığı güçlendiren kontrollü bir deneyim olarak konumlanacak.",
+        "Bugün seçim, fiyatlandırma, form gönderimi veya lead kaydı başlatmaz.",
+        "Açıldığında rota, konfor ve yaşam alışkanlıklarını daha net düşünmeye yardımcı olacak.",
+        "Kararın yerine geçmeyen, hazırlığı güçlendiren kontrollü bir deneyim olarak konumlanacak.",
       ],
     },
     {
       type: "feature-list",
       heading: "Üretim ve müşteri yolculuğu",
       items: [
-        "Rota, mevsim ve günlük yaşam ihtiyacı sakin bir dille anlaşılır.",
-        "Araç, yaşam düzeni, enerji ve depolama beklentileri sadeleşir.",
-        "Karar vermeden önce güven veren bağlam oluşur.",
-        "Üretime yaklaşırken yol daha net ve kontrollü hale gelir.",
+        "Rota, mevsim ve günlük yaşam ihtiyacı sade bir çerçevede anlaşılır.",
+        "Araç, yaşam düzeni, enerji ve depolama beklentileri teknik bağlama oturur.",
+        "Riskler, eksikler ve onay bekleyen kararlar erken görünür hale gelir.",
+        "Admin yayın gerçekliği ve insan onayı güven sınırını korur.",
       ],
     },
     {
       type: "cta",
-      heading: "Yolculuğun daha net bir yerden başlasın",
+      heading: "Yolculuğun güvenilir bir hazırlıkla başlasın",
       body:
-        "Skyvan dünyasını keşfet; rota, konfor ve üretim hazırlığını daha rafine bir başlangıçta bir araya getir. Proje başlatma sayfası şu anda yalnızca güvenli bir bilgilendirme yüzeyidir.",
+        "Skyvan yaklaşımını keşfet; rota, konfor, risk ve üretim hazırlığını daha kontrollü bir başlangıçta bir araya getir. Proje başlatma sayfası şu anda yalnızca güvenli bir bilgilendirme yüzeyidir.",
       ctaLabel: "Proje Başlat",
       ctaHref: "/tr/proje-baslat",
     },
@@ -133,10 +133,10 @@ const enHome: FallbackInput = {
   blocks: [
     {
       type: "hero",
-      heading: "A caravan decision starts with a well-prepared system.",
-      subtext: "Skyvan helps the journey you imagine become clearer through route, living layout, risk, and production readiness.",
+      heading: "A caravan decision starts with trusted preparation.",
+      subtext: "Skyvan clarifies route, living layout, technical risk, and production readiness inside one calm decision system.",
       body:
-        "Skyvan does not pretend an experience is live. It organizes context before decisions, reduces uncertainty, and makes each step toward production easier to understand.",
+        "We do not pretend a live demo or sales flow exists. Skyvan organizes pre-decision context and shows what is ready, what is bounded, and what still needs approval.",
       ctaLabel: "Start Project",
       ctaHref: "/en/proje-baslat",
     },
@@ -144,12 +144,12 @@ const enHome: FallbackInput = {
       type: "text",
       heading: "Freedom starts with decisions you can trust",
       body:
-        "A great caravan is more than a bed, kitchen, or storage choice. It is where you stop, how you live, and which details will make the road feel effortless.",
+        "A great caravan is more than a bed, kitchen, or storage choice. It is where you stop, how you live, which technical limits shape comfort, and which decisions are ready for production.",
     },
     {
       type: "feature-list",
       heading: "How Skyvan thinks",
-      subtext: "A caravan idea becomes a decision flow with clearer context, visible risks, and stronger production preparation.",
+      subtext: "A caravan idea becomes a decision flow with clear context, visible risk, and production preparation that can be trusted.",
       items: [
         "Data",
         "Scenario",
@@ -163,34 +163,34 @@ const enHome: FallbackInput = {
       type: "text",
       heading: "Skyvan AI does not replace decisions",
       body:
-        "Skyvan AI is not a chatbot.\nIt does not decide for you.\nIt explains context, surfaces risks, and strengthens preparation before decisions are made.",
+        "Skyvan AI is not a chatbot.\nIt does not make final technical, commercial, or production decisions.\nIt explains context, surfaces risks, and helps human approval become better informed.",
     },
     {
       type: "feature-list",
       heading: "Design Your Own Caravan — Coming Soon",
       subtext:
-        "Skyvan Workshop is not an active configurator yet. This is only a calm and honest announcement of the design experience ahead.",
+        "Skyvan Workshop is not an active configurator yet. This section is a clear, bounded announcement of the design experience ahead.",
       items: [
         "Today, it starts no selection, pricing, form submission, or lead record.",
-        "Soon, it will help route, comfort, and living habits become easier to think through.",
-        "When it opens, it will remain a controlled experience that strengthens preparation rather than deciding for you.",
+        "When it opens, it will help route, comfort, and living habits become easier to think through.",
+        "It will remain a controlled experience that strengthens preparation rather than deciding for you.",
       ],
     },
     {
       type: "feature-list",
       heading: "Production and customer journey",
       items: [
-        "Understand route, season, and everyday living needs in a calmer way.",
-        "Simplify vehicle, layout, energy, and storage expectations.",
-        "Create reassuring context before decisions become final.",
-        "Move toward production through a clearer, more controlled path.",
+        "Understand route, season, and everyday living needs through a simple frame.",
+        "Place vehicle, layout, energy, and storage expectations into technical context.",
+        "Surface risks, missing inputs, and decisions that still need approval.",
+        "Keep trust bounded by admin publish state and human approval.",
       ],
     },
     {
       type: "cta",
-      heading: "Let the journey begin from a clearer place",
+      heading: "Begin the journey with trusted preparation",
       body:
-        "Explore the Skyvan world and bring route, comfort, and production preparation into a more refined beginning. The start-project page is currently a safe information surface only.",
+        "Explore the Skyvan approach and bring route, comfort, risk, and production readiness into a more controlled beginning. The start-project page is currently a safe information surface only.",
       ctaLabel: "Start Project",
       ctaHref: "/en/proje-baslat",
     },

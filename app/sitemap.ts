@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import {
+  buildRouteLanguages,
   getPublicUrl,
   listFallbackPublicPaths,
   listPublishedAdminPublicPages,
@@ -15,16 +16,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     uniquePaths.set(`${path.locale}:${path.slug}`, path);
   }
 
-  return Array.from(uniquePaths.values()).map((path) => ({
-    url: getPublicUrl(path.locale, path.slug),
-    lastModified: new Date(),
-    changeFrequency: path.slug ? "monthly" : "weekly",
-    priority: path.slug ? 0.7 : 1,
-    alternates: {
-      languages: {
-        tr: getPublicUrl("tr", path.slug),
-        en: getPublicUrl("en", path.slug),
+  return Promise.all(
+    Array.from(uniquePaths.values()).map(async (path) => ({
+      url: getPublicUrl(path.locale, path.slug),
+      lastModified: new Date(),
+      changeFrequency: path.slug ? "monthly" : "weekly",
+      priority: path.slug ? 0.7 : 1,
+      alternates: {
+        languages: await buildRouteLanguages(path.locale, path.slug),
       },
-    },
-  }));
+    })),
+  );
 }

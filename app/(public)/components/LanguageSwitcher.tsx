@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { getLocaleFromPathname, getLocalizedPath } from "../lib/public-routing";
+import { getLanguageSwitchPath, getLocaleFromPathname } from "../lib/public-routing";
 
 export function LanguageSwitcher() {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
-  const slug = pathname.split("/").filter(Boolean).slice(1).join("/");
 
   return (
     <div className="inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] p-1 text-[11px] font-medium">
       {(["tr", "en"] as const).map((nextLocale) => (
         <Link
           key={nextLocale}
-          href={getLocalizedPath(nextLocale, slug)}
+          href={getLanguageSwitchPath(pathname, nextLocale)}
           className={`rounded-full px-3 py-2 transition ${
             locale === nextLocale
               ? "bg-[var(--public-accent)] text-[var(--public-accent-text)]"

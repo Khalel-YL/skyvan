@@ -69,16 +69,6 @@ function parseContentJson(value: unknown): PageContentJson {
   return value as PageContentJson;
 }
 
-function stringifyContentJson(value: unknown) {
-  const parsed = parseContentJson(value);
-
-  if (!Object.keys(parsed).length) {
-    return "";
-  }
-
-  return JSON.stringify(parsed, null, 2);
-}
-
 function isPublished(contentJson: unknown) {
   const parsed = parseContentJson(contentJson);
   return parsed.isPublished !== false;
@@ -241,8 +231,7 @@ export default async function PagesPage({ searchParams }: Props) {
         description: editingExisting.description,
         seoTitle: editingExisting.seoTitle,
         seoDescription: editingExisting.seoDescription,
-        isPublished: isPublished(editingExisting.contentJson),
-        contentJsonText: stringifyContentJson(editingExisting.contentJson),
+        contentJson: editingExisting.contentJson,
       }
     : seededNewVariant;
 

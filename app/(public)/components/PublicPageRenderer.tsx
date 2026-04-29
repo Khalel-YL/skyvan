@@ -5,7 +5,6 @@ import {
   Cpu,
   Factory,
   LockKeyhole,
-  Mountain,
   Route,
   ShieldCheck,
   Sparkles,
@@ -54,7 +53,7 @@ function SectionShell({
   className?: string;
 }) {
   return (
-    <section className={`px-5 py-14 md:px-8 md:py-20 ${className}`}>
+    <section className={`public-reveal px-5 py-14 md:px-8 md:py-20 ${className}`}>
       <div className="mx-auto w-full max-w-7xl">{children}</div>
     </section>
   );
@@ -101,49 +100,60 @@ function isDecisionFlowBlock(block: PublicBlock) {
 }
 
 function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero" }>; page: PublicPageContent }) {
+  const heroTrustLine =
+    page.locale === "tr"
+      ? "Admin kontrollü yayın. Simülasyon yok. Karar sizin, sistem sadece hazırlar."
+      : "Admin-controlled publishing. No simulation. You decide; the system prepares.";
+
   return (
-    <section className="relative overflow-hidden px-5 pb-16 pt-16 md:px-8 md:pb-24 md:pt-24">
+    <section className="public-reveal relative overflow-hidden px-5 pb-16 pt-16 md:px-8 md:pb-24 md:pt-24">
       <div className="absolute inset-x-0 top-0 h-px bg-[var(--public-border)]" />
-      <div className="absolute left-1/2 top-0 h-[34rem] w-[54rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.26),transparent_62%)] opacity-60" />
+      <div className="public-hero-glow absolute inset-x-0 top-[-7rem] mx-auto h-[42rem] w-full max-w-[62rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.2),rgba(255,255,255,0.055)_38%,transparent_68%)] opacity-45" />
+      <div className="absolute left-1/2 top-28 h-[28rem] w-[86vw] max-w-5xl -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.075),transparent_68%)] opacity-60" />
       <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-        <div className="relative">
-          <p className="inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--public-muted)]">
+        <div className="relative min-w-0">
+          <p className="public-hero-stage inline-flex max-w-full rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--public-muted)] md:tracking-[0.22em]">
             {page.slug === ""
               ? "Freedom, Engineered."
               : page.locale === "tr"
                 ? "Premium karavan üretim sistemi"
                 : "Premium caravan production system"}
           </p>
-          <h1 className="mt-7 max-w-5xl text-5xl font-semibold leading-[0.96] tracking-tight text-[var(--public-text)] md:text-7xl">
+          <h1 className="public-hero-stage mt-7 max-w-5xl break-words text-[2.2rem] font-semibold leading-[0.98] tracking-tight text-[var(--public-text)] min-[390px]:text-[2.55rem] md:text-7xl md:leading-[0.94]">
             {block.heading}
           </h1>
           {block.subtext ? (
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--public-muted)] md:text-xl">
+            <p className="public-hero-stage mt-6 max-w-2xl text-base leading-8 text-[var(--public-muted)] md:text-xl md:leading-9">
               {block.subtext}
             </p>
           ) : null}
           {block.body ? (
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-[var(--public-muted)] md:text-base">
+            <p className="public-hero-stage mt-5 max-w-2xl text-sm leading-7 text-[var(--public-muted)] md:text-base md:leading-8">
               {block.body}
             </p>
           ) : null}
           {block.ctaLabel ? (
-            <Link
-              href={safeHref(block.ctaHref, page.locale)}
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--public-accent)] px-6 py-3 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-90"
-            >
-              {block.ctaLabel}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="public-hero-stage mt-8">
+              <Link
+                href={safeHref(block.ctaHref, page.locale)}
+                className="public-premium-cta inline-flex items-center gap-2 rounded-full bg-[var(--public-accent)] px-6 py-3 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-95"
+              >
+                {block.ctaLabel}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <p className="mt-3 max-w-md text-[0.72rem] font-medium leading-5 text-[var(--public-muted)]">
+                {heroTrustLine}
+              </p>
+            </div>
           ) : null}
-          <div className="mt-8 grid max-w-2xl grid-cols-3 gap-2 text-xs text-[var(--public-muted)]">
+          <div className="public-hero-stage mt-8 flex w-full max-w-2xl flex-wrap gap-2 text-xs text-[var(--public-muted)]">
             {(page.locale === "tr"
               ? ["Rota", "Yaşam", "Üretim"]
               : ["Route", "Living", "Production"]
             ).map((item) => (
               <span
                 key={item}
-                className="rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-2 text-center"
+                className="public-hero-chip min-w-0 flex-1 basis-24 rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-2 text-center sm:flex-none sm:basis-40"
               >
                 {item}
               </span>
@@ -151,23 +161,37 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
           </div>
         </div>
 
-        <div className="relative min-h-[30rem] overflow-hidden rounded-[2.2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-5 shadow-2xl shadow-black/10 backdrop-blur">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_12%,rgba(255,255,255,0.28),transparent_17rem),linear-gradient(145deg,rgba(255,255,255,0.08),transparent_42%)]" />
-          <div className="absolute inset-x-12 bottom-16 h-20 rounded-[100%] bg-black/20 blur-3xl" />
-          <div className="relative flex h-full min-h-[27rem] flex-col justify-between rounded-[1.6rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-6">
+        <div className="public-hero-visual relative min-h-[27rem] w-full max-w-full min-w-0 overflow-hidden rounded-[1.75rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-3 backdrop-blur sm:p-5 md:min-h-[31rem] md:rounded-[2.2rem]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_8%,rgba(255,255,255,0.2),transparent_18rem),radial-gradient(circle_at_82%_76%,rgba(255,255,255,0.08),transparent_15rem),linear-gradient(145deg,rgba(255,255,255,0.075),transparent_44%)]" />
+          <div className="absolute inset-x-6 bottom-10 h-24 rounded-[100%] bg-black/20 blur-3xl md:inset-x-12" />
+          <div className="public-hero-panel relative flex h-full min-h-[25rem] min-w-0 flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[var(--public-muted)]">
-                {page.locale === "tr" ? "Yolculuk mimarisi" : "Journey architecture"}
-              </p>
-              <div className="mt-8 overflow-hidden rounded-[1.3rem] border border-[var(--public-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02))] p-4">
-                <div className="relative h-44 rounded-[1rem] border border-[var(--public-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04))]">
-                  <div className="absolute left-[12%] top-[22%] h-20 w-56 rounded-[2rem] border border-[var(--public-border-strong)] bg-[var(--public-surface-strong)] shadow-xl" />
-                  <div className="absolute left-[20%] top-[30%] h-8 w-20 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)]" />
-                  <div className="absolute left-[47%] top-[30%] h-8 w-16 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)]" />
-                  <div className="absolute bottom-[24%] left-[18%] h-8 w-8 rounded-full border border-[var(--public-border-strong)] bg-[var(--public-bg)]" />
-                  <div className="absolute bottom-[24%] left-[62%] h-8 w-8 rounded-full border border-[var(--public-border-strong)] bg-[var(--public-bg)]" />
-                  <div className="absolute bottom-6 left-6 right-6 h-px bg-[var(--public-border)]" />
-                  <Mountain className="absolute right-8 top-7 h-16 w-16 text-[var(--public-muted)] opacity-50" />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)] md:tracking-[0.26em]">
+                  {page.locale === "tr" ? "Yolculuk mimarisi" : "Journey architecture"}
+                </p>
+                <span className="h-2 w-2 rounded-full bg-[var(--public-text)] opacity-45" />
+              </div>
+              <div className="public-hero-diagram mt-6 overflow-hidden rounded-[1.15rem] border border-[var(--public-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.025))] p-3 md:mt-8 md:rounded-[1.3rem] md:p-4">
+                <div className="relative h-44 rounded-[1rem] border border-[var(--public-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.035))]">
+                  <div className="absolute left-[8%] right-[8%] top-[24%] h-px bg-[var(--public-border)] opacity-70" />
+                  <div className="absolute bottom-[28%] left-[8%] right-[8%] h-px bg-[var(--public-border)] opacity-70" />
+                  <div className="absolute left-[13%] top-[25%] h-20 w-[64%] max-w-64 rounded-[2.15rem] border border-[var(--public-border-strong)] bg-[linear-gradient(135deg,var(--public-surface-strong),var(--public-surface))] shadow-xl" />
+                  <div className="absolute left-[20%] top-[34%] h-7 w-[22%] max-w-20 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)]" />
+                  <div className="absolute left-[48%] top-[34%] h-7 w-[18%] max-w-16 rounded-xl border border-[var(--public-border)] bg-[var(--public-surface)]" />
+                  <div className="absolute bottom-[25%] left-[22%] h-8 w-8 rounded-full border border-[var(--public-border-strong)] bg-[var(--public-bg)] shadow-[0_0_0_7px_rgba(255,255,255,0.04)]" />
+                  <div className="absolute bottom-[25%] left-[62%] h-8 w-8 rounded-full border border-[var(--public-border-strong)] bg-[var(--public-bg)] shadow-[0_0_0_7px_rgba(255,255,255,0.04)]" />
+                  <div className="absolute right-[11%] top-[27%] h-20 w-20 rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface)] p-3">
+                    <div className="h-full w-full rounded-xl border border-[var(--public-border-strong)] bg-[linear-gradient(135deg,rgba(255,255,255,0.13),transparent)]" />
+                  </div>
+                  <div className="absolute bottom-5 left-6 right-6 grid grid-cols-4 gap-2">
+                    {[0, 1, 2, 3].map((item) => (
+                      <span
+                        key={item}
+                        className="h-1 rounded-full bg-[var(--public-border-strong)] opacity-70"
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -181,10 +205,10 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
                   return (
                     <div
                       key={item.label}
-                      className="rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface)] p-3"
+                      className="public-hero-module min-w-0 rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface)] p-3"
                     >
                       <Icon className="h-4 w-4 text-[var(--public-text)]" />
-                      <p className="mt-2 text-xs font-medium text-[var(--public-muted)]">{item.label}</p>
+                      <p className="mt-2 truncate text-xs font-medium text-[var(--public-muted)]">{item.label}</p>
                     </div>
                   );
                 })}
@@ -302,12 +326,12 @@ function FeatureListBlock({
             ) : null}
           </div>
 
-          <div className="rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-4 shadow-2xl shadow-black/5 md:p-6">
+          <div className="public-system-panel rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-4 md:p-6">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {block.items.map((item, index) => (
                 <div
                   key={item}
-                  className="rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 sm:min-h-44 sm:p-5"
+                  className="public-flow-card rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 sm:min-h-44 sm:p-5"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--public-muted)]">
@@ -447,7 +471,7 @@ function CtaBlock({ block, page }: { block: Extract<PublicBlock, { type: "cta" }
           {block.ctaLabel ? (
             <Link
               href={safeHref(block.ctaHref, page.locale)}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--public-accent-text)] px-6 py-3 text-sm font-semibold text-[var(--public-accent)] transition hover:opacity-90"
+              className="public-premium-cta inline-flex items-center justify-center gap-2 rounded-full bg-[var(--public-accent-text)] px-6 py-3 text-sm font-semibold text-[var(--public-accent)] transition hover:opacity-90"
             >
               {block.ctaLabel}
               <ArrowRight className="h-4 w-4" />

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { JsonLd } from "../../components/JsonLd";
 import { PublicPageRenderer } from "../../components/PublicPageRenderer";
 import {
   buildPublicMetadata,
   buildWebsiteJsonLd,
-  getPublicPage,
+  getPublicSlugPage,
   normalizePublicLocale,
 } from "../../lib/public-content";
 import { isPublicLocale } from "../../lib/public-routing";
@@ -20,7 +20,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: rawLocale, slug } = await params;
   const locale = normalizePublicLocale(rawLocale);
-  const page = await getPublicPage(locale, slug);
+  const page = await getPublicSlugPage(locale, slug);
+
+  if (!page) {
+    notFound();
+  }
 
   return buildPublicMetadata(page);
 }
@@ -36,7 +40,11 @@ export default async function PublicSlugPage({
     redirect(`/tr/${slug}`);
   }
 
-  const page = await getPublicPage(rawLocale, slug);
+  const page = await getPublicSlugPage(rawLocale, slug);
+
+  if (!page) {
+    notFound();
+  }
 
   return (
     <>
