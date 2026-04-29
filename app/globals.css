@@ -13,6 +13,11 @@
 }
 
 :root {
+  --skyvan-black: #020201;
+  --skyvan-white: #f4f5f4;
+  --skyvan-silver: #e8e9e9;
+  --skyvan-steel: #8c8f8f;
+  --skyvan-tracking: 0.22em;
   color-scheme: dark;
 }
 
@@ -40,7 +45,7 @@ body {
 
 ::selection {
   background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  color: inherit;
 }
 
 /* Global scrollbar */
@@ -161,4 +166,96 @@ input[type="number"]::-webkit-inner-spin-button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
   border-radius: 1.5rem;
+}
+
+/* Public website theme scope. Admin keeps the global dark surface above. */
+.public-site {
+  --public-bg: #f6f3ee;
+  --public-bg-soft: #ebe7df;
+  --public-surface: rgba(255, 255, 255, 0.76);
+  --public-surface-strong: rgba(255, 255, 255, 0.92);
+  --public-text: #151515;
+  --public-muted: rgba(21, 21, 21, 0.64);
+  --public-subtle: rgba(21, 21, 21, 0.1);
+  --public-border: rgba(21, 21, 21, 0.14);
+  --public-border-strong: rgba(21, 21, 21, 0.24);
+  --public-accent: #151515;
+  --public-accent-text: #ffffff;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.98), transparent 34rem),
+    linear-gradient(180deg, var(--public-bg), var(--public-bg-soft));
+  color: var(--public-text);
+  color-scheme: light;
+}
+
+.public-site ::selection {
+  background: rgba(0, 0, 0, 0.16);
+  color: inherit;
+}
+
+.public-site[data-public-theme="dark"] {
+  --public-bg: #050505;
+  --public-bg-soft: #111113;
+  --public-surface: rgba(255, 255, 255, 0.055);
+  --public-surface-strong: rgba(255, 255, 255, 0.09);
+  --public-text: #f7f7f5;
+  --public-muted: rgba(247, 247, 245, 0.64);
+  --public-subtle: rgba(247, 247, 245, 0.1);
+  --public-border: rgba(247, 247, 245, 0.14);
+  --public-border-strong: rgba(247, 247, 245, 0.22);
+  --public-accent: #ffffff;
+  --public-accent-text: #050505;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.12), transparent 34rem),
+    linear-gradient(180deg, var(--public-bg), var(--public-bg-soft));
+  color-scheme: dark;
+}
+
+.public-site[data-public-theme="dark"] ::selection {
+  background: rgba(255, 255, 255, 0.24);
+  color: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+  .public-site[data-public-theme="system"] {
+    --public-bg: #050505;
+    --public-bg-soft: #111113;
+    --public-surface: rgba(255, 255, 255, 0.055);
+    --public-surface-strong: rgba(255, 255, 255, 0.09);
+    --public-text: #f7f7f5;
+    --public-muted: rgba(247, 247, 245, 0.64);
+    --public-subtle: rgba(247, 247, 245, 0.1);
+    --public-border: rgba(247, 247, 245, 0.14);
+    --public-border-strong: rgba(247, 247, 245, 0.22);
+    --public-accent: #ffffff;
+    --public-accent-text: #050505;
+    color-scheme: dark;
+  }
+
+  .public-site[data-public-theme="system"] ::selection {
+    background: rgba(255, 255, 255, 0.24);
+    color: inherit;
+  }
+}
+
+.public-site .brand-logo-auto .brand-logo-dark-background {
+  display: none;
+}
+
+.public-site[data-public-theme="dark"] .brand-logo-auto .brand-logo-light-background {
+  display: none;
+}
+
+.public-site[data-public-theme="dark"] .brand-logo-auto .brand-logo-dark-background {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  .public-site[data-public-theme="system"] .brand-logo-auto .brand-logo-light-background {
+    display: none;
+  }
+
+  .public-site[data-public-theme="system"] .brand-logo-auto .brand-logo-dark-background {
+    display: block;
+  }
 }
