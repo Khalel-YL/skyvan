@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
 import type { PublicBlock, PublicPageContent } from "../lib/launch-content";
 import { getLocalizedPath } from "../lib/public-routing";
 
@@ -513,6 +514,10 @@ function renderBlock(block: PublicBlock, page: PublicPageContent, index: number)
 
   if (block.type === "stats") {
     return <StatsBlock key={index} block={block} />;
+  }
+
+  if (block.type === "decision-system-preview") {
+    return <HomeDecisionSystemPreview key={index} locale={page.locale} />;
   }
 
   return <CtaBlock key={index} block={block} page={page} />;

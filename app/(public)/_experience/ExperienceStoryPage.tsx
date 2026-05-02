@@ -20,32 +20,32 @@ const content = {
     scenes: [
       {
         key: "route",
-        title: "Önce rota belirir.",
+        title: "Rota",
         line: "Yolculuğun ritmi kararın ilk yüzeyini çizer.",
       },
       {
         key: "living",
-        title: "Sonra yaşam düzeni şekillenir.",
+        title: "Yaşam",
         line: "Günlük alışkanlıklar soyut fikirden kullanılabilir düzene dönüşür.",
       },
       {
         key: "risk",
-        title: "Risk erken görünür olur.",
+        title: "Teknik risk",
         line: "Ağırlık, enerji ve su gibi sınırlar karar verilmeden önce işaretlenir.",
       },
       {
         key: "ai",
-        title: "Skyvan AI bağlamı görünür kılar; karar vermez.",
-        line: "Eksik bilgi ve hazırlık sınırları sohbet olmadan, girdi istemeden okunur.",
+        title: "Skyvan AI",
+        line: "Skyvan AI bağlamı görünür kılar; karar vermez.",
       },
       {
         key: "production",
-        title: "Hazırlık üretim diline yaklaşır.",
+        title: "Üretim hazırlığı",
         line: "Netleşen karar başlıkları kontrollü bir üretim öncesi düzene taşınır.",
       },
       {
         key: "approval",
-        title: "Son söz insan onayıyla kalır.",
+        title: "İnsan onayı",
         line: "Skyvan yönü hazırlar; final karar güven ve teknik disiplinle verilir.",
       },
     ],
@@ -57,32 +57,32 @@ const content = {
     scenes: [
       {
         key: "route",
-        title: "First, the route appears.",
+        title: "Route",
         line: "The rhythm of travel draws the first surface of the decision.",
       },
       {
         key: "living",
-        title: "Then living takes shape.",
+        title: "Living",
         line: "Daily habits move from abstract idea into a usable layout.",
       },
       {
         key: "risk",
-        title: "Risk becomes visible early.",
+        title: "Technical risk",
         line: "Weight, energy, and water boundaries are surfaced before a decision is made.",
       },
       {
         key: "ai",
-        title: "Skyvan AI makes context visible; it does not decide.",
-        line: "Missing inputs and preparation boundaries are read without chat, prompts, or user input.",
+        title: "Skyvan AI",
+        line: "Skyvan AI makes context visible; it does not decide.",
       },
       {
         key: "production",
-        title: "Preparation moves toward production language.",
+        title: "Production readiness",
         line: "Clarified decisions become a controlled pre-production structure.",
       },
       {
         key: "approval",
-        title: "Final approval stays human-led.",
+        title: "Human approval",
         line: "Skyvan prepares direction; the final decision stays grounded in trust and technical discipline.",
       },
     ],
@@ -151,21 +151,23 @@ export function ExperienceStoryPage({ locale }: { locale: ExperienceLocale }) {
       </section>
 
       <section className="relative">
-        <div className="sticky top-0 flex min-h-svh items-center overflow-hidden px-5 py-10 md:px-8">
+        <div className="sticky top-16 flex h-[calc(100svh-4rem)] items-center overflow-hidden px-4 py-3 sm:px-5 sm:py-5 md:px-8">
           <div
             className={`pointer-events-none absolute inset-0 transition duration-1000 motion-reduce:transition-none ${getSceneAtmosphere(page.scenes[activeStep]?.key)}`}
           />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[var(--public-bg)] to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[var(--public-bg)] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[var(--public-bg)] to-transparent md:h-28" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--public-bg)] to-transparent md:h-28" />
 
-          <div className="relative mx-auto flex h-[calc(100svh-5rem)] w-full max-w-7xl flex-col items-center justify-center gap-8">
-            <DecisionVessel activeKey={page.scenes[activeStep]?.key ?? "route"} />
+          <div className="relative mx-auto grid h-full w-full max-w-7xl grid-rows-[minmax(11rem,1fr)_auto] items-center gap-3 pb-8 sm:grid-rows-[minmax(14rem,1fr)_auto] sm:gap-5 sm:pb-10 md:gap-6">
+            <div className="flex min-h-0 items-end justify-center sm:items-center">
+              <DecisionVessel activeKey={page.scenes[activeStep]?.key ?? "route"} />
+            </div>
 
-            <div className="min-h-[11rem] w-full max-w-5xl text-center md:min-h-[13rem]">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--public-muted)]">
+            <div className="min-h-[9.25rem] w-full min-w-0 text-center sm:min-h-[10.5rem] md:min-h-[12rem]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--public-muted)] sm:text-xs sm:tracking-[0.28em]">
                 {String(activeStep + 1).padStart(2, "0")} / {String(page.scenes.length).padStart(2, "0")}
               </p>
-              <div className="relative mt-5">
+              <div className="relative mt-3 sm:mt-5">
                 {page.scenes.map((scene, index) => (
                   <div
                     key={scene.key}
@@ -175,10 +177,10 @@ export function ExperienceStoryPage({ locale }: { locale: ExperienceLocale }) {
                         : "pointer-events-none absolute inset-x-0 top-0 translate-y-5 opacity-0"
                     }`}
                   >
-                    <h2 className="mx-auto max-w-4xl text-4xl font-semibold leading-[1.03] tracking-tight text-[var(--public-text)] md:text-7xl">
+                    <h2 className="mx-auto max-w-4xl text-3xl font-semibold leading-[1.05] tracking-tight text-[var(--public-text)] sm:text-4xl md:text-5xl lg:text-6xl">
                       {scene.title}
                     </h2>
-                    <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--public-muted)] md:text-lg">
+                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--public-muted)] sm:mt-4 sm:text-base sm:leading-7 md:text-lg md:leading-8">
                       {scene.line}
                     </p>
                   </div>
@@ -186,7 +188,11 @@ export function ExperienceStoryPage({ locale }: { locale: ExperienceLocale }) {
               </div>
             </div>
 
-            <div className="flex gap-2" aria-hidden="true">
+            <div
+              className="absolute bottom-[max(0.875rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-2"
+              aria-hidden="true"
+              data-experience-progress
+            >
               {page.scenes.map((scene, index) => (
                 <span
                   key={scene.key}
@@ -222,16 +228,16 @@ function DecisionVessel({ activeKey }: { activeKey: SceneKey }) {
   return (
     <div
       data-experience-scene
-      className={`relative aspect-[1.78] w-full max-w-[62rem] transition duration-1000 ease-out motion-reduce:transition-none ${getVesselTransform(activeKey)}`}
+      className={`relative aspect-[1.78] w-[min(100%,52rem)] max-h-[42svh] transition duration-1000 ease-out motion-reduce:transition-none ${getVesselTransform(activeKey)}`}
     >
-      <div className="absolute inset-x-[4%] top-[8%] bottom-[3%] rounded-[999px] bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.2),transparent_42%)] blur-3xl" />
+      <div className="absolute inset-x-[4%] top-[10%] bottom-[2%] rounded-[999px] bg-[radial-gradient(circle_at_50%_45%,color-mix(in_srgb,var(--public-text)_13%,transparent),transparent_42%)] blur-3xl" />
 
-      <div className="absolute inset-x-[3%] top-[20%] bottom-[16%] rounded-[5rem] border border-[var(--public-border-strong)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface)_58%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-48px_90px_rgba(0,0,0,0.12),0_40px_130px_rgba(0,0,0,0.22)] md:rounded-[7rem]" />
-      <div className="absolute right-[5%] top-[24%] h-[50%] w-[22%] rounded-r-[5rem] border border-l-0 border-[var(--public-border)] bg-[linear-gradient(120deg,rgba(255,255,255,0.16),transparent_58%)] md:rounded-r-[7rem]" />
-      <div className="absolute left-[13%] right-[22%] top-[34%] h-[23%] rounded-[999px] border border-[var(--public-border)] bg-[var(--public-bg)]/38" />
-      <div className="absolute left-[20%] right-[30%] top-[46%] h-px bg-[var(--public-border-strong)]" />
-      <div className="absolute bottom-[15%] left-[24%] h-[6%] w-[10%] rounded-full border border-[var(--public-border-strong)] bg-[var(--public-surface-strong)] shadow-[0_12px_30px_rgba(0,0,0,0.14)]" />
-      <div className="absolute bottom-[15%] right-[24%] h-[6%] w-[10%] rounded-full border border-[var(--public-border-strong)] bg-[var(--public-surface-strong)] shadow-[0_12px_30px_rgba(0,0,0,0.14)]" />
+      <div className="absolute inset-x-[4%] top-[22%] bottom-[17%] rounded-[4rem] border border-[color-mix(in_srgb,var(--public-border-strong)_78%,var(--public-text)_22%)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface)_58%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),inset_0_-42px_78px_rgba(0,0,0,0.12),0_34px_110px_rgba(0,0,0,0.2)] md:rounded-[6rem]" />
+      <div className="absolute right-[6%] top-[26%] h-[47%] w-[21%] rounded-r-[4rem] border border-l-0 border-[color-mix(in_srgb,var(--public-border)_72%,var(--public-text)_28%)] bg-[linear-gradient(120deg,color-mix(in_srgb,var(--public-text)_9%,transparent),transparent_58%)] md:rounded-r-[6rem]" />
+      <div className="absolute left-[14%] right-[23%] top-[36%] h-[21%] rounded-[999px] border border-[color-mix(in_srgb,var(--public-border)_72%,var(--public-text)_28%)] bg-[var(--public-bg)]/38" />
+      <div className="absolute left-[21%] right-[31%] top-[47%] h-px bg-[color-mix(in_srgb,var(--public-border-strong)_74%,var(--public-text)_26%)]" />
+      <div className="absolute bottom-[16%] left-[25%] h-[6%] w-[10%] rounded-full border border-[color-mix(in_srgb,var(--public-border-strong)_74%,var(--public-text)_26%)] bg-[var(--public-surface-strong)] shadow-[0_10px_26px_rgba(0,0,0,0.14)]" />
+      <div className="absolute bottom-[16%] right-[25%] h-[6%] w-[10%] rounded-full border border-[color-mix(in_srgb,var(--public-border-strong)_74%,var(--public-text)_26%)] bg-[var(--public-surface-strong)] shadow-[0_10px_26px_rgba(0,0,0,0.14)]" />
 
       <VesselLayer active={activeKey === "route"} revealed={true} className="left-[12%] top-[28%] h-[22%] w-[43%]">
         <span className="absolute left-0 top-[52%] h-[4%] w-[78%] origin-left rotate-[-7deg] rounded-full bg-[var(--public-text)]/70" />
@@ -297,18 +303,18 @@ function VesselLayer({
 
 function getVesselTransform(activeKey: SceneKey) {
   if (activeKey === "route") {
-    return "scale-[0.95] -translate-y-1";
+    return "scale-[0.91] translate-y-2";
   }
 
   if (activeKey === "ai") {
-    return "scale-[1.03]";
+    return "scale-[0.97] translate-y-1";
   }
 
   if (activeKey === "approval") {
-    return "scale-[0.98] translate-y-1";
+    return "scale-[0.94] translate-y-2";
   }
 
-  return "scale-100";
+  return "scale-[0.94] translate-y-1";
 }
 
 function getSceneAtmosphere(activeKey: SceneKey | undefined) {

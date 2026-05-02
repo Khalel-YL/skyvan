@@ -27,6 +27,9 @@ export type PublicBlock =
       stats: Array<{ label: string; value: string }>;
     }
   | {
+      type: "decision-system-preview";
+    }
+  | {
       type: "cta";
       heading: string;
       body?: string;

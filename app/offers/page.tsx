@@ -5,6 +5,7 @@ import {
   FileSignature, Wallet, Calculator, ArrowRight, 
   FileText, Send, CheckCircle2, XCircle, PenTool
 } from "lucide-react";
+import AutoSubmitSelect from "./AutoSubmitSelect";
 import { moveOfferStage } from "./actions";
 
 export default async function OffersPage() {
@@ -101,17 +102,16 @@ export default async function OffersPage() {
                          'use server';
                          await moveOfferStage(offer.id, formData.get('status') as string);
                        }}>
-                         <select 
+                         <AutoSubmitSelect
                            name="status"
                            defaultValue={col.id}
-                           onChange={(e) => e.target.form?.requestSubmit()}
                            className="bg-black border border-zinc-800 text-[9px] text-zinc-300 font-bold uppercase py-1.5 px-2 rounded-lg outline-none focus:border-blue-500 cursor-pointer"
                          >
                            <option value="new">Yeni Tasarım</option>
                            <option value="contacted">Fiyat Çalışılıyor</option>
                            <option value="converted">Onaylandı (Üretime Al)</option>
                            <option value="closed">Reddedildi</option>
-                         </select>
+                         </AutoSubmitSelect>
                        </form>
                     </div>
 
