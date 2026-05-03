@@ -1,3 +1,14 @@
+export type PageBlockMedia = {
+  mediaId: string;
+  mediaType: "image" | "video" | "model3d";
+  title: string;
+  url: string;
+  previewUrl?: string;
+  embedUrl?: string;
+  provider?: "direct" | "youtube" | "external";
+  altText?: string;
+};
+
 export type PageContentBlock =
   | {
       type: "hero";
@@ -6,12 +17,14 @@ export type PageContentBlock =
       body?: string;
       ctaLabel?: string;
       ctaHref?: string;
+      media?: PageBlockMedia;
     }
   | {
       type: "text";
       heading?: string;
       body?: string;
       content?: string;
+      media?: PageBlockMedia;
     }
   | {
       type: "feature-list";
@@ -63,6 +76,18 @@ const supportedBlockTypes = new Set<PageContentBlock["type"]>([
   "stats",
   "cta",
 ]);
+const supportedMediaTypes = new Set<PageBlockMedia["mediaType"]>([
+  "image",
+  "video",
+  "model3d",
+]);
+const supportedProviders = new Set<NonNullable<PageBlockMedia["provider"]>>([
+  "direct",
+  "youtube",
+  "external",
+]);
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function cleanString(value: unknown) {
   return String(value ?? "").trim();
@@ -71,6 +96,55 @@ function cleanString(value: unknown) {
 function optionalString(value: unknown) {
   const cleaned = cleanString(value);
   return cleaned || undefined;
+}
+
+function isSafeHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeMedia(value: unknown): PageBlockMedia | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const mediaId = cleanString(raw.mediaId);
+  const mediaType = cleanString(raw.mediaType).toLowerCase();
+  const title = cleanString(raw.title);
+  const url = cleanString(raw.url);
+
+  if (
+    !uuidPattern.test(mediaId) ||
+    !supportedMediaTypes.has(mediaType as PageBlockMedia["mediaType"]) ||
+    !title ||
+    !isSafeHttpUrl(url)
+  ) {
+    return undefined;
+  }
+
+  const provider = cleanString(raw.provider).toLowerCase();
+
+  return {
+    mediaId,
+    mediaType: mediaType as PageBlockMedia["mediaType"],
+    title,
+    url,
+    previewUrl: optionalString(raw.previewUrl),
+    embedUrl: optionalString(raw.embedUrl),
+    provider: supportedProviders.has(provider as NonNullable<PageBlockMedia["provider"]>)
+      ? (provider as NonNullable<PageBlockMedia["provider"]>)
+      : undefined,
+    altText: optionalString(raw.altText),
+  };
+}
+
+function hasMalformedMedia(value: unknown) {
+  return Boolean(value) && !normalizeMedia(value);
 }
 
 function normalizeItems(value: unknown) {
@@ -121,6 +195,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
       body: optionalString(raw.body),
       ctaLabel: optionalString(raw.ctaLabel),
       ctaHref: optionalString(raw.ctaHref),
+      media: normalizeMedia(raw.media),
     };
   }
 
@@ -156,6 +231,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
     heading: optionalString(raw.heading),
     body: optionalString(raw.body),
     content: optionalString(raw.content),
+    media: normalizeMedia(raw.media),
   };
 }
 
@@ -253,6 +329,10 @@ export function validatePageBlocks(input: PageBlockValidationInput): PageBlockVa
 
     if (block.type === "hero" && !block.heading.trim()) {
       blockers.push(`${label}: Başlık zorunludur.`);
+    }
+
+    if ("media" in block && hasMalformedMedia(block.media)) {
+      blockers.push(`${label}: Seçili medya bağlantısı geçerli değil.`);
     }
 
     if (block.type === "text" && !block.heading?.trim() && !block.body?.trim() && !block.content?.trim()) {

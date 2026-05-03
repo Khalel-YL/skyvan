@@ -66,6 +66,16 @@ type PageBlock = {
   }>;
   ctaLabel?: string;
   ctaHref?: string;
+  media?: {
+    mediaId: string;
+    mediaType: "image" | "video" | "model3d";
+    title: string;
+    url: string;
+    previewUrl?: string;
+    embedUrl?: string;
+    provider?: "direct" | "youtube" | "external";
+    altText?: string;
+  };
 };
 
 type PageContentJson = {
@@ -96,6 +106,8 @@ const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
   "stats",
   "cta",
 ]);
+const ALLOWED_MEDIA_TYPES = new Set(["image", "video", "model3d"]);
+const ALLOWED_MEDIA_PROVIDERS = new Set(["direct", "youtube", "external"]);
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -169,6 +181,15 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+}
+
+function isSafeHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
 }
 
 function safeJsonParse(value: string) {
@@ -269,6 +290,45 @@ function normalizeStats(value: unknown) {
   return stats.length > 0 ? stats : undefined;
 }
 
+function sanitizeMedia(value: unknown): PageBlock["media"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const mediaId = String(raw.mediaId ?? "").trim();
+  const mediaType = String(raw.mediaType ?? "").trim().toLowerCase();
+  const title = String(raw.title ?? "").trim();
+  const url = String(raw.url ?? "").trim();
+
+  if (
+    !isUuid(mediaId) ||
+    !ALLOWED_MEDIA_TYPES.has(mediaType) ||
+    !title ||
+    !isSafeHttpUrl(url)
+  ) {
+    return undefined;
+  }
+
+  const previewUrl = String(raw.previewUrl ?? "").trim();
+  const embedUrl = String(raw.embedUrl ?? "").trim();
+  const provider = String(raw.provider ?? "").trim().toLowerCase();
+  const altText = String(raw.altText ?? "").trim();
+
+  return {
+    mediaId,
+    mediaType: mediaType as "image" | "video" | "model3d",
+    title,
+    url,
+    previewUrl: previewUrl && isSafeHttpUrl(previewUrl) ? previewUrl : undefined,
+    embedUrl: embedUrl && isSafeHttpUrl(embedUrl) ? embedUrl : undefined,
+    provider: ALLOWED_MEDIA_PROVIDERS.has(provider)
+      ? (provider as "direct" | "youtube" | "external")
+      : undefined,
+    altText: altText || undefined,
+  };
+}
+
 function sanitizeBlock(value: unknown): PageBlock | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -314,6 +374,11 @@ function sanitizeBlock(value: unknown): PageBlock | null {
 
   if (isNonEmptyString(raw.ctaHref)) {
     block.ctaHref = raw.ctaHref.trim();
+  }
+
+  const media = sanitizeMedia(raw.media);
+  if (media) {
+    block.media = media;
   }
 
   return block;

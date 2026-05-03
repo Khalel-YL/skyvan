@@ -10,10 +10,15 @@ import {
   getBlockLabel,
   validatePageBlocks,
 } from "../_lib/page-blocks";
+import {
+  PageMediaPicker,
+  type PageMediaPickerAsset,
+} from "./PageMediaPicker";
 
 type PageBlockEditorProps = {
   blocks: PageContentBlock[];
   onChange: (blocks: PageContentBlock[]) => void;
+  mediaAssets: PageMediaPickerAsset[];
 };
 
 const blockActions: Array<{
@@ -155,7 +160,7 @@ function Field({
   );
 }
 
-export function PageBlockEditor({ blocks, onChange }: PageBlockEditorProps) {
+export function PageBlockEditor({ blocks, onChange, mediaAssets }: PageBlockEditorProps) {
   function setBlock(index: number, nextBlock: PageContentBlock) {
     onChange(blocks.map((block, blockIndex) => (blockIndex === index ? nextBlock : block)));
   }
@@ -317,6 +322,12 @@ export function PageBlockEditor({ blocks, onChange }: PageBlockEditorProps) {
                     <Field label="Buton yazısı" value={block.ctaLabel ?? ""} onChange={(value) => setBlock(index, updateBlock(block, { ctaLabel: value }))} />
                     <Field label="Buton bağlantısı" value={block.ctaHref ?? ""} onChange={(value) => setBlock(index, updateBlock(block, { ctaHref: value }))} />
                   </div>
+                  <PageMediaPicker
+                    mediaAssets={mediaAssets}
+                    selected={block.media}
+                    onSelect={(media) => setBlock(index, updateBlock(block, { media }))}
+                    onRemove={() => setBlock(index, updateBlock(block, { media: undefined }))}
+                  />
                 </>
               ) : null}
 

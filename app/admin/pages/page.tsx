@@ -15,8 +15,14 @@ import {
 
 import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
+import {
+  getMediaPreviewUrl,
+  getMediaPrimaryUrl,
+  normalizeMediaContent,
+} from "@/app/admin/media/media-types";
 
 import AddPageDrawer from "./AddPageDrawer";
+import type { PageMediaPickerAsset } from "./_components/PageMediaPicker";
 import { deletePage, repairPageSlug } from "./actions";
 
 type SearchParamsInput =
@@ -52,6 +58,12 @@ type PageContentJson = {
     subtext?: string;
     body?: string;
   }>;
+};
+
+type MediaPickerRow = {
+  id: string;
+  title: string | null;
+  contentJson: unknown;
 };
 
 function normalizePublishFilter(value: string) {
@@ -152,6 +164,37 @@ export default async function PagesPage({ searchParams }: Props) {
       asc(localizedContent.locale),
       asc(localizedContent.title),
     );
+
+  const mediaRows = (await db
+    .select({
+      id: localizedContent.id,
+      title: localizedContent.title,
+      contentJson: localizedContent.contentJson,
+    })
+    .from(localizedContent)
+    .where(eq(localizedContent.entityType, "media"))) as MediaPickerRow[];
+  const mediaAssets = mediaRows.reduce<PageMediaPickerAsset[]>((acc, media) => {
+      const content = normalizeMediaContent(media.contentJson, media.title || "");
+      const url = getMediaPrimaryUrl(content);
+
+      if (!url) {
+        return acc;
+      }
+
+      acc.push({
+        mediaId: media.id,
+        mediaType: content.mediaType,
+        title: content.title || media.title || "Adsız medya",
+        url,
+        previewUrl: getMediaPreviewUrl(content) || undefined,
+        embedUrl: content.embedUrl,
+        provider: content.provider,
+        altText: content.altText,
+        tags: content.tags,
+      });
+
+      return acc;
+    }, []);
 
   const filteredRows = rows.filter((row) => {
     const published = isPublished(row.contentJson);
@@ -302,7 +345,9 @@ export default async function PagesPage({ searchParams }: Props) {
         </div>
       </section>
 
-      {editId ? <AddPageDrawer initialData={initialData} /> : null}
+      {editId ? (
+        <AddPageDrawer initialData={initialData} mediaAssets={mediaAssets} />
+      ) : null}
 
       <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

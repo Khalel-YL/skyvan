@@ -11,6 +11,62 @@ type PageLivePreviewProps = {
   blocks: PageContentBlock[];
 };
 
+function MediaPreview({ block }: { block: PageContentBlock }) {
+  if (!("media" in block) || !block.media) {
+    return null;
+  }
+
+  const media = block.media;
+
+  if (media.mediaType === "video") {
+    return (
+      <div className="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-black/5">
+        {media.provider === "youtube" && media.embedUrl ? (
+          <iframe
+            src={media.embedUrl}
+            title={media.title}
+            className="aspect-video w-full"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : media.provider === "direct" ? (
+          <video
+            className="aspect-video w-full object-cover"
+            controls
+            poster={media.previewUrl}
+            preload="metadata"
+          >
+            <source src={media.url} />
+          </video>
+        ) : (
+          <div className="flex aspect-video items-center justify-center p-5 text-center text-sm text-black/55">
+            Harici video bağlantısı: {media.title}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (media.mediaType === "model3d") {
+    return (
+      <div className="mt-4 flex aspect-video items-center justify-center rounded-2xl border border-black/10 bg-black/5 p-5 text-center text-sm text-black/55">
+        3D önizleme altyapısı hazır: {media.title}
+      </div>
+    );
+  }
+
+  return media.previewUrl || media.url ? (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Admin live preview renders external media library URLs. */}
+      <img
+        src={media.previewUrl || media.url}
+        alt={media.altText || media.title}
+        className="aspect-video w-full object-cover"
+      />
+    </div>
+  ) : null;
+}
+
 export function PageLivePreview({
   title,
   description,
@@ -56,6 +112,7 @@ export function PageLivePreview({
               {"body" in block && block.body ? (
                 <p className="mt-3 whitespace-pre-line text-sm leading-6 text-black/65">{block.body}</p>
               ) : null}
+              <MediaPreview block={block} />
               {block.type === "text" && block.content ? (
                 <p className="mt-3 whitespace-pre-line text-sm leading-6 text-black/65">{block.content}</p>
               ) : null}

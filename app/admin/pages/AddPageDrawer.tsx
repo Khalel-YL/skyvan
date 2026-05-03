@@ -10,6 +10,7 @@ import { PageBlockEditor } from "./_components/PageBlockEditor";
 import { PageLivePreview } from "./_components/PageLivePreview";
 import { PagePublishPanel } from "./_components/PagePublishPanel";
 import { PageSeoPanel } from "./_components/PageSeoPanel";
+import type { PageMediaPickerAsset } from "./_components/PageMediaPicker";
 import {
   type PageContentBlock,
   createDefaultPageBlocks,
@@ -69,6 +70,7 @@ export default function AddPageDrawer({
   seedLocale,
   seedTitle,
   seedEntityId,
+  mediaAssets = [],
 }: {
   open?: boolean;
   onClose?: () => void;
@@ -76,6 +78,7 @@ export default function AddPageDrawer({
   seedLocale?: string;
   seedTitle?: string;
   seedEntityId?: string;
+  mediaAssets?: PageMediaPickerAsset[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -313,7 +316,11 @@ export default function AddPageDrawer({
               {state.errors?.seoTitle ? <p className="text-xs text-rose-400">{state.errors.seoTitle}</p> : null}
               {state.errors?.seoDescription ? <p className="text-xs text-rose-400">{state.errors.seoDescription}</p> : null}
 
-              <PageBlockEditor blocks={blocks} onChange={setBlocks} />
+              <PageBlockEditor
+                blocks={blocks}
+                onChange={setBlocks}
+                mediaAssets={mediaAssets}
+              />
               {state.errors?.content ? <p className="text-xs text-rose-400">{state.errors.content}</p> : null}
             </div>
 
