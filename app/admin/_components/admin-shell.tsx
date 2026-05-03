@@ -15,8 +15,9 @@ export function AdminShell({
   databaseNote,
 }: AdminShellProps) {
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
+    <div className="admin-shell min-h-screen overflow-x-clip bg-[var(--admin-bg)] text-[var(--admin-text)]">
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,0.13),transparent_36rem)]" />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[1920px]">
         <AdminSidebar />
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
@@ -25,8 +26,8 @@ export function AdminShell({
             databaseNote={databaseNote}
           />
 
-          <main className="flex-1 p-4 md:p-6">
-            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          <main className="flex-1 px-4 py-5 md:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-[1760px]">{children}</div>
           </main>
         </div>
       </div>

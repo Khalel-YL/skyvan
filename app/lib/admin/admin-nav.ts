@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 
 export type AdminNavSection = "stable" | "pipeline";
+export type AdminNavGroupId =
+  | "overview"
+  | "content"
+  | "engineering-core"
+  | "commercial-operations"
+  | "intelligence-governance"
+  | "system";
 
 export type AdminNavItem = {
   title: string;
@@ -27,7 +34,15 @@ export type AdminNavItem = {
   icon: LucideIcon;
   enabled: boolean;
   section: AdminNavSection;
+  group: AdminNavGroupId;
   badge?: string;
+};
+
+export type AdminNavGroup = {
+  id: AdminNavGroupId;
+  title: string;
+  description: string;
+  items: AdminNavItem[];
 };
 
 export const adminNavItems: AdminNavItem[] = [
@@ -38,6 +53,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: LayoutDashboard,
     enabled: true,
     section: "stable",
+    group: "overview",
   },
   {
     title: "Sayfalar",
@@ -46,6 +62,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: FileText,
     enabled: true,
     section: "stable",
+    group: "content",
   },
   {
     title: "Blog",
@@ -54,6 +71,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: BookOpen,
     enabled: true,
     section: "stable",
+    group: "content",
   },
   {
     title: "Medya",
@@ -62,6 +80,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: FolderKanban,
     enabled: true,
     section: "stable",
+    group: "content",
   },
   {
     title: "SEO & Ayarlar",
@@ -70,6 +89,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Settings2,
     enabled: true,
     section: "stable",
+    group: "content",
     badge: "Yeni",
   },
   {
@@ -79,6 +99,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Truck,
     enabled: true,
     section: "stable",
+    group: "engineering-core",
   },
   {
     title: "Kategoriler",
@@ -87,6 +108,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Blocks,
     enabled: true,
     section: "stable",
+    group: "engineering-core",
   },
   {
     title: "Ürünler",
@@ -95,6 +117,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Package,
     enabled: true,
     section: "stable",
+    group: "engineering-core",
   },
   {
     title: "Paketler",
@@ -103,6 +126,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Boxes,
     enabled: true,
     section: "stable",
+    group: "engineering-core",
   },
   {
     title: "Build Versions",
@@ -111,6 +135,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Waypoints,
     enabled: true,
     section: "stable",
+    group: "engineering-core",
     badge: "Yeni",
   },
   {
@@ -120,6 +145,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Users,
     enabled: true,
     section: "stable",
+    group: "commercial-operations",
     badge: "CRM",
   },
   {
@@ -129,6 +155,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: BadgeEuro,
     enabled: true,
     section: "stable",
+    group: "commercial-operations",
     badge: "CRM",
   },
   {
@@ -138,6 +165,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Activity,
     enabled: true,
     section: "stable",
+    group: "commercial-operations",
     badge: "CRM",
   },
   {
@@ -147,6 +175,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Settings2,
     enabled: true,
     section: "stable",
+    group: "intelligence-governance",
   },
   {
     title: "AI Core",
@@ -155,6 +184,7 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Bot,
     enabled: true,
     section: "stable",
+    group: "intelligence-governance",
   },
   {
     title: "Audit & Publish",
@@ -163,6 +193,17 @@ export const adminNavItems: AdminNavItem[] = [
     icon: ShieldCheck,
     enabled: true,
     section: "stable",
+    group: "intelligence-governance",
+    badge: "Yeni",
+  },
+  {
+    title: "Datasheet Merkezi",
+    href: "/admin/datasheets",
+    description: "AI bilgi tabanı belge kayıt merkezi",
+    icon: FileDigit,
+    enabled: true,
+    section: "stable",
+    group: "intelligence-governance",
     badge: "Yeni",
   },
   {
@@ -172,15 +213,45 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Users,
     enabled: true,
     section: "stable",
+    group: "system",
     badge: "Core",
   },
+];
+
+const adminNavGroupMeta: Array<Omit<AdminNavGroup, "items">> = [
   {
-    title: "Datasheet Merkezi",
-    href: "/admin/datasheets",
-    description: "AI bilgi tabanı belge kayıt merkezi",
-    icon: FileDigit,
-    enabled: true,
-    section: "stable",
-    badge: "Yeni",
+    id: "overview",
+    title: "Overview",
+    description: "Operasyon çekirdeği",
+  },
+  {
+    id: "content",
+    title: "Content",
+    description: "Yayın ve medya kontrolü",
+  },
+  {
+    id: "engineering-core",
+    title: "Engineering Core",
+    description: "Ürün ve build omurgası",
+  },
+  {
+    id: "commercial-operations",
+    title: "Commercial Operations",
+    description: "CRM ve satış hattı",
+  },
+  {
+    id: "intelligence-governance",
+    title: "Intelligence & Governance",
+    description: "AI, kural ve denetim yüzeyi",
+  },
+  {
+    id: "system",
+    title: "System",
+    description: "Erişim ve kullanıcı yönetimi",
   },
 ];
+
+export const adminNavGroups: AdminNavGroup[] = adminNavGroupMeta.map((group) => ({
+  ...group,
+  items: adminNavItems.filter((item) => item.group === group.id),
+}));

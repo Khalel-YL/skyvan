@@ -21,6 +21,21 @@
   color-scheme: dark;
 }
 
+.admin-shell {
+  --admin-bg: #050505;
+  --admin-rail: rgba(2, 2, 2, 0.72);
+  --admin-surface: rgba(255, 255, 255, 0.045);
+  --admin-surface-raised: rgba(255, 255, 255, 0.07);
+  --admin-border: rgba(255, 255, 255, 0.105);
+  --admin-border-strong: rgba(255, 255, 255, 0.22);
+  --admin-text: #f6f6f3;
+  --admin-muted: rgba(246, 246, 243, 0.56);
+  --admin-success: #34d399;
+  --admin-warning: #fbbf24;
+  --admin-danger: #fb7185;
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }

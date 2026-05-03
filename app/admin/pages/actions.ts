@@ -20,6 +20,11 @@ import {
   getPagePublishTransition,
 } from "@/app/lib/admin/governance";
 
+import {
+  type PageContentBlock,
+  validatePageBlocks,
+} from "./_lib/page-blocks";
+
 export type PageFormState = {
   ok: boolean;
   message: string;
@@ -53,6 +58,7 @@ type PageBlock = {
   heading?: string;
   subtext?: string;
   body?: string;
+  content?: string;
   items?: string[];
   stats?: Array<{
     label: string;
@@ -79,6 +85,8 @@ type PageRecord = {
   contentJson: unknown;
 };
 
+type PageSubmitIntent = "draft" | "publish" | "keep-published" | "unpublish";
+
 const PAGE_ENTITY_TYPE = "page";
 
 const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
@@ -91,6 +99,45 @@ const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function getSubmitIntent(formData: FormData) {
+  const intents = formData
+    .getAll("submitIntent")
+    .map((value) => String(value ?? "").trim());
+
+  if (intents.includes("publish")) {
+    return "publish";
+  }
+
+  if (intents.includes("unpublish")) {
+    return "unpublish";
+  }
+
+  if (intents.includes("keep-published")) {
+    return "keep-published";
+  }
+
+  return "draft";
+}
+
+function getNextPublishState(params: {
+  submitIntent: PageSubmitIntent;
+  previousIsPublished: boolean;
+}) {
+  if (params.submitIntent === "publish") {
+    return true;
+  }
+
+  if (params.submitIntent === "unpublish") {
+    return false;
+  }
+
+  if (params.submitIntent === "keep-published") {
+    return params.previousIsPublished;
+  }
+
+  return params.previousIsPublished ? true : false;
 }
 
 function normalizeLocale(input: string) {
@@ -118,6 +165,12 @@ function normalizeSlug(input: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function safeJsonParse(value: string) {
   if (!value.trim()) {
     return null;
@@ -128,6 +181,48 @@ function safeJsonParse(value: string) {
   } catch {
     return null;
   }
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSaveFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error);
+
+  if (message.includes("No transactions support in neon-http driver")) {
+    return "Veritabanı sürücüsü transaction wrapper desteklemediği için kayıt tamamlanamadı. Pages write path Neon HTTP uyumlu çalışmalıdır.";
+  }
+
+  if (message.toLowerCase().includes("duplicate key")) {
+    return "Bu kayıt veritabanında benzersiz bir alanla çakışıyor. Slug, locale veya sayfa varyantını kontrol et.";
+  }
+
+  if (message.toLowerCase().includes("database_url")) {
+    return "Veritabanı bağlantısı yapılandırılamadığı için kayıt yapılamadı.";
+  }
+
+  if (message.toLowerCase().includes("invalid input syntax for type uuid")) {
+    return "Kayıt kimliği UUID formatında olmadığı için veritabanı yazımı durduruldu.";
+  }
+
+  if (message.toLowerCase().includes("violates foreign key constraint")) {
+    return "Audit veya içerik kaydı ilişkili kullanıcı/veri kaydıyla eşleşmediği için yazım durduruldu.";
+  }
+
+  if (message.toLowerCase().includes("violates not-null constraint")) {
+    return "Zorunlu bir veritabanı alanı boş kaldığı için kayıt yapılamadı.";
+  }
+
+  if (message.toLowerCase().includes("fetch failed")) {
+    return "Veritabanı bağlantısına ulaşılamadığı için kayıt tamamlanamadı.";
+  }
+
+  return "Beklenmeyen bir kayıt hatası oluştu. Sunucu loglarında güvenli tanı bilgisi üretildi.";
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -197,6 +292,10 @@ function sanitizeBlock(value: unknown): PageBlock | null {
 
   if (isNonEmptyString(raw.body)) {
     block.body = raw.body.trim();
+  }
+
+  if (isNonEmptyString(raw.content)) {
+    block.content = raw.content.trim();
   }
 
   const items = normalizeItems(raw.items);
@@ -309,9 +408,7 @@ function normalizeContentJson(params: {
   return {
     contentJson: {
       isPublished: params.isPublished,
-      blocks: hasUserBlocks
-        ? blocks
-        : createDefaultBlocks(params.title, params.description, params.locale),
+      blocks,
     },
     hasUserBlocks,
   };
@@ -344,6 +441,18 @@ function revalidatePagePath(slug: string | null | undefined) {
   }
 
   revalidatePath(`/pages/${normalizedSlug}`);
+}
+
+function revalidateLocalizedPagePaths(locale: string, slug: string | null | undefined) {
+  const normalizedLocale = normalizeLocale(locale);
+  const normalizedSlug = normalizeSlug(String(slug ?? ""));
+
+  revalidatePath("/tr");
+  revalidatePath("/en");
+
+  if (normalizedLocale && normalizedSlug) {
+    revalidatePath(`/${normalizedLocale}/${normalizedSlug}`);
+  }
 }
 
 function buildPageAuditState(
@@ -480,8 +589,14 @@ export async function savePage(
   const seoTitle = getTrimmed(formData, "seoTitle");
   const seoDescription = getTrimmed(formData, "seoDescription");
   const content = String(formData.get("content") ?? "");
-  const isPublished = formData.get("isPublished") === "on";
-  const previousPage = id ? await findPageById(id) : null;
+  const submitIntent = getSubmitIntent(formData);
+  const hasValidId = !id || isUuid(id);
+  const previousPage = id && hasValidId ? await findPageById(id) : null;
+  const previousIsPublished = isPagePublishedContent(previousPage?.contentJson);
+  const isPublished = getNextPublishState({
+    submitIntent,
+    previousIsPublished,
+  });
 
   const values = {
     id,
@@ -498,7 +613,7 @@ export async function savePage(
 
   const errors: NonNullable<PageFormState["errors"]> = {};
 
-  if (id && !previousPage) {
+  if (id && hasValidId && !previousPage) {
     return {
       ok: false,
       message: "Güncellenecek page kaydı bulunamadı.",
@@ -509,6 +624,14 @@ export async function savePage(
     };
   }
 
+  if (id && !isUuid(id)) {
+    errors.form = "Güncellenecek page ID değeri UUID formatında değil.";
+  }
+
+  if (entityIdInput && !isUuid(entityIdInput)) {
+    errors.form = "Page entity ID değeri UUID formatında değil.";
+  }
+
   if (!locale) {
     errors.locale = "Locale zorunludur.";
   }
@@ -517,15 +640,15 @@ export async function savePage(
     errors.title = "Başlık zorunludur.";
   }
 
-  if (!slug) {
-    errors.slug = "Slug zorunludur.";
+  if (isPublished && !slug) {
+    errors.slug = "Publish için slug zorunludur.";
   }
 
-  if (seoTitle.length > 90) {
+  if (isPublished && seoTitle.length > 90) {
     errors.seoTitle = "SEO başlığı 90 karakteri geçmemelidir.";
   }
 
-  if (seoDescription.length > 170) {
+  if (isPublished && seoDescription.length > 170) {
     errors.seoDescription = "SEO açıklaması 170 karakteri geçmemelidir.";
   }
 
@@ -536,12 +659,24 @@ export async function savePage(
     locale,
     isPublished,
   });
+  normalizedContent.contentJson.isPublished = isPublished;
 
   if (normalizedContent.error) {
     errors.content = normalizedContent.error;
   }
 
+  if (!isPublished && !normalizedContent.hasUserBlocks) {
+    errors.content = "Taslak kaydetmek için en az bir içerik bloğu ekle.";
+  }
+
   if (isPublished) {
+    const structuredValidation = validatePageBlocks({
+      title,
+      slug,
+      seoTitle,
+      seoDescription,
+      blocks: normalizedContent.contentJson.blocks as PageContentBlock[],
+    });
     const publishBlockers = getPagePublishBlockers({
       title,
       slug,
@@ -550,15 +685,20 @@ export async function savePage(
       hasBlocks: normalizedContent.hasUserBlocks,
       isPublished: true,
     });
+    const blockBlockers = structuredValidation.blockers.filter(
+      (blocker) =>
+        blocker.includes("#") || blocker.includes("content block"),
+    );
+    const blockers = [...publishBlockers, ...blockBlockers];
 
-    if (publishBlockers.length > 0) {
+    if (blockers.length > 0) {
       return {
         ok: false,
         message: "Publish blocker nedeniyle sayfa kaydedilemedi.",
         values,
         errors: {
           ...errors,
-          form: publishBlockers.join(" "),
+          form: blockers.join(" "),
         },
       };
     }
@@ -573,11 +713,13 @@ export async function savePage(
     };
   }
 
-  const existingSlug = await findPageBySlugAndLocale({
-    slug,
-    locale,
-    excludeId: id || undefined,
-  });
+  const existingSlug = slug
+    ? await findPageBySlugAndLocale({
+        slug,
+        locale,
+        excludeId: id || undefined,
+      })
+    : null;
 
   if (existingSlug) {
     return {
@@ -592,7 +734,6 @@ export async function savePage(
 
   try {
     const auditActor = await requireStrictAuditActor();
-    const previousIsPublished = isPagePublishedContent(previousPage?.contentJson);
     const previousSlug = previousPage?.slug ?? "";
 
     if (id && previousPage) {
@@ -601,42 +742,38 @@ export async function savePage(
       let publishTransition: "publish" | "rollback" | null = null;
       let revisionName: string | null = null;
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(localizedContent)
-          .set({
-            locale,
-            title,
-            slug,
-            description: description || null,
-            seoTitle: seoTitle || null,
-            seoDescription: seoDescription || null,
-            contentJson: normalizedContent.contentJson,
-          })
-          .where(
-            and(
-              eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
-              eq(localizedContent.id, id),
-            ),
-          )
-          .returning({
-            id: localizedContent.id,
-            entityId: localizedContent.entityId,
-            title: localizedContent.title,
-            slug: localizedContent.slug,
-            locale: localizedContent.locale,
-            description: localizedContent.description,
-            seoTitle: localizedContent.seoTitle,
-            seoDescription: localizedContent.seoDescription,
-            contentJson: localizedContent.contentJson,
-          });
+      const updatedRows = await db
+        .update(localizedContent)
+        .set({
+          locale,
+          title,
+          slug,
+          description: description || null,
+          seoTitle: seoTitle || null,
+          seoDescription: seoDescription || null,
+          contentJson: normalizedContent.contentJson,
+        })
+        .where(
+          and(
+            eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+            eq(localizedContent.id, id),
+          ),
+        )
+        .returning({
+          id: localizedContent.id,
+          entityId: localizedContent.entityId,
+          title: localizedContent.title,
+          slug: localizedContent.slug,
+          locale: localizedContent.locale,
+          description: localizedContent.description,
+          seoTitle: localizedContent.seoTitle,
+          seoDescription: localizedContent.seoDescription,
+          contentJson: localizedContent.contentJson,
+        });
 
-        updatedPage = updatedRows[0] ?? null;
+      updatedPage = updatedRows[0] ?? null;
 
-        if (!updatedPage) {
-          return;
-        }
-
+      if (updatedPage) {
         const nextUpdatedPage = updatedPage;
         updatedPageSlug = nextUpdatedPage.slug;
         const nextIsPublished = isPagePublishedContent(nextUpdatedPage.contentJson);
@@ -654,7 +791,7 @@ export async function savePage(
           : null;
 
         await writePageAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: nextUpdatedPage.id,
           action: "update",
@@ -667,13 +804,13 @@ export async function savePage(
 
         if (publishTransition && revisionName) {
           await writePageRevision({
-            database: tx,
+            database: db,
             actor: auditActor,
             revisionName,
             status: publishTransition === "publish" ? "published" : "rolled_back",
           });
         }
-      });
+      }
 
       if (!updatedPage) {
         return {
@@ -688,12 +825,14 @@ export async function savePage(
 
       revalidatePath("/admin/pages");
       revalidatePagePath(updatedPageSlug);
+      revalidateLocalizedPagePaths(locale, updatedPageSlug);
 
       if (
         previousSlug &&
         normalizeSlug(previousSlug) !== normalizeSlug(updatedPageSlug ?? "")
       ) {
         revalidatePagePath(previousSlug);
+        revalidateLocalizedPagePaths(previousPage.locale, previousSlug);
       }
     } else {
       let insertedPage: PageRecord | null = null;
@@ -701,39 +840,35 @@ export async function savePage(
       let publishTransition: "publish" | "rollback" | null = null;
       let revisionName: string | null = null;
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(localizedContent)
-          .values({
-            id: uuidv4(),
-            entityType: PAGE_ENTITY_TYPE,
-            entityId: entityIdInput || uuidv4(),
-            locale,
-            title,
-            slug,
-            description: description || null,
-            seoTitle: seoTitle || null,
-            seoDescription: seoDescription || null,
-            contentJson: normalizedContent.contentJson,
-          })
-          .returning({
-            id: localizedContent.id,
-            entityId: localizedContent.entityId,
-            title: localizedContent.title,
-            slug: localizedContent.slug,
-            locale: localizedContent.locale,
-            description: localizedContent.description,
-            seoTitle: localizedContent.seoTitle,
-            seoDescription: localizedContent.seoDescription,
-            contentJson: localizedContent.contentJson,
-          });
+      const insertedRows = await db
+        .insert(localizedContent)
+        .values({
+          id: uuidv4(),
+          entityType: PAGE_ENTITY_TYPE,
+          entityId: entityIdInput || uuidv4(),
+          locale,
+          title,
+          slug,
+          description: description || null,
+          seoTitle: seoTitle || null,
+          seoDescription: seoDescription || null,
+          contentJson: normalizedContent.contentJson,
+        })
+        .returning({
+          id: localizedContent.id,
+          entityId: localizedContent.entityId,
+          title: localizedContent.title,
+          slug: localizedContent.slug,
+          locale: localizedContent.locale,
+          description: localizedContent.description,
+          seoTitle: localizedContent.seoTitle,
+          seoDescription: localizedContent.seoDescription,
+          contentJson: localizedContent.contentJson,
+        });
 
-        insertedPage = insertedRows[0] ?? null;
+      insertedPage = insertedRows[0] ?? null;
 
-        if (!insertedPage) {
-          return;
-        }
-
+      if (insertedPage) {
         const nextInsertedPage = insertedPage;
         insertedPageSlug = nextInsertedPage.slug;
         publishTransition = getPagePublishTransition({
@@ -750,7 +885,7 @@ export async function savePage(
           : null;
 
         await writePageAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: nextInsertedPage.id,
           action: "create",
@@ -762,13 +897,13 @@ export async function savePage(
 
         if (publishTransition && revisionName) {
           await writePageRevision({
-            database: tx,
+            database: db,
             actor: auditActor,
             revisionName,
             status: "published",
           });
         }
-      });
+      }
 
       if (!insertedPage) {
         return {
@@ -783,6 +918,7 @@ export async function savePage(
 
       revalidatePath("/admin/pages");
       revalidatePagePath(insertedPageSlug);
+      revalidateLocalizedPagePaths(locale, insertedPageSlug);
     }
   } catch (error) {
     if (error instanceof AuditActorBindingError) {
@@ -796,21 +932,38 @@ export async function savePage(
       };
     }
 
-    console.error("savePage error", error);
+    console.error("savePage error", {
+      operation: id ? "update" : "create",
+      submitIntent,
+      locale,
+      slug,
+      hasContent: content.trim().length > 0,
+      blockCount: normalizedContent.contentJson.blocks.length,
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     return {
       ok: false,
       message: "Sayfa kaydedilemedi.",
       values,
       errors: {
-        form: "Beklenmeyen bir kayıt hatası oluştu.",
+        form: getSaveFailureMessage(error),
       },
     };
   }
 
   return {
     ok: true,
-    message: id ? "Sayfa güncellendi." : "Sayfa oluşturuldu.",
+    message: id
+      ? isPublished
+        ? submitIntent === "keep-published"
+          ? "Yayındaki sayfa güncellendi."
+          : "Sayfa yayınlandı."
+        : "Sayfa taslak olarak güncellendi."
+      : isPublished
+        ? "Sayfa oluşturuldu ve yayınlandı."
+        : "Sayfa taslak olarak oluşturuldu.",
     values,
   };
 }
@@ -853,35 +1006,29 @@ export async function deletePage(id: string, formData: FormData) {
 
   try {
     const auditActor = await requireStrictAuditActor();
-    let deletedCount = 0;
+    const deletedRows = await db
+      .delete(localizedContent)
+      .where(
+        and(
+          eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+          eq(localizedContent.id, normalizedId),
+        ),
+      )
+      .returning({
+        id: localizedContent.id,
+      });
 
-    await db.transaction(async (tx) => {
-      const deletedRows = await tx
-        .delete(localizedContent)
-        .where(
-          and(
-            eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
-            eq(localizedContent.id, normalizedId),
-          ),
-        )
-        .returning({
-          id: localizedContent.id,
-        });
+    const deletedCount = deletedRows.length;
 
-      deletedCount = deletedRows.length;
-
-      if (deletedCount === 0) {
-        return;
-      }
-
+    if (deletedCount > 0) {
       await writePageAudit({
-        database: tx,
+        database: db,
         actor: auditActor,
         entityId: existingPage.id,
         action: "delete",
         previousState: buildPageAuditState(existingPage),
       });
-    });
+    }
 
     if (deletedCount === 0) {
       redirect(
@@ -901,7 +1048,11 @@ export async function deletePage(id: string, formData: FormData) {
       );
     }
 
-    console.error("deletePage error", error);
+    console.error("deletePage error", {
+      id: normalizedId,
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     redirect(
       buildPagesRedirectUrl({
@@ -983,47 +1134,43 @@ export async function repairPageSlug(
   try {
     const auditActor = await requireStrictAuditActor();
 
-    await db.transaction(async (tx) => {
-      const updatedRows = await tx
-        .update(localizedContent)
-        .set({
-          slug: nextSlug,
-        })
-        .where(
-          and(
-            eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
-            eq(localizedContent.id, existingPage.id),
-          ),
-        )
-        .returning({
-          id: localizedContent.id,
-          entityId: localizedContent.entityId,
-          title: localizedContent.title,
-          slug: localizedContent.slug,
-          locale: localizedContent.locale,
-          description: localizedContent.description,
-          seoTitle: localizedContent.seoTitle,
-          seoDescription: localizedContent.seoDescription,
-          contentJson: localizedContent.contentJson,
-        });
+    const updatedRows = await db
+      .update(localizedContent)
+      .set({
+        slug: nextSlug,
+      })
+      .where(
+        and(
+          eq(localizedContent.entityType, PAGE_ENTITY_TYPE),
+          eq(localizedContent.id, existingPage.id),
+        ),
+      )
+      .returning({
+        id: localizedContent.id,
+        entityId: localizedContent.entityId,
+        title: localizedContent.title,
+        slug: localizedContent.slug,
+        locale: localizedContent.locale,
+        description: localizedContent.description,
+        seoTitle: localizedContent.seoTitle,
+        seoDescription: localizedContent.seoDescription,
+        contentJson: localizedContent.contentJson,
+      });
 
-      updatedPage = updatedRows[0] ?? null;
+    updatedPage = updatedRows[0] ?? null;
 
-      if (!updatedPage) {
-        return;
-      }
-
+    if (updatedPage) {
       const nextUpdatedPage = updatedPage;
       updatedPageSlug = nextUpdatedPage.slug;
       await writePageAudit({
-        database: tx,
+        database: db,
         actor: auditActor,
         entityId: nextUpdatedPage.id,
         action: "update",
         previousState: buildPageAuditState(existingPage),
         newState: buildPageAuditState(nextUpdatedPage),
       });
-    });
+    }
   } catch (error) {
     if (error instanceof AuditActorBindingError) {
       redirect(
@@ -1034,7 +1181,12 @@ export async function repairPageSlug(
       );
     }
 
-    console.error("repairPageSlug error", error);
+    console.error("repairPageSlug error", {
+      id: normalizedId,
+      nextSlug,
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     redirect(
       buildPagesRedirectUrl({

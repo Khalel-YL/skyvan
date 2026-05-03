@@ -201,23 +201,19 @@ export default async function PagesPage({ searchParams }: Props) {
           description: "",
           seoTitle: "",
           seoDescription: "",
-          isPublished: true,
-          contentJsonText: seedTitle
-            ? JSON.stringify(
-                {
-                  blocks: [
-                    {
-                      type: "hero",
-                      heading: seedTitle,
-                      subtext: "Skyvan",
-                      body: "Yeni locale varyantı için başlangıç içeriği.",
-                    },
-                  ],
-                },
-                null,
-                2,
-              )
-            : "",
+          contentJson: {
+            isPublished: false,
+            blocks: seedTitle
+              ? [
+                  {
+                    type: "hero",
+                    heading: seedTitle,
+                    subtext: "Skyvan",
+                    body: "Yeni locale varyantı için başlangıç içeriği.",
+                  },
+                ]
+              : [],
+          },
         }
       : null;
 
@@ -429,7 +425,7 @@ export default async function PagesPage({ searchParams }: Props) {
                         const published = isPublished(row.contentJson);
                         const blocksCount = countBlocks(row.contentJson);
                         const hasSeo = Boolean(
-                          row.seoTitle?.trim() || row.seoDescription?.trim(),
+                          row.seoTitle?.trim() && row.seoDescription?.trim(),
                         );
                         const safeSlug = getSafeSlug(row.slug, row.title);
                         const missingSlug = !String(row.slug ?? "").trim();

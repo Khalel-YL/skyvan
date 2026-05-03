@@ -16,6 +16,11 @@ import {
   resolveAccessIdentity,
 } from "@/app/lib/auth/access";
 
+type AccessSignInResult = {
+  code: string;
+  redirectTo?: string;
+};
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -25,6 +30,7 @@ export async function signInWithAccess(formData: FormData) {
   const name = getTrimmed(formData, "name");
   const accessKey = getTrimmed(formData, "accessKey");
   const next = normalizeAccessReturnPath(getTrimmed(formData, "next"));
+  let signInResult: AccessSignInResult;
 
   try {
     const result = await resolveAccessIdentity({
@@ -38,17 +44,36 @@ export async function signInWithAccess(formData: FormData) {
     });
 
     if (result.user.role === "admin") {
-      redirect(next);
-    }
-
-    redirect(
-      buildAccessRedirectUrl({
+      signInResult = {
+        code: "signed-in-admin",
+        redirectTo: next,
+      };
+    } else {
+      signInResult = {
         code: result.created ? "signed-in-created" : "signed-in-user",
-      }),
-    );
+      };
+    }
   } catch (error) {
-    const code =
-      error instanceof AccessLoginError ? error.code : "sign-in-failed";
+    let code = "sign-in-failed";
+
+    if (error instanceof AccessLoginError) {
+      code = error.code;
+    } else if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+
+      if (message.includes("session secret") || message.includes("signed session")) {
+        code = "session-runtime-blocked";
+      } else if (message.includes("database_url") || message.includes("users tablosu")) {
+        code = "db-unavailable";
+      }
+
+      console.error("signInWithAccess failed:", {
+        code,
+        message: error.message,
+      });
+    } else {
+      console.error("signInWithAccess failed with unknown error");
+    }
 
     redirect(
       buildAccessRedirectUrl({
@@ -59,6 +84,17 @@ export async function signInWithAccess(formData: FormData) {
       }),
     );
   }
+
+  if (signInResult.redirectTo) {
+    redirect(signInResult.redirectTo);
+  }
+
+  redirect(
+    buildAccessRedirectUrl({
+      code: signInResult.code,
+      next,
+    }),
+  );
 }
 
 export async function signOutFromAccess() {
@@ -98,8 +134,6 @@ export async function claimInitialAdmin(formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/admin/users");
     revalidatePath("/admin/audit");
-
-    redirect(next);
   } catch (error) {
     const code =
       error instanceof AdminBootstrapError
@@ -113,4 +147,6 @@ export async function claimInitialAdmin(formData: FormData) {
       }),
     );
   }
+
+  redirect(next);
 }
