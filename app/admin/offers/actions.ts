@@ -36,8 +36,85 @@ export type OfferFormState = {
   };
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logOfferActionError(action: string, id: string | null, error: unknown) {
+  console.error(`admin/offers/${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
+function getOfferSaveFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Yinelenen teklif referansı veya benzersiz alan çakışması nedeniyle kayıt tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "Geçersiz lead / müşteri kaydı nedeniyle teklif işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Geçersiz teklif kimliği nedeniyle işlem durduruldu.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazım hatası nedeniyle teklif kaydı tamamlanamadı.";
+  }
+
+  return "Teklif kaydı sırasında beklenmeyen bir hata oluştu.";
+}
+
+function getOfferDeleteFailureCode(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (
+    message.includes("violates foreign key constraint") ||
+    message.includes("still referenced") ||
+    message.includes("restrict")
+  ) {
+    return "relation-blocked";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return "delete-failed";
 }
 
 function normalizeStatus(value: string): OfferStatus {
@@ -156,6 +233,42 @@ export async function saveOffer(
   const validUntilInput = getTrimmed(formData, "validUntil") || getTodayInput();
   const totalAmountInput = getTrimmed(formData, "totalAmount");
   const status = normalizeStatus(getTrimmed(formData, "status"));
+
+  if (id && !isUuid(id)) {
+    return {
+      ok: false,
+      message: "Geçersiz teklif kimliği.",
+      values: {
+        id,
+        leadId,
+        offerReference: rawOfferReferenceInput,
+        validUntil: validUntilInput,
+        totalAmount: totalAmountInput,
+        status,
+      },
+      errors: {
+        form: "Teklif kimliği UUID formatında olmadığı için işlem durduruldu.",
+      },
+    };
+  }
+
+  if (leadId && !isUuid(leadId)) {
+    return {
+      ok: false,
+      message: "Geçersiz lead / müşteri kaydı.",
+      values: {
+        id,
+        leadId,
+        offerReference: rawOfferReferenceInput,
+        validUntil: validUntilInput,
+        totalAmount: totalAmountInput,
+        status,
+      },
+      errors: {
+        leadId: "Lead kimliği geçersiz.",
+      },
+    };
+  }
 
   const existingOfferRows = id
     ? await db
@@ -294,28 +407,35 @@ export async function saveOffer(
     if (id && existingOffer) {
       let updatedId = "";
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(offers)
-          .set({
-            leadId,
-            offerReference,
-            validUntil: parsedValidUntil as Date,
-            totalAmount: parsedTotalAmount as string,
-            status,
-          })
-          .where(eq(offers.id, id))
-          .returning({
-            id: offers.id,
-          });
+      const updatedRows = await db
+        .update(offers)
+        .set({
+          leadId,
+          offerReference,
+          validUntil: parsedValidUntil as Date,
+          totalAmount: parsedTotalAmount as string,
+          status,
+        })
+        .where(eq(offers.id, id))
+        .returning({
+          id: offers.id,
+        });
 
-        updatedId = updatedRows[0]?.id ?? "";
+      updatedId = updatedRows[0]?.id ?? "";
 
-        if (!updatedId) {
-          return;
-        }
+      if (!updatedId) {
+        return {
+          ok: false,
+          message: "Teklif güncellenemedi.",
+          values,
+          errors: {
+            form: "Teklif kaydı işlem sırasında bulunamadı. Listeyi yenileyip tekrar dene.",
+          },
+        };
+      }
 
-        await writeStrictAuditLogInTransaction(tx, {
+      try {
+        await writeStrictAuditLogInTransaction(db, {
           entityType: "offer",
           entityId: updatedId,
           action: "update",
@@ -329,42 +449,48 @@ export async function saveOffer(
           },
           actor: auditActor,
         });
-      });
-
-      if (!updatedId) {
+      } catch (error) {
+        logOfferActionError("saveOffer audit update", id, error);
         return {
           ok: false,
-          message: "Teklif güncellenemedi.",
+          message: "Audit kaydı yazılamadı.",
           values,
           errors: {
-            form: "Teklif kaydı işlem sırasında bulunamadı. Listeyi yenileyip tekrar dene.",
+            form: "Teklif güncellendi ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
           },
         };
       }
     } else {
       let insertedId = "";
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(offers)
-          .values({
-            leadId,
-            offerReference,
-            validUntil: parsedValidUntil as Date,
-            totalAmount: parsedTotalAmount as string,
-            status,
-          })
-          .returning({
-            id: offers.id,
-          });
+      const insertedRows = await db
+        .insert(offers)
+        .values({
+          leadId,
+          offerReference,
+          validUntil: parsedValidUntil as Date,
+          totalAmount: parsedTotalAmount as string,
+          status,
+        })
+        .returning({
+          id: offers.id,
+        });
 
-        insertedId = insertedRows[0]?.id ?? "";
+      insertedId = insertedRows[0]?.id ?? "";
 
-        if (!insertedId) {
-          return;
-        }
+      if (!insertedId) {
+        return {
+          ok: false,
+          message: "Teklif oluşturulamadı.",
+          values,
+          errors: {
+            form: "Teklif kaydı oluşturulurken beklenmeyen bir hata oluştu.",
+          },
+        };
+      }
 
-        await writeStrictAuditLogInTransaction(tx, {
+      try {
+        await writeStrictAuditLogInTransaction(db, {
           entityType: "offer",
           entityId: insertedId,
           action: "create",
@@ -377,15 +503,14 @@ export async function saveOffer(
           },
           actor: auditActor,
         });
-      });
-
-      if (!insertedId) {
+      } catch (error) {
+        logOfferActionError("saveOffer audit create", insertedId, error);
         return {
           ok: false,
-          message: "Teklif oluşturulamadı.",
+          message: "Audit kaydı yazılamadı.",
           values,
           errors: {
-            form: "Teklif kaydı oluşturulurken beklenmeyen bir hata oluştu.",
+            form: "Teklif oluşturuldu ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
           },
         };
       }
@@ -419,11 +544,11 @@ export async function saveOffer(
       };
     }
 
-    console.error("saveOffer error:", error);
+    logOfferActionError("saveOffer", id || null, error);
 
     return {
       ok: false,
-      message: "Teklif kaydı sırasında beklenmeyen bir hata oluştu.",
+      message: getOfferSaveFailureMessage(error),
       values,
       errors: {
         form: "Kayıt tamamlanamadı. Referans benzersizliği ve lead bağı tekrar kontrol edilmeli.",
@@ -436,7 +561,7 @@ export async function deleteOffer(id: string) {
   const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
 
-  if (!normalizedId) {
+  if (!normalizedId || !isUuid(normalizedId)) {
     redirect(
       buildOffersRedirectUrl({
         offerAction: "error",
@@ -487,28 +612,14 @@ export async function deleteOffer(id: string) {
     const auditActor = await requireStrictAuditActor();
     let deletedCount = 0;
 
-    await db.transaction(async (tx) => {
-      const deletedRows = await tx
-        .delete(offers)
-        .where(eq(offers.id, normalizedId))
-        .returning({
-          id: offers.id,
-        });
-
-      deletedCount = deletedRows.length;
-
-      if (deletedCount === 0) {
-        return;
-      }
-
-      await writeStrictAuditLogInTransaction(tx, {
-        entityType: "offer",
-        entityId: existingOffer.id,
-        action: "delete",
-        previousState: existingOffer,
-        actor: auditActor,
+    const deletedRows = await db
+      .delete(offers)
+      .where(eq(offers.id, normalizedId))
+      .returning({
+        id: offers.id,
       });
-    });
+
+    deletedCount = deletedRows.length;
 
     if (deletedCount === 0) {
       redirect(
@@ -518,7 +629,29 @@ export async function deleteOffer(id: string) {
         }),
       );
     }
+
+    try {
+      await writeStrictAuditLogInTransaction(db, {
+        entityType: "offer",
+        entityId: existingOffer.id,
+        action: "delete",
+        previousState: existingOffer,
+        actor: auditActor,
+      });
+    } catch (error) {
+      logOfferActionError("deleteOffer audit", normalizedId, error);
+      redirect(
+        buildOffersRedirectUrl({
+          offerAction: "error",
+          offerCode: "audit-write-failed",
+        }),
+      );
+    }
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     if (error instanceof AuditActorBindingError) {
       redirect(
         buildOffersRedirectUrl({
@@ -528,12 +661,12 @@ export async function deleteOffer(id: string) {
       );
     }
 
-    console.error("deleteOffer error:", error);
+    logOfferActionError("deleteOffer", normalizedId, error);
 
     redirect(
       buildOffersRedirectUrl({
         offerAction: "error",
-        offerCode: "delete-failed",
+        offerCode: getOfferDeleteFailureCode(error),
       }),
     );
   }
