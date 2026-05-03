@@ -24,22 +24,23 @@ export function PackageFilters({
   return (
     <form
       action="/admin/packages"
-      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5"
+      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"
     >
-      <div className="flex flex-col gap-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-zinc-100">Filtreler</h2>
-          <p className="text-sm text-zinc-400">
-            Paket kayıtlarını görünüm, model ve metne göre daralt.
-          </p>
-        </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold text-zinc-100">Filtreler</h2>
+            <p className="text-xs text-zinc-500">
+              Paket kayıtlarını görünüm, model ve metne göre daralt.
+            </p>
+          </div>
 
-        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
           <button
             type="submit"
             name="view"
             value="all"
-            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${segmentClass(
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
               view === "all",
             )}`}
           >
@@ -50,7 +51,7 @@ export function PackageFilters({
             type="submit"
             name="view"
             value="default"
-            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${segmentClass(
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
               view === "default",
             )}`}
           >
@@ -61,12 +62,13 @@ export function PackageFilters({
             type="submit"
             name="view"
             value="custom"
-            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${segmentClass(
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
               view === "custom",
             )}`}
           >
             Standart
           </button>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr_auto]">
@@ -77,7 +79,7 @@ export function PackageFilters({
               name="q"
               defaultValue={query}
               placeholder="Paket adı veya kod..."
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
             />
           </div>
 
@@ -86,7 +88,7 @@ export function PackageFilters({
             <select
               name="modelId"
               defaultValue={modelId}
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-zinc-700"
+              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition focus:border-zinc-700"
             >
               <option value="">Tüm modeller</option>
               <option value="none">Bağımsız paketler</option>

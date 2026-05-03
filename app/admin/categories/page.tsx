@@ -179,7 +179,7 @@ export default async function CategoriesPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
             Admin · Kategori Omurgası
@@ -190,7 +190,8 @@ export default async function CategoriesPage({
               Kategori Yönetimi
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-              Ürünlerin workshop, kural motoru ve ilerideki AI katmanıyla uyumlu kategori omurgasını yönet.
+              Ürünleri, kural motorunu ve AI hazırlığını aynı sade kategori
+              omurgasında hizala.
             </p>
           </div>
         </div>
@@ -202,7 +203,7 @@ export default async function CategoriesPage({
                 type="submit"
                 className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
               >
-                Çekirdek Seti Senkronize Et
+                Çekirdek Seti Eşitle
               </button>
             </form>
           ) : null}
@@ -282,7 +283,7 @@ export default async function CategoriesPage({
                   type="submit"
                   className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
                 >
-                  Çekirdek Seti Senkronize Et
+                  Çekirdek Seti Eşitle
                 </button>
               </form>
 

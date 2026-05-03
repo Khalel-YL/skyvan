@@ -8,9 +8,20 @@ type PackagesListProps = {
   databaseReady: boolean;
 };
 
-function chip(label: string) {
+function shortenLabel(value: string) {
+  if (value.length <= 22) {
+    return value;
+  }
+
+  return `${value.slice(0, 14)}...${value.slice(-4)}`;
+}
+
+function chip(label: string, title?: string) {
   return (
-    <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300">
+    <span
+      title={title}
+      className="inline-flex max-w-full rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300"
+    >
       {label}
     </span>
   );
@@ -40,33 +51,34 @@ export function PackagesList({
       {packages.map((item) => (
         <div
           key={item.id}
-          className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"
+          className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3.5 transition hover:border-zinc-700"
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-semibold tracking-tight text-zinc-100">
+                <h3 className="break-words text-base font-semibold tracking-tight text-zinc-100">
                   {item.name}
                 </h3>
 
                 {item.isDefault ? (
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-100">
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-100">
                     Varsayılan
                   </span>
                 ) : (
-                  <span className="rounded-full border border-zinc-700 bg-zinc-800/70 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                  <span className="rounded-full border border-zinc-700 bg-zinc-800/70 px-2 py-0.5 text-xs font-medium text-zinc-300">
                     Standart
                   </span>
                 )}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {chip(`Kod ${item.slug}`)}
+                {chip(`Kod ${shortenLabel(item.slug)}`, item.slug)}
                 {chip(`Seviye ${item.tierLevel ?? 0}`)}
                 {chip(
                   item.modelSlug
-                    ? `Model ${item.modelSlug}`
+                    ? `Model ${shortenLabel(item.modelSlug)}`
                     : "Bağımsız paket",
+                  item.modelSlug ?? undefined,
                 )}
               </div>
             </div>

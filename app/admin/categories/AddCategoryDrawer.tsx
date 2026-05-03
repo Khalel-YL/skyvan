@@ -111,7 +111,7 @@ function CategoryDrawerForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="İkon etiketi"
-          hint="Örnek: bolt, droplet, chef-hat, bed"
+          hint="Kısa ikon adı. Örnek: bolt, droplet, chef-hat, bed."
           error={state.fieldErrors.icon}
         >
           <input
@@ -193,8 +193,8 @@ function CategoryDrawerForm({
       </Field>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Üst kategori ve alt kategori yapısını bu fazda bilerek genişletmiyoruz.
-        Önce ürün, workshop ve kural motoru için tek seviyeli omurgayı net tutuyoruz.
+        Bu fazda tek seviyeli kategori omurgası korunur; ürün ve kural
+        ilişkileri aynı akışta kalır.
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -263,7 +263,7 @@ export default function AddCategoryDrawer({
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Kategoriler
+                  Kategori Omurgası
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
                   {isEdit ? "Kategori Düzenle" : "Yeni Kategori"}

@@ -206,10 +206,10 @@ export default async function PackagesPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Admin · Packages
+            Admin · Paket Omurgası
           </div>
 
           <div>
@@ -217,8 +217,8 @@ export default async function PackagesPage({
               Paketler
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-              Modele bağlı veya bağımsız paketleri sade, kompakt ve operasyonel
-              biçimde yönet.
+              Modele bağlı veya bağımsız paketleri, varsayılan seçimleri ve
+              seviye yapısını tek ekranda yönet.
             </p>
           </div>
         </div>

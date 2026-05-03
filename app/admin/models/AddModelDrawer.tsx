@@ -93,7 +93,7 @@ function ModelDrawerForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="Model kodu"
-          hint="Örnek: DUCATO-L4H3 veya TRANSIT-L3H3. Kayıt sırasında sistem kodu normalize edilir."
+          hint="Örnek: DUCATO-L4H3 veya TRANSIT-L3H3. Kod kayıt sırasında standartlaştırılır."
           error={state.fieldErrors.slug}
         >
           <div className="space-y-2">
@@ -210,7 +210,7 @@ function ModelDrawerForm({
       <div className="grid gap-4 md:grid-cols-3">
         <Field
           label="Dingil mesafesi (mm)"
-          hint="Wheelbase"
+          hint="Ön ve arka aks arası mesafe."
           error={state.fieldErrors.wheelbaseMm}
         >
           <input
@@ -264,9 +264,8 @@ function ModelDrawerForm({
       </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Bu batch’te model kodunu tek kaynaklı ve stabil hale getiriyoruz.
-        Yeni kayıtta aynı kod varsa sistem otomatik olarak sonraki güvenli
-        varyantı üretir; düzenlemede ise kontrol kullanıcıda kalır.
+        Yeni kayıtta aynı kod varsa sistem sonraki güvenli varyantı önerir.
+        Düzenlemede kod kontrolü bilinçli olarak sende kalır.
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">

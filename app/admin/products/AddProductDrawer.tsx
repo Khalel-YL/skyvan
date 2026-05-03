@@ -25,7 +25,7 @@ function SubmitButton() {
   return (
     <button
       type="submit"
-      className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+      className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
     >
       {pending ? "Kaydediliyor..." : "Ürün Ekle"}
     </button>
@@ -59,27 +59,30 @@ export function AddProductDrawer({ categories }: Props) {
             ) as HTMLDialogElement | null
           )?.showModal()
         }
-        className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+        className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
       >
         Ürün Ekle
       </button>
 
       <dialog
         id="add-product-dialog"
-        className="w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-950 p-0 text-zinc-100 backdrop:bg-black/70"
+        className="w-full max-w-4xl rounded-3xl border border-zinc-800 bg-zinc-950 p-0 text-zinc-100 backdrop:bg-black/70"
       >
-        <form action={formAction} className="rounded-2xl bg-zinc-950 p-6">
-          <div className="mb-5 flex items-center justify-between">
+        <form action={formAction} className="rounded-3xl bg-zinc-950 p-6">
+          <div className="mb-5 flex items-start justify-between gap-4 border-b border-zinc-800 pb-5">
             <div>
-              <h2 className="text-lg font-semibold text-white">Ürün Ekle</h2>
+              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                Ürün Kataloğu
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-white">Yeni Ürün</h2>
               <p className="mt-1 text-sm text-zinc-500">
-                Ürün ana kaydını oluştur.
+                Ürün ana kaydını kategori, fiyat ve hazırlık sinyalleriyle oluştur.
               </p>
             </div>
 
             <button
               type="button"
-              className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-zinc-800"
+              className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-zinc-800"
               onClick={() =>
                 (
                   document.getElementById(
@@ -362,7 +365,7 @@ function ProductFormFields({
 
       <div>
         <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Mesh Key
+          3D Mesh Anahtarı
         </label>
         <input
           name="meshKey"
@@ -373,7 +376,7 @@ function ProductFormFields({
 
       <div>
         <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Material Key
+          Materyal Anahtarı
         </label>
         <input
           name="materialKey"
@@ -383,17 +386,11 @@ function ProductFormFields({
       </div>
 
       <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Teknik Özellikler JSON
-        </label>
-        <textarea
-          name="technicalSpecs"
-          rows={3}
-          defaultValue={values?.technicalSpecs ?? ""}
-          placeholder='{"voltage":"12V"}'
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="technicalSpecs" />
+        <input type="hidden" name="technicalSpecs" defaultValue={values?.technicalSpecs ?? ""} />
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+          Teknik özellikler bu ekranda serbest metin olarak düzenlenmez. Ürün
+          kaydı önce operasyonel alanlarla oluşturulur.
+        </div>
       </div>
 
       <div>
@@ -535,7 +532,7 @@ function CategoryDerivedInfo({ category }: { category: CategoryOption | null }) 
         Görsel kategori: {category?.isVisual ? "Evet" : "Hayır"}
       </span>
       <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
-        3D hedef katman: {category?.targetLayer ?? "null"}
+        3D hedef katman: {category?.targetLayer ?? "Atanmamış"}
       </span>
     </div>
   );

@@ -411,7 +411,7 @@ function getReadinessPriority(
 function formatShortId(value: string) {
   if (!value) return "-";
   if (value.length <= 16) return value;
-  return `${value.slice(0, 8)}...${value.slice(-6)}`;
+  return `${value.slice(0, 8)}...`;
 }
 
 function getWorkshopVisibilityLabel(value: ProductListItem["workshopVisibility"]) {
@@ -435,7 +435,7 @@ function InfoChip({
 }) {
   return (
     <span
-      className={`inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300 ${className}`}
+      className={`inline-flex max-w-full rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300 ${className}`}
     >
       {children}
     </span>
@@ -454,7 +454,7 @@ function MetricCard({
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
       <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-2 text-base font-semibold text-zinc-100">{value}</p>
+      <p className="mt-2 break-words text-base font-semibold text-zinc-100">{value}</p>
       {subValue ? <p className="mt-1 text-xs text-zinc-500">{subValue}</p> : null}
     </div>
   );
@@ -720,12 +720,14 @@ export async function ProductsTable({
           return (
             <div
               key={product.id}
-              className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 xl:flex-row xl:items-start xl:justify-between"
+              className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 transition hover:border-zinc-700 xl:flex-row xl:items-start xl:justify-between"
             >
               <div className="min-w-0 flex-1 space-y-4">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+                    <h3 className="min-w-0 break-words text-lg font-semibold text-white">
+                      {product.name}
+                    </h3>
                     <ProductStatusBadge status={displayStatus} />
                     <ReadinessBadge meta={meta} />
                     {isLegacyAlignedToDraft(product.lifecycleNote) ? (
@@ -751,7 +753,7 @@ export async function ProductsTable({
                     </InfoChip>
 
                     <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
-                      Katman {product.targetLayer ?? "null"}
+                      Katman {product.targetLayer ?? "Atanmamış"}
                     </InfoChip>
 
                     <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
@@ -769,21 +771,21 @@ export async function ProductsTable({
                     ) : null}
 
                     {product.meshKey ? (
-                      <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
-                        Mesh {product.meshKey}
+                      <InfoChip className="break-all border-zinc-800 bg-zinc-900 text-zinc-400">
+                        Mesh {formatShortId(product.meshKey)}
                       </InfoChip>
                     ) : null}
 
                     {product.materialKey ? (
-                      <InfoChip className="border-zinc-800 bg-zinc-900 text-zinc-400">
-                        Material {product.materialKey}
+                      <InfoChip className="break-all border-zinc-800 bg-zinc-900 text-zinc-400">
+                        Materyal {formatShortId(product.materialKey)}
                       </InfoChip>
                     ) : null}
 
                     {product.sku ? <InfoChip>{product.sku}</InfoChip> : null}
 
-                    <InfoChip className="text-zinc-500">
-                      {formatShortId(product.slug)}
+                    <InfoChip className="break-all text-zinc-500">
+                      Slug {formatShortId(product.slug)}
                     </InfoChip>
                   </div>
                 </div>

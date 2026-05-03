@@ -105,7 +105,7 @@ function PackageDrawerForm({
 
         <Field
           label="Model"
-          hint="Paket bir araca bağlanacaksa seç. Boş bırakılabilir."
+          hint="Paket belirli bir model için geçerliyse seç; genel paketler boş kalabilir."
           error={state.fieldErrors.modelId}
         >
           <select
@@ -196,8 +196,7 @@ function PackageDrawerForm({
       </Field>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Bu batch’te packages modülü admin omurgası olarak sertleştiriliyor.
-        Aynı kapsam içinde birden fazla varsayılan paket bırakılmıyor.
+        Varsayılan paket, aynı model veya genel kapsam içindeki öneriyi belirler.
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-4">
@@ -273,7 +272,7 @@ export default function AddPackageDrawer({
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Packages
+                  Paket Omurgası
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
                   {isEdit ? "Paket Düzenle" : "Yeni Paket"}

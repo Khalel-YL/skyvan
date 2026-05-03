@@ -103,7 +103,7 @@ function getFlashMessage(params: Awaited<ModelsPageProps["searchParams"]>) {
 function getBatchLabel(batch?: string) {
   switch (batch) {
     case "large-van-core":
-      return "Core Large Van Batch";
+      return "Çekirdek large-van grubu";
     case "ducato-class":
       return "Ducato Sınıfı";
     case "transit-class":
@@ -117,7 +117,7 @@ function getBatchLabel(batch?: string) {
     case "daily-class":
       return "Daily Sınıfı";
     default:
-      return "Seçilen batch";
+      return "Seçilen grup";
   }
 }
 
@@ -142,17 +142,17 @@ function getImportFeedback(params: Awaited<ModelsPageProps["searchParams"]>) {
       case "invalid-batch":
         return {
           type: "error" as const,
-          message: "Geçersiz import batch isteği alındı.",
+          message: "Geçersiz içeri alma grubu isteği alındı.",
         };
       case "empty-batch":
         return {
           type: "error" as const,
-          message: "Seçilen batch içinde import edilecek kayıt bulunamadı.",
+          message: "Seçilen grup içinde içeri alınacak kayıt bulunamadı.",
         };
       default:
         return {
           type: "error" as const,
-          message: "Vehicle seed import sırasında beklenmeyen bir hata oluştu.",
+          message: "Araç modeli içeri alma sırasında beklenmeyen bir hata oluştu.",
         };
     }
   }
@@ -203,10 +203,10 @@ export default async function ModelsPage({ searchParams }: ModelsPageProps) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Admin · Models
+            Admin · Model Omurgası
           </div>
 
           <div>
@@ -214,8 +214,8 @@ export default async function ModelsPage({ searchParams }: ModelsPageProps) {
               Araç Modelleri
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-              Şasi, taşıma kapasitesi ve görünür yüzey ölçülerini yöneten çekirdek
-              model omurgası.
+              Şasi, taşıma kapasitesi ve ölçü verilerini workshop öncesi net
+              tutan operasyonel model kataloğu.
             </p>
           </div>
         </div>
