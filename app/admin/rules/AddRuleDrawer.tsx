@@ -173,6 +173,8 @@ function RuleDrawerForm({
       return;
     }
 
+    // Existing drawer state is synchronized to the currently selected condition group.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPendingTargetId(currentOptions[0]?.id ?? "");
   }, [currentOptions, pendingTargetId]);
 
@@ -513,6 +515,8 @@ export default function AddRuleDrawer({
 
   useEffect(() => {
     if (forceOpen) {
+      // Existing deep-link behavior opens a fresh drawer instance from query params.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormKey((current) => current + 1);
       setIsOpen(true);
     }

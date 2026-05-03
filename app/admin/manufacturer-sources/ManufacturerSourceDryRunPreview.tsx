@@ -29,7 +29,7 @@ export function ManufacturerSourceDryRunPreview({
       <div>
         <div className="text-sm font-medium text-white">Dry-run URL kontrolü</div>
         <p className="mt-1 text-xs text-white/50">
-          URL'nin kurallara uyup uymadığını test eder.
+          URLnin kurallara uyup uymadığını test eder.
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export function ManufacturerSourceDryRunPreview({
 
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="text-xs text-white/40">Eşleşen izinli path'ler</div>
+              <div className="text-xs text-white/40">Eşleşen izinli pathler</div>
               <div className="mt-2 space-y-1">
                 {state.result.matchedAllowlist.length === 0 ? (
                   <div className="text-xs text-white/45">Yok</div>
@@ -145,7 +145,7 @@ export function ManufacturerSourceDryRunPreview({
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="text-xs text-white/40">Eşleşen engelli path'ler</div>
+              <div className="text-xs text-white/40">Eşleşen engelli pathler</div>
               <div className="mt-2 space-y-1">
                 {state.result.matchedBlocklist.length === 0 ? (
                   <div className="text-xs text-white/45">Yok</div>

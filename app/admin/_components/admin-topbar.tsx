@@ -13,14 +13,14 @@ type AdminTopbarProps = {
 
 const quickLinks = [
   {
-    label: "Public Website",
+    label: "Public Site",
     href: "/tr",
     icon: ExternalLink,
-    note: "Canlı yüzey",
+    note: "Canlı yayın yüzeyi",
     locked: false,
   },
   {
-    label: "Admin Home",
+    label: "Admin Ana Sayfa",
     href: "/admin",
     icon: Home,
     note: "Operasyon merkezi",
@@ -30,7 +30,7 @@ const quickLinks = [
     label: "Workshop",
     href: "/workshop",
     icon: LockKeyhole,
-    note: "Future / locked",
+    note: "Gelecek faz / kilitli",
     locked: true,
   },
 ];
@@ -91,7 +91,7 @@ export function AdminTopbar({
                       <span>{item.label}</span>
                       {item.locked ? (
                         <span className="rounded-full border border-amber-300/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-100">
-                          Locked
+                          Kilitli
                         </span>
                       ) : (
                         <span className="hidden text-[10px] text-[var(--admin-muted)] 2xl:inline">
@@ -123,7 +123,7 @@ export function AdminTopbar({
           <div className="mt-3 flex flex-col gap-2 border-t border-[var(--admin-border)] pt-3 text-xs text-[var(--admin-muted)] md:flex-row md:items-center md:justify-between">
             <p className="min-w-0 leading-5">{databaseNote}</p>
             <p className="shrink-0 font-medium text-zinc-400">
-              Admin shell · premium foundation
+              Admin shell · premium temel
             </p>
           </div>
         </div>

@@ -221,32 +221,32 @@ export const adminNavItems: AdminNavItem[] = [
 const adminNavGroupMeta: Array<Omit<AdminNavGroup, "items">> = [
   {
     id: "overview",
-    title: "Overview",
+    title: "Genel Bakış",
     description: "Operasyon çekirdeği",
   },
   {
     id: "content",
-    title: "Content",
+    title: "İçerik",
     description: "Yayın ve medya kontrolü",
   },
   {
     id: "engineering-core",
-    title: "Engineering Core",
+    title: "Mühendislik Çekirdeği",
     description: "Ürün ve build omurgası",
   },
   {
     id: "commercial-operations",
-    title: "Commercial Operations",
+    title: "Ticari Operasyonlar",
     description: "CRM ve satış hattı",
   },
   {
     id: "intelligence-governance",
-    title: "Intelligence & Governance",
+    title: "Zeka ve Yönetişim",
     description: "AI, kural ve denetim yüzeyi",
   },
   {
     id: "system",
-    title: "System",
+    title: "Sistem",
     description: "Erişim ve kullanıcı yönetimi",
   },
 ];

@@ -201,7 +201,7 @@ export function AddManufacturerSourceDrawer({
                 disabled={!canWrite || pending}
                 className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <p className="text-xs text-white/40">Hariç tutulacak path'leri satır satır gir.</p>
+              <p className="text-xs text-white/40">Hariç tutulacak pathleri satır satır gir.</p>
               {state.fieldErrors.pathBlocklist ? (
                 <p className="text-xs text-rose-300">{state.fieldErrors.pathBlocklist}</p>
               ) : null}

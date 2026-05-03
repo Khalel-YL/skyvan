@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { AvailableModelOption, PackageFilterView } from "./types";
 
 type PackageFiltersProps = {
@@ -104,12 +106,12 @@ export function PackageFilters({
               Uygula
             </button>
 
-            <a
+            <Link
               href="/admin/packages"
               className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
             >
               Sıfırla
-            </a>
+            </Link>
           </div>
         </div>
       </div>

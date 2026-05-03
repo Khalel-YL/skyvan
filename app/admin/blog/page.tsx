@@ -220,62 +220,68 @@ export default async function BlogDashboard({
   );
 
   return (
-    <div className="flex min-h-screen overflow-hidden bg-[#050505]">
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="flex items-center gap-3 text-2xl font-light text-white">
-              <FileText className="h-6 w-6 text-amber-500" />
-              Blog & <span className="font-semibold">İçerik Stüdyosu</span>
-            </h1>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              Editoryal yayın ve içerik bütünlüğü yüzeyi
-            </p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+            Admin · Blog
           </div>
 
-          {db ? (
-            <Link
-              href="/admin/blog?new=true"
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-xs font-black uppercase tracking-widest text-black transition hover:bg-amber-400"
-            >
-              <PenTool className="h-4 w-4" />
-              Yeni Makale
-            </Link>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-zinc-500"
-            >
-              Veritabanı Gerekli
-            </button>
-          )}
+          <div>
+            <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-zinc-100">
+              <FileText className="h-6 w-6 text-amber-400" />
+              Blog & İçerik Stüdyosu
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+              Editoryal yayınları, hazırlık durumunu ve public görünürlüğü tek
+              merkezden yönet.
+            </p>
+          </div>
         </div>
 
+        {db ? (
+          <Link
+            href="/admin/blog?new=true"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white"
+          >
+            <PenTool className="h-4 w-4" />
+            Yeni Makale
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-500"
+          >
+            Veritabanı gerekli
+          </button>
+        )}
+      </div>
+
         {actionFeedback ? (
-          <div className={`mt-6 rounded-2xl border p-4 text-sm ${toneClasses(actionFeedback.tone)}`}>
+          <div className={`rounded-2xl border p-4 text-sm ${toneClasses(actionFeedback.tone)}`}>
             {actionFeedback.message}
           </div>
         ) : null}
 
         {!db ? (
-          <div className="mt-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
             {dbHealth.note}
           </div>
         ) : null}
 
         {queryWarning ? (
-          <div className="mt-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
             {queryWarning}
           </div>
         ) : null}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-zinc-800 bg-[#0a0a0a] p-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
               Toplam içerik
             </p>
-            <p className="mt-3 text-3xl font-black text-white">{allArticles.length}</p>
+            <p className="mt-3 text-3xl font-semibold text-white">{allArticles.length}</p>
             <p className="mt-2 text-xs text-zinc-500">Kayıtlı blog sayısı</p>
           </div>
 
@@ -283,15 +289,15 @@ export default async function BlogDashboard({
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-300/80">
               Yayında
             </p>
-            <p className="mt-3 text-3xl font-black">{publishedCount}</p>
+            <p className="mt-3 text-3xl font-semibold">{publishedCount}</p>
             <p className="mt-2 text-xs text-sky-300/80">Public yüzeye açık içerik</p>
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-[#0a0a0a] p-5">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
               Taslak
             </p>
-            <p className="mt-3 text-3xl font-black text-white">{draftCount}</p>
+            <p className="mt-3 text-3xl font-semibold text-white">{draftCount}</p>
             <p className="mt-2 text-xs text-zinc-500">Henüz yayına alınmamış içerik</p>
           </div>
 
@@ -299,15 +305,15 @@ export default async function BlogDashboard({
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
               Yapısal olarak hazır
             </p>
-            <p className="mt-3 text-3xl font-black">{readyCount}</p>
+            <p className="mt-3 text-3xl font-semibold">{readyCount}</p>
             <p className="mt-2 text-xs text-emerald-300/80">
               Slug + kapak + yeterli içerik
             </p>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="rounded-3xl border border-zinc-800 bg-[#0a0a0a] p-6">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
             <div className="flex items-start gap-3">
               <div className="rounded-2xl bg-zinc-900 p-3 text-amber-400">
                 <ShieldAlert className="h-5 w-5" />
@@ -326,11 +332,11 @@ export default async function BlogDashboard({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-zinc-800 bg-[#0a0a0a] p-6">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
               İçerik hacmi
             </p>
-            <p className="mt-3 text-3xl font-black text-white">{totalWordCount}</p>
+            <p className="mt-3 text-3xl font-semibold text-white">{totalWordCount}</p>
             <p className="mt-2 text-xs leading-5 text-zinc-500">
               Blog yüzeyinde kayıtlı toplam kelime sayısı. Trafik veya SEO için
               simüle metrik üretilmez.
@@ -338,7 +344,7 @@ export default async function BlogDashboard({
           </div>
         </div>
 
-        <div className="mt-8 space-y-4 pb-12">
+        <div className="space-y-4">
           {allArticles.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-zinc-800 p-16 text-center text-zinc-500">
               <FileText className="h-12 w-12 opacity-25" />
@@ -361,11 +367,12 @@ export default async function BlogDashboard({
               return (
                 <div
                   key={article.id}
-                  className="rounded-[2rem] border border-zinc-800 bg-[#0a0a0a] p-6 shadow-lg transition hover:border-zinc-700"
+                  className="rounded-[2rem] border border-zinc-800 bg-zinc-950/60 p-5 shadow-lg transition hover:border-zinc-700"
                 >
                   <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
                     <div className="flex min-w-0 flex-1 gap-5">
                       {article.blogContent.coverImage ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={article.blogContent.coverImage}
                           alt={article.title}
@@ -442,7 +449,7 @@ export default async function BlogDashboard({
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
                       <Link
                         href={`/admin/blog?edit=${article.id}`}
                         className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
@@ -451,7 +458,7 @@ export default async function BlogDashboard({
                       </Link>
 
                       <form action={deleteBlogPost.bind(null, article.id)}>
-                        <button className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-300 transition hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-200">
+                        <button className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-200 transition hover:border-rose-400/40 hover:bg-rose-500/15">
                           Sil
                         </button>
                       </form>
@@ -462,8 +469,6 @@ export default async function BlogDashboard({
             })
           )}
         </div>
-      </div>
-
       {isDrawerOpen ? (
         <>
           <Link

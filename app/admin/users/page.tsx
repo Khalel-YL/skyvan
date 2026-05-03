@@ -1,5 +1,6 @@
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { ShieldAlert, ShieldCheck, UserCog, Users as UsersIcon } from "lucide-react";
+import Link from "next/link";
 
 import { db, getDatabaseHealth } from "@/db/db";
 import { users } from "@/db/schema";
@@ -313,12 +314,12 @@ export default async function UsersAdminPage({
               Uygula
             </button>
 
-            <a
+            <Link
               href="/admin/users"
               className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               Sıfırla
-            </a>
+            </Link>
           </form>
         </div>
       </section>

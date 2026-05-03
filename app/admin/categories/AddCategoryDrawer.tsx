@@ -193,7 +193,7 @@ function CategoryDrawerForm({
       </Field>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Üst kategori ve alt kategori yapısını bu batch'te bilerek genişletmiyoruz.
+        Üst kategori ve alt kategori yapısını bu fazda bilerek genişletmiyoruz.
         Önce ürün, workshop ve kural motoru için tek seviyeli omurgayı net tutuyoruz.
       </div>
 

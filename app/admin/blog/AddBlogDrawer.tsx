@@ -213,6 +213,7 @@ export default function AddBlogDrawer({
 
             {coverImage ? (
               <div className="overflow-hidden rounded-2xl border border-zinc-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={coverImage}
                   alt="Kapak görseli"

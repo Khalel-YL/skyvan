@@ -162,7 +162,7 @@ function RegistryCard({
 
         <div className="mt-3 grid gap-3 xl:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-            <div className="text-xs text-white/40">İzin verilen path'ler</div>
+            <div className="text-xs text-white/40">İzin verilen pathler</div>
             <div className="mt-2 space-y-1">
               {item.pathAllowlist.length === 0 ? (
                 <div className="text-xs text-white/45">Boş</div>
@@ -177,7 +177,7 @@ function RegistryCard({
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-            <div className="text-xs text-white/40">Engellenen path'ler</div>
+            <div className="text-xs text-white/40">Engellenen pathler</div>
             <div className="mt-2 space-y-1">
               {item.pathBlocklist.length === 0 ? (
                 <div className="text-xs text-white/45">Boş</div>
@@ -279,7 +279,7 @@ function RegistryCard({
 
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/80">İzin verilen path'ler</label>
+                  <label className="text-sm font-medium text-white/80">İzin verilen pathler</label>
                   <textarea
                     name="pathAllowlist"
                     rows={3}
@@ -290,7 +290,7 @@ function RegistryCard({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/80">Engellenen path'ler</label>
+                  <label className="text-sm font-medium text-white/80">Engellenen pathler</label>
                   <textarea
                     name="pathBlocklist"
                     rows={3}

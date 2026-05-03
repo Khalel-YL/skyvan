@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type RuleFiltersProps = {
   query: string;
   ruleType: string;
@@ -76,12 +78,12 @@ export function RuleFilters({
             Uygula
           </button>
 
-          <a
+          <Link
             href="/admin/rules"
             className="rounded-2xl border border-zinc-800 bg-transparent px-4 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
           >
             Sıfırla
-          </a>
+          </Link>
         </div>
       </form>
     </section>

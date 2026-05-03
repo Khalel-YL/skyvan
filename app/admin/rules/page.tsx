@@ -1304,7 +1304,10 @@ function buildRuleSuggestions(
       return a.targetProductLabel.localeCompare(b.targetProductLabel, "tr");
     })
     .slice(0, 6)
-    .map(({ score: _score, ...item }) => item);
+    .map(({ score, ...item }) => {
+      void score;
+      return item;
+    });
 }
 
 type ConflictPreviewItem = {
