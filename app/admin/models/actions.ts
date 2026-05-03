@@ -34,8 +34,80 @@ type ModelRecord = {
   updatedAt: Date | string | null;
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logModelActionError(action: string, id: string | null, error: unknown) {
+  console.error(`models/${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function getModelSaveFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Yinelenen model kaydı veya benzersiz alan çakışması nedeniyle kayıt tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "İlişkili kayıt doğrulanamadığı için model işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Geçersiz kayıt kimliği nedeniyle model işlemi durduruldu.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazım hatası nedeniyle model kaydı tamamlanamadı.";
+  }
+
+  return "Model kaydı işlenirken beklenmeyen bir hata oluştu.";
+}
+
+function getModelMutationCode(error: unknown, fallback: string) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (
+    message.includes("violates foreign key constraint") ||
+    message.includes("still referenced") ||
+    message.includes("restrict")
+  ) {
+    return "relation-blocked";
+  }
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "duplicate";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return fallback;
 }
 
 function normalizeStatus(value: string): "draft" | "active" | "archived" {
@@ -269,6 +341,11 @@ export async function saveModel(
     const requestedSlug = getTrimmed(formData, "slug");
     const slug = normalizeModelSlug(requestedSlug);
     const status = normalizeStatus(getTrimmed(formData, "status"));
+
+    if (id && !isUuid(id)) {
+      return createGenericError("Geçersiz kayıt kimliği nedeniyle model işlemi durduruldu.");
+    }
+
     const existingModel = id ? await findModelById(id) : null;
 
     if (id && !existingModel) {
@@ -352,101 +429,103 @@ export async function saveModel(
 
       let updatedModel: ModelRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(models)
-          .set({
-            slug,
-            baseWeightKg: baseWeightKg.toFixed(2),
-            maxPayloadKg: maxPayloadKg.toFixed(2),
-            wheelbaseMm,
-            roofLengthMm,
-            roofWidthMm,
-            status,
-            updatedAt: new Date(),
-          })
-          .where(eq(models.id, id))
-          .returning({
-            id: models.id,
-            slug: models.slug,
-            baseWeightKg: models.baseWeightKg,
-            maxPayloadKg: models.maxPayloadKg,
-            wheelbaseMm: models.wheelbaseMm,
-            roofLengthMm: models.roofLengthMm,
-            roofWidthMm: models.roofWidthMm,
-            status: models.status,
-            updatedAt: models.updatedAt,
-          });
+      const updatedRows = await db
+        .update(models)
+        .set({
+          slug,
+          baseWeightKg: baseWeightKg.toFixed(2),
+          maxPayloadKg: maxPayloadKg.toFixed(2),
+          wheelbaseMm,
+          roofLengthMm,
+          roofWidthMm,
+          status,
+          updatedAt: new Date(),
+        })
+        .where(eq(models.id, id))
+        .returning({
+          id: models.id,
+          slug: models.slug,
+          baseWeightKg: models.baseWeightKg,
+          maxPayloadKg: models.maxPayloadKg,
+          wheelbaseMm: models.wheelbaseMm,
+          roofLengthMm: models.roofLengthMm,
+          roofWidthMm: models.roofWidthMm,
+          status: models.status,
+          updatedAt: models.updatedAt,
+        });
 
-        updatedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
+      updatedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
 
-        if (!updatedModel) {
-          return;
-        }
+      if (!updatedModel) {
+        return createGenericError("Model kaydı işlem sırasında güncellenemedi.");
+      }
 
-        savedSlug = updatedModel.slug;
+      savedSlug = updatedModel.slug;
 
+      try {
         await writeModelAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: updatedModel.id,
           action: "update",
           previousState: existingModel,
           newState: updatedModel,
         });
-      });
-
-      if (!updatedModel) {
-        return createGenericError("Model kaydı işlem sırasında güncellenemedi.");
+      } catch (error) {
+        logModelActionError("saveModel audit update", id, error);
+        return createGenericError(
+          "Model kaydı güncellendi ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
       let insertedModel: ModelRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(models)
-          .values({
-            id: uuidv4(),
-            slug: resolvedSlug,
-            baseWeightKg: baseWeightKg.toFixed(2),
-            maxPayloadKg: maxPayloadKg.toFixed(2),
-            wheelbaseMm,
-            roofLengthMm,
-            roofWidthMm,
-            status,
-          })
-          .returning({
-            id: models.id,
-            slug: models.slug,
-            baseWeightKg: models.baseWeightKg,
-            maxPayloadKg: models.maxPayloadKg,
-            wheelbaseMm: models.wheelbaseMm,
-            roofLengthMm: models.roofLengthMm,
-            roofWidthMm: models.roofWidthMm,
-            status: models.status,
-            updatedAt: models.updatedAt,
-          });
+      const insertedRows = await db
+        .insert(models)
+        .values({
+          id: uuidv4(),
+          slug: resolvedSlug,
+          baseWeightKg: baseWeightKg.toFixed(2),
+          maxPayloadKg: maxPayloadKg.toFixed(2),
+          wheelbaseMm,
+          roofLengthMm,
+          roofWidthMm,
+          status,
+        })
+        .returning({
+          id: models.id,
+          slug: models.slug,
+          baseWeightKg: models.baseWeightKg,
+          maxPayloadKg: models.maxPayloadKg,
+          wheelbaseMm: models.wheelbaseMm,
+          roofLengthMm: models.roofLengthMm,
+          roofWidthMm: models.roofWidthMm,
+          status: models.status,
+          updatedAt: models.updatedAt,
+        });
 
-        insertedModel = (insertedRows[0] as ModelRecord | undefined) ?? null;
+      insertedModel = (insertedRows[0] as ModelRecord | undefined) ?? null;
 
-        if (!insertedModel) {
-          return;
-        }
+      if (!insertedModel) {
+        return createGenericError("Model kaydı oluşturulamadı.");
+      }
 
-        savedSlug = insertedModel.slug;
+      savedSlug = insertedModel.slug;
 
+      try {
         await writeModelAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: insertedModel.id,
           action: "create",
           newState: insertedModel,
         });
-      });
-
-      if (!insertedModel) {
-        return createGenericError("Model kaydı oluşturulamadı.");
+      } catch (error) {
+        logModelActionError("saveModel audit create", insertedModel.id, error);
+        return createGenericError(
+          "Model kaydı oluşturuldu ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     }
 
@@ -478,8 +557,8 @@ export async function saveModel(
       );
     }
 
-    console.error("saveModel error:", error);
-    return createGenericError("Model kaydı işlenirken beklenmeyen bir hata oluştu.");
+    logModelActionError("saveModel", null, error);
+    return createGenericError(getModelSaveFailureMessage(error));
   }
 }
 
@@ -487,7 +566,7 @@ export async function archiveModel(formData: FormData) {
   const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
-  if (!id) {
+  if (!id || !isUuid(id)) {
     redirect(
       buildModelsRedirectUrl({
         modelAction: "error",
@@ -511,47 +590,51 @@ export async function archiveModel(formData: FormData) {
     const auditActor = await requireStrictAuditActor();
     let archivedModel: ModelRecord | null = null;
 
-    await db.transaction(async (tx) => {
-      const updatedRows = await tx
-        .update(models)
-        .set({
-          status: "archived",
-          updatedAt: new Date(),
-        })
-        .where(eq(models.id, id))
-        .returning({
-          id: models.id,
-          slug: models.slug,
-          baseWeightKg: models.baseWeightKg,
-          maxPayloadKg: models.maxPayloadKg,
-          wheelbaseMm: models.wheelbaseMm,
-          roofLengthMm: models.roofLengthMm,
-          roofWidthMm: models.roofWidthMm,
-          status: models.status,
-          updatedAt: models.updatedAt,
-        });
-
-      archivedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
-
-      if (!archivedModel) {
-        return;
-      }
-
-      await writeModelAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: archivedModel.id,
-        action: "update",
-        previousState: existingModel,
-        newState: archivedModel,
+    const updatedRows = await db
+      .update(models)
+      .set({
+        status: "archived",
+        updatedAt: new Date(),
+      })
+      .where(eq(models.id, id))
+      .returning({
+        id: models.id,
+        slug: models.slug,
+        baseWeightKg: models.baseWeightKg,
+        maxPayloadKg: models.maxPayloadKg,
+        wheelbaseMm: models.wheelbaseMm,
+        roofLengthMm: models.roofLengthMm,
+        roofWidthMm: models.roofWidthMm,
+        status: models.status,
+        updatedAt: models.updatedAt,
       });
-    });
+
+    archivedModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
 
     if (!archivedModel) {
       redirect(
         buildModelsRedirectUrl({
           modelAction: "error",
           modelCode: "invalid-id",
+        }),
+      );
+    }
+
+    try {
+      await writeModelAudit({
+        database: db,
+        actor: auditActor,
+        entityId: archivedModel.id,
+        action: "update",
+        previousState: existingModel,
+        newState: archivedModel,
+      });
+    } catch (error) {
+      logModelActionError("archiveModel audit", id, error);
+      redirect(
+        buildModelsRedirectUrl({
+          modelAction: "error",
+          modelCode: "audit-write-failed",
         }),
       );
     }
@@ -572,12 +655,12 @@ export async function archiveModel(formData: FormData) {
       );
     }
 
-    console.error("archiveModel error:", error);
+    logModelActionError("archiveModel", id, error);
 
     redirect(
       buildModelsRedirectUrl({
         modelAction: "error",
-        modelCode: "archive-failed",
+        modelCode: getModelMutationCode(error, "archive-failed"),
       }),
     );
   }
@@ -593,7 +676,7 @@ export async function restoreModel(formData: FormData) {
   const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
-  if (!id) {
+  if (!id || !isUuid(id)) {
     redirect(
       buildModelsRedirectUrl({
         modelAction: "error",
@@ -617,47 +700,51 @@ export async function restoreModel(formData: FormData) {
     const auditActor = await requireStrictAuditActor();
     let restoredModel: ModelRecord | null = null;
 
-    await db.transaction(async (tx) => {
-      const updatedRows = await tx
-        .update(models)
-        .set({
-          status: "active",
-          updatedAt: new Date(),
-        })
-        .where(eq(models.id, id))
-        .returning({
-          id: models.id,
-          slug: models.slug,
-          baseWeightKg: models.baseWeightKg,
-          maxPayloadKg: models.maxPayloadKg,
-          wheelbaseMm: models.wheelbaseMm,
-          roofLengthMm: models.roofLengthMm,
-          roofWidthMm: models.roofWidthMm,
-          status: models.status,
-          updatedAt: models.updatedAt,
-        });
-
-      restoredModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
-
-      if (!restoredModel) {
-        return;
-      }
-
-      await writeModelAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: restoredModel.id,
-        action: "update",
-        previousState: existingModel,
-        newState: restoredModel,
+    const updatedRows = await db
+      .update(models)
+      .set({
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(models.id, id))
+      .returning({
+        id: models.id,
+        slug: models.slug,
+        baseWeightKg: models.baseWeightKg,
+        maxPayloadKg: models.maxPayloadKg,
+        wheelbaseMm: models.wheelbaseMm,
+        roofLengthMm: models.roofLengthMm,
+        roofWidthMm: models.roofWidthMm,
+        status: models.status,
+        updatedAt: models.updatedAt,
       });
-    });
+
+    restoredModel = (updatedRows[0] as ModelRecord | undefined) ?? null;
 
     if (!restoredModel) {
       redirect(
         buildModelsRedirectUrl({
           modelAction: "error",
           modelCode: "invalid-id",
+        }),
+      );
+    }
+
+    try {
+      await writeModelAudit({
+        database: db,
+        actor: auditActor,
+        entityId: restoredModel.id,
+        action: "update",
+        previousState: existingModel,
+        newState: restoredModel,
+      });
+    } catch (error) {
+      logModelActionError("restoreModel audit", id, error);
+      redirect(
+        buildModelsRedirectUrl({
+          modelAction: "error",
+          modelCode: "audit-write-failed",
         }),
       );
     }
@@ -678,12 +765,12 @@ export async function restoreModel(formData: FormData) {
       );
     }
 
-    console.error("restoreModel error:", error);
+    logModelActionError("restoreModel", id, error);
 
     redirect(
       buildModelsRedirectUrl({
         modelAction: "error",
-        modelCode: "restore-failed",
+        modelCode: getModelMutationCode(error, "restore-failed"),
       }),
     );
   }

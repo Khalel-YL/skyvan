@@ -18,6 +18,23 @@ import {
   type OfficialVehicleImportBatchKey,
 } from "./official-vehicle-catalog";
 
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logModelImportError(action: string, count: number, error: unknown) {
+  console.error(`models/${action} error`, {
+    action,
+    count,
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
 function parseBatchKey(formData: FormData): OfficialVehicleImportBatchKey | null {
   const raw = String(formData.get("batchKey") ?? "").trim();
 
@@ -105,35 +122,35 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
     }> = [];
 
     if (toInsert.length > 0) {
-      await db.transaction(async (tx) => {
-        insertedRows = await tx
-          .insert(models)
-          .values(
-            toInsert.map((item) => ({
-              id: uuidv4(),
-              slug: item.slug,
-              baseWeightKg: item.baseWeightKg.toFixed(2),
-              maxPayloadKg: item.maxPayloadKg.toFixed(2),
-              wheelbaseMm: item.wheelbaseMm,
-              roofLengthMm: item.roofLengthMm,
-              roofWidthMm: item.roofWidthMm,
-              status: item.status,
-            })),
-          )
-          .returning({
-            id: models.id,
-            slug: models.slug,
-            baseWeightKg: models.baseWeightKg,
-            maxPayloadKg: models.maxPayloadKg,
-            wheelbaseMm: models.wheelbaseMm,
-            roofLengthMm: models.roofLengthMm,
-            roofWidthMm: models.roofWidthMm,
-            status: models.status,
-            updatedAt: models.updatedAt,
-          });
+      insertedRows = await db
+        .insert(models)
+        .values(
+          toInsert.map((item) => ({
+            id: uuidv4(),
+            slug: item.slug,
+            baseWeightKg: item.baseWeightKg.toFixed(2),
+            maxPayloadKg: item.maxPayloadKg.toFixed(2),
+            wheelbaseMm: item.wheelbaseMm,
+            roofLengthMm: item.roofLengthMm,
+            roofWidthMm: item.roofWidthMm,
+            status: item.status,
+          })),
+        )
+        .returning({
+          id: models.id,
+          slug: models.slug,
+          baseWeightKg: models.baseWeightKg,
+          maxPayloadKg: models.maxPayloadKg,
+          wheelbaseMm: models.wheelbaseMm,
+          roofLengthMm: models.roofLengthMm,
+          roofWidthMm: models.roofWidthMm,
+          status: models.status,
+          updatedAt: models.updatedAt,
+        });
 
+      try {
         for (const insertedModel of insertedRows) {
-          await writeStrictAuditLogInTransaction(tx, {
+          await writeStrictAuditLogInTransaction(db, {
             entityType: "model",
             entityId: insertedModel.id,
             action: "create",
@@ -141,7 +158,21 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
             actor: auditActor,
           });
         }
-      });
+      } catch (error) {
+        logModelImportError(
+          "importOfficialVehicleSeeds audit",
+          insertedRows.length,
+          error,
+        );
+
+        redirect(
+          buildModelsRedirectUrl({
+            importStatus: "error",
+            importCode: "unexpected",
+            batch: batchKey,
+          }),
+        );
+      }
     }
 
     importedCount = insertedRows.length;
@@ -160,7 +191,7 @@ export async function importOfficialVehicleSeeds(formData: FormData) {
       );
     }
 
-    console.error("importOfficialVehicleSeeds error:", error);
+    logModelImportError("importOfficialVehicleSeeds", importedCount, error);
 
     redirect(
       buildModelsRedirectUrl({
