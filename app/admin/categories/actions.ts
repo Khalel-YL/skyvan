@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
 
 import { getDbOrThrow } from "@/db/db";
-import { categories } from "@/db/schema";
+import { categories, products } from "@/db/schema";
 import {
   type AuditInsertDatabase,
   AuditActorBindingError,
@@ -45,6 +45,9 @@ type CategorySyncCode =
   | "duplicate-slug"
   | "sync-failed";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 class CategorySyncError extends Error {
   categoryCode: CategorySyncCode;
   dbCode?: string;
@@ -71,6 +74,75 @@ class CategorySyncError extends Error {
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logCategoryActionError(action: string, id: string | null, error: unknown) {
+  console.error(`categories/${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function getCategorySaveFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Yinelenen kategori kaydı veya benzersiz slug çakışması nedeniyle kayıt tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "İlişkili kayıt doğrulanamadığı için kategori işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Geçersiz kategori kimliği nedeniyle işlem durduruldu.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazım hatası nedeniyle kategori kaydı tamamlanamadı.";
+  }
+
+  return "Kategori kaydı işlenirken beklenmeyen bir hata oluştu.";
+}
+
+function getCategoryMutationCode(error: unknown, fallback: string) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (
+    message.includes("violates foreign key constraint") ||
+    message.includes("still referenced") ||
+    message.includes("restrict")
+  ) {
+    return "dependency-blocked";
+  }
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "duplicate-slug";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return fallback;
 }
 
 function normalizeSlug(input: string) {
@@ -306,7 +378,8 @@ function logCategorySyncError(error: unknown) {
     message: details.message,
     detail: details.detail,
     constraint: details.constraint,
-    error,
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
   });
 
   return details.categoryCode;
@@ -331,6 +404,25 @@ async function getCategoryById(id: string): Promise<CategoryRecord | null> {
     .limit(1);
 
   return (rows[0] as CategoryRecord | undefined) ?? null;
+}
+
+async function hasCategoryDependencies(id: string) {
+  const db = getDbOrThrow();
+
+  const [productRows, childRows] = await Promise.all([
+    db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.categoryId, id))
+      .limit(1),
+    db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(eq(categories.parentId, id))
+      .limit(1),
+  ]);
+
+  return productRows.length > 0 || childRows.length > 0;
 }
 
 async function writeCategoryAudit(input: {
@@ -363,6 +455,11 @@ export async function saveCategory(
   const icon = getTrimmed(formData, "icon") || "folder";
   const status = normalizeStatus(getTrimmed(formData, "status"));
   const sortOrder = parseInteger(getTrimmed(formData, "sortOrder"));
+
+  if (id && !isUuid(id)) {
+    return createGenericError("Geçersiz kategori kimliği nedeniyle işlem durduruldu.");
+  }
+
   const existingCategory = id ? await getCategoryById(id) : null;
 
   if (!name) {
@@ -408,93 +505,95 @@ export async function saveCategory(
     if (id && existingCategory) {
       let updatedCategory: CategoryRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(categories)
-          .set({
-            name,
-            slug,
-            icon,
-            status,
-            sortOrder,
-            updatedAt: new Date(),
-          })
-          .where(eq(categories.id, id))
-          .returning({
-            id: categories.id,
-            name: categories.name,
-            slug: categories.slug,
-            icon: categories.icon,
-            status: categories.status,
-            sortOrder: categories.sortOrder,
-            createdAt: categories.createdAt,
-            updatedAt: categories.updatedAt,
-          });
+      const updatedRows = await db
+        .update(categories)
+        .set({
+          name,
+          slug,
+          icon,
+          status,
+          sortOrder,
+          updatedAt: new Date(),
+        })
+        .where(eq(categories.id, id))
+        .returning({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          icon: categories.icon,
+          status: categories.status,
+          sortOrder: categories.sortOrder,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        });
 
-        updatedCategory = (updatedRows[0] as CategoryRecord | undefined) ?? null;
+      updatedCategory = (updatedRows[0] as CategoryRecord | undefined) ?? null;
 
-        if (!updatedCategory) {
-          return;
-        }
+      if (!updatedCategory) {
+        return createGenericError("Kategori kaydı işlem sırasında güncellenemedi.");
+      }
 
+      try {
         await writeCategoryAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: updatedCategory.id,
           action: "update",
           previousState: existingCategory,
           newState: updatedCategory,
         });
-      });
-
-      if (!updatedCategory) {
-        return createGenericError("Kategori kaydı işlem sırasında güncellenemedi.");
+      } catch (error) {
+        logCategoryActionError("saveCategory audit update", id, error);
+        return createGenericError(
+          "Kategori kaydı güncellendi ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     } else {
       let insertedCategory: CategoryRecord | null = null;
       const now = new Date();
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(categories)
-          .values({
-            id: uuidv4(),
-            name,
-            slug,
-            icon,
-            status,
-            sortOrder,
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning({
-            id: categories.id,
-            name: categories.name,
-            slug: categories.slug,
-            icon: categories.icon,
-            status: categories.status,
-            sortOrder: categories.sortOrder,
-            createdAt: categories.createdAt,
-            updatedAt: categories.updatedAt,
-          });
+      const insertedRows = await db
+        .insert(categories)
+        .values({
+          id: uuidv4(),
+          name,
+          slug,
+          icon,
+          status,
+          sortOrder,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({
+          id: categories.id,
+          name: categories.name,
+          slug: categories.slug,
+          icon: categories.icon,
+          status: categories.status,
+          sortOrder: categories.sortOrder,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+        });
 
-        insertedCategory = (insertedRows[0] as CategoryRecord | undefined) ?? null;
+      insertedCategory = (insertedRows[0] as CategoryRecord | undefined) ?? null;
 
-        if (!insertedCategory) {
-          return;
-        }
+      if (!insertedCategory) {
+        return createGenericError("Kategori kaydı oluşturulamadı.");
+      }
 
+      try {
         await writeCategoryAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: insertedCategory.id,
           action: "create",
           newState: insertedCategory,
         });
-      });
-
-      if (!insertedCategory) {
-        return createGenericError("Kategori kaydı oluşturulamadı.");
+      } catch (error) {
+        logCategoryActionError("saveCategory audit create", insertedCategory.id, error);
+        return createGenericError(
+          "Kategori kaydı oluşturuldu ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     }
   } catch (error) {
@@ -508,10 +607,8 @@ export async function saveCategory(
       );
     }
 
-    console.error("saveCategory error:", error);
-    return createGenericError(
-      "Kategori kaydı işlenirken beklenmeyen bir hata oluştu.",
-    );
+    logCategoryActionError("saveCategory", id || null, error);
+    return createGenericError(getCategorySaveFailureMessage(error));
   }
 
   revalidateCategories();
@@ -522,7 +619,7 @@ export async function deleteCategory(id: string) {
   const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
 
-  if (!normalizedId) {
+  if (!normalizedId || !isUuid(normalizedId)) {
     redirect(
       buildCategoriesRedirectUrl({
         categoryAction: "error",
@@ -561,11 +658,14 @@ export async function deleteCategory(id: string) {
     throw error;
   }
 
+  let deleteFallbackCode = "delete-failed";
+
   try {
     let deletedCount = 0;
+    const hasDependencies = await hasCategoryDependencies(normalizedId);
 
-    await db.transaction(async (tx) => {
-      const deletedRows = await tx
+    if (!hasDependencies) {
+      const deletedRows = await db
         .delete(categories)
         .where(eq(categories.id, normalizedId))
         .returning({
@@ -574,20 +674,28 @@ export async function deleteCategory(id: string) {
 
       deletedCount = deletedRows.length;
 
-      if (deletedCount === 0) {
-        return;
+      if (deletedCount > 0) {
+        try {
+          await writeCategoryAudit({
+            database: db,
+            actor: auditActor,
+            entityId: existingCategory.id,
+            action: "delete",
+            previousState: existingCategory,
+          });
+        } catch (error) {
+          logCategoryActionError("deleteCategory audit delete", normalizedId, error);
+          redirect(
+            buildCategoriesRedirectUrl({
+              categoryAction: "error",
+              categoryCode: "audit-write-failed",
+            }),
+          );
+        }
       }
+    }
 
-      await writeCategoryAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: existingCategory.id,
-        action: "delete",
-        previousState: existingCategory,
-      });
-    });
-
-    if (deletedCount === 0) {
+    if (!hasDependencies && deletedCount === 0) {
       revalidateCategories();
       redirect(
         buildCategoriesRedirectUrl({
@@ -604,46 +712,62 @@ export async function deleteCategory(id: string) {
       throw error;
     }
 
-    console.error("Category hard delete failed, archive fallback applied:", error);
+    deleteFallbackCode = getCategoryMutationCode(error, "delete-failed");
+    logCategoryActionError("deleteCategory hard delete", normalizedId, error);
   }
 
   try {
     let archivedCategory: CategoryRecord | null = null;
 
-    await db.transaction(async (tx) => {
-      const archivedRows = await tx
-        .update(categories)
-        .set({
-          status: "archived",
-          updatedAt: new Date(),
-        })
-        .where(eq(categories.id, normalizedId))
-        .returning({
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-          icon: categories.icon,
-          status: categories.status,
-          sortOrder: categories.sortOrder,
-          createdAt: categories.createdAt,
-          updatedAt: categories.updatedAt,
-        });
+    const archivedRows = await db
+      .update(categories)
+      .set({
+        status: "archived",
+        updatedAt: new Date(),
+      })
+      .where(eq(categories.id, normalizedId))
+      .returning({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        icon: categories.icon,
+        status: categories.status,
+        sortOrder: categories.sortOrder,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+      });
 
-      archivedCategory = (archivedRows[0] as CategoryRecord | undefined) ?? null;
+    archivedCategory = (archivedRows[0] as CategoryRecord | undefined) ?? null;
 
-      if (!archivedCategory) {
-        return;
-      }
+    if (!archivedCategory) {
+      revalidateCategories();
+      redirect(
+        buildCategoriesRedirectUrl({
+          categoryAction: "error",
+          categoryCode: "delete-failed",
+        }),
+      );
+    }
 
+    try {
       await writeCategoryAudit({
-        database: tx,
+        database: db,
         actor: auditActor,
         entityId: archivedCategory.id,
         action: "update",
         previousState: existingCategory,
         newState: archivedCategory,
       });
-    });
+    } catch (error) {
+      logCategoryActionError("deleteCategory audit archive", normalizedId, error);
+      revalidateCategories();
+      redirect(
+        buildCategoriesRedirectUrl({
+          categoryAction: "error",
+          categoryCode: "audit-write-failed",
+        }),
+      );
+    }
 
     if (archivedCategory) {
       revalidateCategories();
@@ -654,14 +778,15 @@ export async function deleteCategory(id: string) {
       throw error;
     }
 
-    console.error("Category archive fallback failed:", error);
+    deleteFallbackCode = getCategoryMutationCode(error, "delete-failed");
+    logCategoryActionError("deleteCategory archive fallback", normalizedId, error);
   }
 
   revalidateCategories();
   redirect(
     buildCategoriesRedirectUrl({
       categoryAction: "error",
-      categoryCode: "delete-failed",
+      categoryCode: deleteFallbackCode,
     }),
   );
 }
