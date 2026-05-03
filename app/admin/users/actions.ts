@@ -1,6 +1,6 @@
 "use server";
 
-import { count, eq, sql } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,7 +26,8 @@ type UserRecord = {
   lastSignedIn: Date;
 };
 
-const ADMIN_ROLE_GUARD_LOCK_KEY = 842319552;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -38,6 +39,40 @@ function parseRole(value: string): UserRole | null {
   }
 
   return null;
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getUserMutationFailureCode(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "duplicate-key";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "relation-blocked";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return "update-failed";
 }
 
 function normalizeRoleFilter(value: string) {
@@ -106,7 +141,7 @@ export async function updateUserRole(formData: FormData) {
     role: roleFilter !== "all" ? roleFilter : undefined,
   };
 
-  if (!id) {
+  if (!id || !isUuid(id)) {
     redirect(
       buildUsersRedirectUrl({
         ...returnParams,
@@ -154,10 +189,7 @@ export async function updateUserRole(formData: FormData) {
     let mutationCode: "missing-user" | "noop" | "last-admin-blocked" | "update-failed" | null =
       null;
 
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(${ADMIN_ROLE_GUARD_LOCK_KEY})`);
-
-      const currentRows = await tx
+    const currentRows = await db
         .select({
           id: users.id,
           openId: users.openId,
@@ -173,22 +205,17 @@ export async function updateUserRole(formData: FormData) {
         .where(eq(users.id, id))
         .limit(1);
 
-      const currentUser = (currentRows[0] as UserRecord | undefined) ?? null;
+    const currentUser = (currentRows[0] as UserRecord | undefined) ?? null;
 
-      if (!currentUser) {
-        mutationCode = "missing-user";
-        return;
-      }
-
+    if (!currentUser) {
+      mutationCode = "missing-user";
+    } else if (currentUser.role === nextRole) {
+      mutationCode = "noop";
+    } else {
       previousUserForAudit = currentUser;
 
-      if (currentUser.role === nextRole) {
-        mutationCode = "noop";
-        return;
-      }
-
       if (currentUser.role === "admin" && nextRole === "user") {
-        const adminCountRows = await tx
+        const adminCountRows = await db
           .select({
             value: count(),
           })
@@ -199,50 +226,62 @@ export async function updateUserRole(formData: FormData) {
 
         if (adminCount <= 1) {
           mutationCode = "last-admin-blocked";
-          return;
         }
       }
 
-      const updatedRows = await tx
-        .update(users)
-        .set({
-          role: nextRole,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, id))
-        .returning({
-          id: users.id,
-          openId: users.openId,
-          name: users.name,
-          email: users.email,
-          loginMethod: users.loginMethod,
-          role: users.role,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-          lastSignedIn: users.lastSignedIn,
-        });
+      if (!mutationCode) {
+        const updatedRows = await db
+          .update(users)
+          .set({
+            role: nextRole,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, id))
+          .returning({
+            id: users.id,
+            openId: users.openId,
+            name: users.name,
+            email: users.email,
+            loginMethod: users.loginMethod,
+            role: users.role,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+            lastSignedIn: users.lastSignedIn,
+          });
 
-      updatedUser = (updatedRows[0] as UserRecord | undefined) ?? null;
+        updatedUser = (updatedRows[0] as UserRecord | undefined) ?? null;
 
-      if (!updatedUser) {
-        mutationCode = "update-failed";
-        return;
+        if (!updatedUser || !previousUserForAudit) {
+          mutationCode = "update-failed";
+        } else {
+          try {
+            await writeStrictAuditLogInTransaction(db, {
+              entityType: "user",
+              entityId: updatedUser.id,
+              action: "update",
+              previousState: previousUserForAudit,
+              newState: updatedUser,
+              actor: auditActor,
+            });
+          } catch (error) {
+            console.error("updateUserRole audit write error", {
+              action: "updateUserRole",
+              hasId: Boolean(id),
+              errorName: getSafeErrorName(error),
+              errorMessage: getSafeErrorMessage(error),
+            });
+
+            redirect(
+              buildUsersRedirectUrl({
+                ...returnParams,
+                userAction: "error",
+                userCode: "audit-write-failed",
+              }),
+            );
+          }
+        }
       }
-
-      if (!updatedUser || !previousUserForAudit) {
-        mutationCode = "update-failed";
-        return;
-      }
-
-      await writeStrictAuditLogInTransaction(tx, {
-        entityType: "user",
-        entityId: updatedUser.id,
-        action: "update",
-        previousState: previousUserForAudit,
-        newState: updatedUser,
-        actor: auditActor,
-      });
-    });
+    }
 
     if (mutationCode === "missing-user") {
       redirect(
@@ -297,13 +336,18 @@ export async function updateUserRole(formData: FormData) {
       );
     }
 
-    console.error("updateUserRole error:", error);
+    console.error("updateUserRole error", {
+      action: "updateUserRole",
+      hasId: Boolean(id),
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     redirect(
       buildUsersRedirectUrl({
         ...returnParams,
         userAction: "error",
-        userCode: "update-failed",
+        userCode: getUserMutationFailureCode(error),
       }),
     );
   }

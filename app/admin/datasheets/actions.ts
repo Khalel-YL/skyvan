@@ -8,6 +8,7 @@ import { getDbOrThrow } from "@/db/db";
 import { aiDocumentChunks, aiKnowledgeDocuments, products } from "@/db/schema";
 import {
   hasBlockedScheme,
+  isOpenableHttpUrl,
   normalizeWhitespace,
 } from "./validation";
 import {
@@ -68,6 +69,8 @@ const allowedParsingStatuses = new Set([
   "completed",
   "failed",
 ]);
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const GOVERNANCE_BLOCKER_GROUP_ORDER: GovernanceBlockerGroup[] = [
   "Veri eksikliği",
@@ -77,6 +80,88 @@ const GOVERNANCE_BLOCKER_GROUP_ORDER: GovernanceBlockerGroup[] = [
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function hasUrlScheme(value: string) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value.trim());
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getDatasheetFailureMessage(error: unknown, fallback: string) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Aynı benzersiz alanlara sahip bir datasheet kaydı zaten mevcut.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "İlişkili kayıt doğrulanamadığı için datasheet işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Kayıt kimliği UUID formatında olmadığı için datasheet işlemi durduruldu.";
+  }
+
+  if (message.includes("violates not-null constraint")) {
+    return "Zorunlu bir veritabanı alanı boş kaldığı için datasheet işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazımı tamamlanamadığı için datasheet işlemi durduruldu.";
+  }
+
+  return fallback;
+}
+
+function logDatasheetActionError(action: string, id: string | null, error: unknown) {
+  console.error(`Datasheet ${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function isNextRedirectError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
+function getDatasheetDeleteFailureCode(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (
+    message.includes("violates foreign key constraint") ||
+    message.includes("still referenced") ||
+    message.includes("restrict")
+  ) {
+    return "relation-blocked";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return "delete-failed";
 }
 
 function mapGovernanceBlocker(blocker: string): ExplainableGovernanceBlocker {
@@ -367,10 +452,27 @@ export async function saveDatasheet(
   const docType = getTrimmed(formData, "docType");
   const parsingStatus = getTrimmed(formData, "parsingStatus");
   const s3Key = getTrimmed(formData, "s3Key");
-  const previousDocument = id ? await getDatasheetById(id) : null;
   const nextParsingStatus = parsingStatus as DatasheetParsingStatus;
 
   const fieldErrors: DatasheetActionState["fieldErrors"] = {};
+
+  if (id && !isUuid(id)) {
+    return {
+      status: "error",
+      message: "Datasheet kimliği UUID formatında olmalıdır.",
+      fieldErrors: {},
+    };
+  }
+
+  if (productId && !isUuid(productId)) {
+    return {
+      status: "error",
+      message: "Ürün kimliği UUID formatında olmalıdır.",
+      fieldErrors: {},
+    };
+  }
+
+  const previousDocument = id ? await getDatasheetById(id) : null;
 
   if (id && !previousDocument) {
     return {
@@ -400,6 +502,8 @@ export async function saveDatasheet(
     fieldErrors.s3Key = "Belge bağlantısı / storage anahtarı çok kısa.";
   } else if (hasBlockedScheme(s3Key)) {
     fieldErrors.s3Key = "Bu bağlantı şeması güvenlik nedeniyle kabul edilmiyor.";
+  } else if (hasUrlScheme(s3Key) && !isOpenableHttpUrl(s3Key)) {
+    fieldErrors.s3Key = "Belge bağlantısı http veya https URL formatında olmalı.";
   } else if (await hasDuplicateStorageKey(id, s3Key)) {
     fieldErrors.s3Key =
       "Aynı belge bağlantısı / storage anahtarı ile kayıt zaten mevcut.";
@@ -459,43 +563,28 @@ export async function saveDatasheet(
     if (id && previousDocument) {
       let updatedDocument: DatasheetRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(aiKnowledgeDocuments)
-          .set({
-            productId: productId || null,
-            title,
-            docType: docType as DatasheetDocType,
-            parsingStatus: nextParsingStatus,
-            s3Key,
-            updatedAt: now,
-          })
-          .where(eq(aiKnowledgeDocuments.id, id))
-          .returning({
-            id: aiKnowledgeDocuments.id,
-            productId: aiKnowledgeDocuments.productId,
-            title: aiKnowledgeDocuments.title,
-            docType: aiKnowledgeDocuments.docType,
-            parsingStatus: aiKnowledgeDocuments.parsingStatus,
-            s3Key: aiKnowledgeDocuments.s3Key,
-            updatedAt: aiKnowledgeDocuments.updatedAt,
-          });
-
-        updatedDocument = (updatedRows[0] as DatasheetRecord | undefined) ?? null;
-
-        if (!updatedDocument) {
-          return;
-        }
-
-        await writeDatasheetAudit({
-          database: tx,
-          actor: auditActor,
-          entityId: updatedDocument.id,
-          action: "update",
-          previousState: buildDatasheetState(previousDocument),
-          newState: buildDatasheetState(updatedDocument),
+      const updatedRows = await db
+        .update(aiKnowledgeDocuments)
+        .set({
+          productId: productId || null,
+          title,
+          docType: docType as DatasheetDocType,
+          parsingStatus: nextParsingStatus,
+          s3Key,
+          updatedAt: now,
+        })
+        .where(eq(aiKnowledgeDocuments.id, id))
+        .returning({
+          id: aiKnowledgeDocuments.id,
+          productId: aiKnowledgeDocuments.productId,
+          title: aiKnowledgeDocuments.title,
+          docType: aiKnowledgeDocuments.docType,
+          parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          s3Key: aiKnowledgeDocuments.s3Key,
+          updatedAt: aiKnowledgeDocuments.updatedAt,
         });
-      });
+
+      updatedDocument = (updatedRows[0] as DatasheetRecord | undefined) ?? null;
 
       if (!updatedDocument) {
         return {
@@ -504,49 +593,74 @@ export async function saveDatasheet(
           fieldErrors: {},
         };
       }
+
+      try {
+        await writeDatasheetAudit({
+          database: db,
+          actor: auditActor,
+          entityId: updatedDocument.id,
+          action: "update",
+          previousState: buildDatasheetState(previousDocument),
+          newState: buildDatasheetState(updatedDocument),
+        });
+      } catch (error) {
+        logDatasheetActionError("saveDatasheet audit update", id, error);
+
+        return {
+          status: "error",
+          message:
+            "Datasheet güncellendi ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+          fieldErrors: {},
+        };
+      }
     } else {
       let insertedDocument: DatasheetRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(aiKnowledgeDocuments)
-          .values({
-            productId: productId || null,
-            title,
-            docType: docType as DatasheetDocType,
-            parsingStatus: nextParsingStatus,
-            s3Key,
-            updatedAt: now,
-          })
-          .returning({
-            id: aiKnowledgeDocuments.id,
-            productId: aiKnowledgeDocuments.productId,
-            title: aiKnowledgeDocuments.title,
-            docType: aiKnowledgeDocuments.docType,
-            parsingStatus: aiKnowledgeDocuments.parsingStatus,
-            s3Key: aiKnowledgeDocuments.s3Key,
-            updatedAt: aiKnowledgeDocuments.updatedAt,
-          });
-
-        insertedDocument = (insertedRows[0] as DatasheetRecord | undefined) ?? null;
-
-        if (!insertedDocument) {
-          return;
-        }
-
-        await writeDatasheetAudit({
-          database: tx,
-          actor: auditActor,
-          entityId: insertedDocument.id,
-          action: "create",
-          newState: buildDatasheetState(insertedDocument),
+      const insertedRows = await db
+        .insert(aiKnowledgeDocuments)
+        .values({
+          productId: productId || null,
+          title,
+          docType: docType as DatasheetDocType,
+          parsingStatus: nextParsingStatus,
+          s3Key,
+          updatedAt: now,
+        })
+        .returning({
+          id: aiKnowledgeDocuments.id,
+          productId: aiKnowledgeDocuments.productId,
+          title: aiKnowledgeDocuments.title,
+          docType: aiKnowledgeDocuments.docType,
+          parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          s3Key: aiKnowledgeDocuments.s3Key,
+          updatedAt: aiKnowledgeDocuments.updatedAt,
         });
-      });
+
+      insertedDocument = (insertedRows[0] as DatasheetRecord | undefined) ?? null;
 
       if (!insertedDocument) {
         return {
           status: "error",
           message: "Datasheet oluşturulamadı.",
+          fieldErrors: {},
+        };
+      }
+
+      try {
+        await writeDatasheetAudit({
+          database: db,
+          actor: auditActor,
+          entityId: insertedDocument.id,
+          action: "create",
+          newState: buildDatasheetState(insertedDocument),
+        });
+      } catch (error) {
+        logDatasheetActionError("saveDatasheet audit create", null, error);
+
+        return {
+          status: "error",
+          message:
+            "Datasheet oluşturuldu ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
           fieldErrors: {},
         };
       }
@@ -561,11 +675,14 @@ export async function saveDatasheet(
       };
     }
 
-    console.error("Datasheet save error:", error);
+    logDatasheetActionError("saveDatasheet", id || null, error);
 
     return {
       status: "error",
-      message: "Datasheet kaydı sırasında beklenmeyen bir hata oluştu.",
+      message: getDatasheetFailureMessage(
+        error,
+        "Datasheet kaydı sırasında beklenmeyen bir hata oluştu.",
+      ),
       fieldErrors: {},
     };
   }
@@ -584,12 +701,12 @@ export async function saveDatasheet(
 
 export async function deleteDatasheet(id: string) {
   const db = getDbOrThrow();
+  const normalizedId = String(id ?? "").trim();
 
-  if (!id) {
+  if (!normalizedId || !isUuid(normalizedId)) {
     redirect("/admin/datasheets?docAction=error&docCode=invalid-id");
   }
 
-  const normalizedId = String(id ?? "").trim();
   let existingDocument: DatasheetRecord | null = null;
 
   try {
@@ -614,39 +731,44 @@ export async function deleteDatasheet(id: string) {
     const auditActor = await requireStrictAuditActor();
     let deletedCount = 0;
 
-    await db.transaction(async (tx) => {
-      const deletedRows = await tx
-        .delete(aiKnowledgeDocuments)
-        .where(eq(aiKnowledgeDocuments.id, normalizedId))
-        .returning({
-          id: aiKnowledgeDocuments.id,
-        });
+    const deletedRows = await db
+      .delete(aiKnowledgeDocuments)
+      .where(eq(aiKnowledgeDocuments.id, normalizedId))
+      .returning({
+        id: aiKnowledgeDocuments.id,
+      });
 
-      deletedCount = deletedRows.length;
+    deletedCount = deletedRows.length;
 
-      if (deletedCount === 0) {
-        return;
-      }
+    if (deletedCount === 0) {
+      redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
+    }
 
+    try {
       await writeDatasheetAudit({
-        database: tx,
+        database: db,
         actor: auditActor,
         entityId: activeExistingDocument.id,
         action: "delete",
         previousState: buildDatasheetState(activeExistingDocument),
       });
-    });
-
-    if (deletedCount === 0) {
-      redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
+    } catch (error) {
+      logDatasheetActionError("deleteDatasheet audit", normalizedId, error);
+      redirect("/admin/datasheets?docAction=error&docCode=audit-write-failed");
     }
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     if (error instanceof AuditActorBindingError) {
       redirect("/admin/datasheets?docAction=error&docCode=audit-actor-required");
     }
 
-    console.error("Datasheet delete error:", error);
-    redirect("/admin/datasheets?docAction=error&docCode=delete-failed");
+    logDatasheetActionError("deleteDatasheet", normalizedId, error);
+    redirect(
+      `/admin/datasheets?docAction=error&docCode=${getDatasheetDeleteFailureCode(error)}`,
+    );
   }
 
   revalidateDatasheetLifecyclePaths([existingDocument?.productId ?? null]);
