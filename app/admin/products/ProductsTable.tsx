@@ -435,7 +435,7 @@ function InfoChip({
 }) {
   return (
     <span
-      className={`inline-flex max-w-full rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300 ${className}`}
+      className={`inline-flex max-w-full rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 ${className}`}
     >
       {children}
     </span>
@@ -452,9 +452,9 @@ function MetricCard({
   subValue?: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2">
       <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-2 break-words text-base font-semibold text-zinc-100">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-zinc-100">{value}</p>
       {subValue ? <p className="mt-1 text-xs text-zinc-500">{subValue}</p> : null}
     </div>
   );
@@ -505,13 +505,13 @@ function ReadinessPanel({
   score: number;
 }) {
   return (
-    <div className="flex w-full flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Hazırlık Sinyali
           </p>
-          <p className="mt-1 text-sm text-zinc-400">{meta.detail}</p>
+          <p className="mt-1 text-xs leading-5 text-zinc-400">{meta.detail}</p>
         </div>
 
         <span
@@ -688,7 +688,7 @@ export async function ProductsTable({
     });
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-3">
       {enrichedProducts.map(
         ({
           product,
@@ -720,12 +720,12 @@ export async function ProductsTable({
           return (
             <div
               key={product.id}
-              className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 transition hover:border-zinc-700 xl:flex-row xl:items-start xl:justify-between"
+              className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3 transition hover:border-zinc-700 xl:flex-row xl:items-start xl:justify-between"
             >
-              <div className="min-w-0 flex-1 space-y-4">
-                <div className="space-y-3">
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="min-w-0 break-words text-lg font-semibold text-white">
+                    <h3 className="min-w-0 break-words text-base font-semibold text-white">
                       {product.name}
                     </h3>
                     <ProductStatusBadge status={displayStatus} />
@@ -791,12 +791,12 @@ export async function ProductsTable({
                 </div>
 
                 {product.shortDescription ? (
-                  <p className="max-w-3xl text-sm leading-6 text-zinc-400">
+                  <p className="max-w-3xl text-xs leading-5 text-zinc-400">
                     {product.shortDescription}
                   </p>
                 ) : null}
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   <MetricCard label="Fiyat" value={formatMoney(product.basePrice)} />
                   <MetricCard
                     label="Ağırlık"
@@ -822,18 +822,18 @@ export async function ProductsTable({
                 </div>
               </div>
 
-              <div className="flex w-full shrink-0 flex-col items-stretch gap-3 xl:w-[360px] xl:items-end">
+              <div className="flex w-full shrink-0 flex-col items-stretch gap-2 xl:w-[340px] xl:items-end">
                 <div className="flex flex-wrap gap-2 xl:justify-end">
                   <Link
                     href={`/admin/products/${product.id}/documents`}
-                    className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition ${documentsButtonClass}`}
+                    className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${documentsButtonClass}`}
                   >
                     Belgeler
                   </Link>
 
                   <Link
                     href={`/admin/products/${product.id}/sources`}
-                    className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition ${bindingsButtonClass}`}
+                    className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${bindingsButtonClass}`}
                   >
                     Kaynak Bağları
                   </Link>

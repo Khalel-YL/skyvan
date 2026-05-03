@@ -24,23 +24,44 @@ export function PackageFilters({
   return (
     <form
       action="/admin/packages"
-      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4"
+      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3"
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-zinc-100">Filtreler</h2>
-            <p className="text-xs text-zinc-500">
-              Paket kayıtlarını görünüm, model ve metne göre daralt.
-            </p>
-          </div>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto] xl:items-end">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-zinc-400">Paket ara</label>
+          <input
+            type="text"
+            name="q"
+            defaultValue={query}
+            placeholder="Paket adı veya kod..."
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
+          />
+        </div>
 
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-zinc-400">Model</label>
+          <select
+            name="modelId"
+            defaultValue={modelId}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-zinc-700"
+          >
+            <option value="">Tüm modeller</option>
+            <option value="none">Bağımsız paketler</option>
+            {availableModels.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.slug}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1.5">
           <button
             type="submit"
             name="view"
             value="all"
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${segmentClass(
               view === "all",
             )}`}
           >
@@ -51,7 +72,7 @@ export function PackageFilters({
             type="submit"
             name="view"
             value="default"
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${segmentClass(
               view === "default",
             )}`}
           >
@@ -62,59 +83,27 @@ export function PackageFilters({
             type="submit"
             name="view"
             value="custom"
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${segmentClass(
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${segmentClass(
               view === "custom",
             )}`}
           >
             Standart
           </button>
           </div>
-        </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr_auto]">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Paket ara</label>
-            <input
-              type="text"
-              name="q"
-              defaultValue={query}
-              placeholder="Paket adı veya kod..."
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">Model</label>
-            <select
-              name="modelId"
-              defaultValue={modelId}
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 outline-none transition focus:border-zinc-700"
-            >
-              <option value="">Tüm modeller</option>
-              <option value="none">Bağımsız paketler</option>
-              {availableModels.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.slug}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-full border border-zinc-200 bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
+              className="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-white"
             >
               Uygula
             </button>
 
             <Link
               href="/admin/packages"
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
             >
               Sıfırla
             </Link>
-          </div>
         </div>
       </div>
     </form>

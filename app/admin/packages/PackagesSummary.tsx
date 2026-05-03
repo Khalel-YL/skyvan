@@ -8,7 +8,7 @@ type PackagesSummaryProps = {
   currentView: PackageFilterView;
 };
 
-function SummaryCard({
+function StatChip({
   label,
   value,
   active = false,
@@ -18,20 +18,16 @@ function SummaryCard({
   active?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border px-4 py-3 ${
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
         active
           ? "border-zinc-700 bg-zinc-900"
           : "border-zinc-800 bg-zinc-950/60"
       }`}
     >
-      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-100">
-        {value}
-      </div>
-    </div>
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-semibold text-zinc-100">{value}</span>
+    </span>
   );
 }
 
@@ -43,19 +39,19 @@ export function PackagesSummary({
   currentView,
 }: PackagesSummaryProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <SummaryCard label="Toplam" value={total} active={currentView === "all"} />
-      <SummaryCard
+    <div className="flex flex-wrap items-center gap-2">
+      <StatChip label="Toplam" value={total} active={currentView === "all"} />
+      <StatChip
         label="Varsayılan"
         value={defaultCount}
         active={currentView === "default"}
       />
-      <SummaryCard
+      <StatChip
         label="Standart"
         value={customCount}
         active={currentView === "custom"}
       />
-      <SummaryCard label="Modele Bağlı" value={linkedCount} />
+      <StatChip label="Modele Bağlı" value={linkedCount} />
     </div>
   );
 }

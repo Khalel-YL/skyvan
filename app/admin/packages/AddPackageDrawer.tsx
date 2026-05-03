@@ -52,7 +52,7 @@ function Field({
 }
 
 const inputClassName =
-  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
+  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
 
 function PackageDrawerForm({
   defaults,
@@ -78,7 +78,7 @@ function PackageDrawerForm({
   );
 
   return (
-    <form action={formAction} className="space-y-6 p-6">
+    <form action={formAction} className="space-y-5 p-5">
       {isEdit ? <input type="hidden" name="id" value={defaults.id} /> : null}
       <input type="hidden" name="isDefault" value={String(isDefault)} />
 
@@ -195,7 +195,7 @@ function PackageDrawerForm({
         </button>
       </Field>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-400">
         Varsayılan paket, aynı model veya genel kapsam içindeki öneriyi belirler.
       </div>
 
@@ -269,7 +269,7 @@ export default function AddPackageDrawer({
       {isOpen ? (
         <div className="fixed inset-0 z-50 bg-black/70 p-4">
           <div className="ml-auto h-full w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-5 py-4 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
                   Paket Omurgası

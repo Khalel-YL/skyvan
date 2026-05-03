@@ -70,21 +70,16 @@ export function OfficialVehicleImportCard({
   const totalSeedCount = officialVehicleSeeds.length;
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-2">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-1">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
             Model Kataloğu · Resmi Araç Aileleri
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-100">
-              Resmi araç ailelerini içeri al
-            </h2>
-            <p className="mt-1 max-w-3xl text-sm leading-5 text-zinc-400">
-              Large-van ailelerini kontrollü ekler; mevcut kodlar atlanır.
-            </p>
-          </div>
+          <h2 className="text-base font-semibold text-zinc-100">
+            Resmi araç ailelerini içeri al
+          </h2>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -95,7 +90,7 @@ export function OfficialVehicleImportCard({
 
       {feedback ? (
         <div
-          className={`mt-4 rounded-2xl px-4 py-3 text-sm ${
+          className={`mt-3 rounded-2xl px-3 py-2 text-sm ${
             feedback.type === "success"
               ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
               : "border border-rose-500/20 bg-rose-500/10 text-rose-100"
@@ -107,7 +102,7 @@ export function OfficialVehicleImportCard({
 
       <form
         action={importOfficialVehicleSeeds}
-        className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3"
+        className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3"
       >
         <input type="hidden" name="batchKey" value="large-van-core" />
 
@@ -131,7 +126,7 @@ export function OfficialVehicleImportCard({
         </div>
       </form>
 
-      <div className="mt-4 grid gap-2">
+      <div className="mt-3 grid gap-2">
         {familyCards.map((item) => (
           <FamilyRow
             key={item.key}

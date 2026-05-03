@@ -21,25 +21,22 @@ function statusFilterLabel(status: ProductsSummaryProps["currentStatus"]) {
   }
 }
 
-function SummaryCard({
+function StatChip({
   label,
   value,
-  hint,
+  className = "",
 }: {
   label: string;
   value: number;
-  hint: string;
+  className?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
-      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100">
-        {value}
-      </div>
-      <div className="mt-2 text-xs text-zinc-500">{hint}</div>
-    </div>
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${className}`}
+    >
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-semibold text-zinc-100">{value}</span>
+    </span>
   );
 }
 
@@ -51,42 +48,31 @@ export function ProductsSummary({
   currentStatus,
 }: ProductsSummaryProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-          {statusFilterLabel(currentStatus)}
-        </span>
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300">
+        {statusFilterLabel(currentStatus)}
+      </span>
 
-        <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-400">
-          Görünen ürün sayısı: {total}
-        </span>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Toplam ürün"
-          value={total}
-          hint="Mevcut filtre sonucunda görünen toplam kayıt."
-        />
-
-        <SummaryCard
-          label="Aktif"
-          value={active}
-          hint="Canlı kullanıma açık ürünler."
-        />
-
-        <SummaryCard
-          label="Taslak"
-          value={draft}
-          hint="Henüz yayına hazır olmayan ürünler."
-        />
-
-        <SummaryCard
-          label="Arşiv"
-          value={archived}
-          hint="Soft archive durumundaki kayıtlar."
-        />
-      </div>
+      <StatChip
+        label="Toplam"
+        value={total}
+        className="border-zinc-700 bg-zinc-900"
+      />
+      <StatChip
+        label="Aktif"
+        value={active}
+        className="border-emerald-800 bg-emerald-950/50"
+      />
+      <StatChip
+        label="Taslak"
+        value={draft}
+        className="border-amber-800 bg-amber-950/40"
+      />
+      <StatChip
+        label="Arşiv"
+        value={archived}
+        className="border-zinc-700 bg-zinc-900"
+      />
     </div>
   );
 }

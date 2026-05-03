@@ -70,7 +70,7 @@ export function CategoriesList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {categories.map((category) => {
         const stats = productStatsByCategoryId[category.id] ?? {
           total: 0,
@@ -81,11 +81,11 @@ export function CategoriesList({
         return (
           <div
             key={category.id}
-            className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3.5 transition hover:border-zinc-700"
+            className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3 transition hover:border-zinc-700"
           >
-            <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
               <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <h3 className="break-words text-base font-semibold text-zinc-100">
                     {category.name}
                   </h3>
@@ -99,7 +99,7 @@ export function CategoriesList({
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Chip className="break-all">Kod {category.slug}</Chip>
                   <Chip>İkon {category.icon || "Yok"}</Chip>
                   <Chip>Sıra {category.sortOrder}</Chip>

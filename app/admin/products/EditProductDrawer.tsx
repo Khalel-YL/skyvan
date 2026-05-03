@@ -72,16 +72,16 @@ export function EditProductDrawer({
         id={dialogId}
         className="w-full max-w-4xl rounded-3xl border border-zinc-800 bg-zinc-950 p-0 text-zinc-100 backdrop:bg-black/70"
       >
-        <form action={formAction} className="rounded-3xl bg-zinc-950 p-6">
+        <form action={formAction} className="rounded-3xl bg-zinc-950 p-5">
           <input type="hidden" name="id" value={product.id} />
 
-          <div className="mb-5 flex items-start justify-between gap-4 border-b border-zinc-800 pb-5">
+          <div className="mb-4 flex items-start justify-between gap-4 border-b border-zinc-800 pb-4">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
                 Ürün Kataloğu
               </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Ürünü Düzenle</h2>
-              <p className="mt-1 text-sm text-zinc-500">
+              <h2 className="mt-1.5 text-xl font-semibold text-white">Ürünü Düzenle</h2>
+              <p className="mt-1 text-xs text-zinc-500">
                 Ürün ana kaydını ve operasyonel görünürlüğünü güncelle.
               </p>
             </div>
@@ -104,7 +104,7 @@ export function EditProductDrawer({
             defaults={formValues}
           />
 
-          <div className="mt-5 flex items-center justify-between gap-4">
+          <div className="mt-4 flex items-center justify-between gap-4">
             <p className={`text-sm ${state.ok ? "text-green-400" : "text-red-400"}`}>
               {state.message}
             </p>

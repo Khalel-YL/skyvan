@@ -76,13 +76,13 @@ export function ModelsList({ models, databaseReady }: ModelsListProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {models.map((model) => (
         <div
           key={model.id}
-          className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3.5 transition hover:border-zinc-700"
+          className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3 transition hover:border-zinc-700"
         >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="break-all text-base font-semibold tracking-tight text-zinc-100">

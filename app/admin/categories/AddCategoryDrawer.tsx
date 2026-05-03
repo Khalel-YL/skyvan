@@ -49,7 +49,7 @@ function Field({
 }
 
 const inputClassName =
-  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
+  "w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700";
 
 function CategoryDrawerForm({
   defaults,
@@ -67,7 +67,7 @@ function CategoryDrawerForm({
   const [status, setStatus] = useState<CategoryStatus>(defaults.status);
 
   return (
-    <form action={formAction} className="space-y-6 p-6">
+    <form action={formAction} className="space-y-5 p-5">
       {isEdit ? <input type="hidden" name="id" value={defaults.id} /> : null}
 
       {state.message ? (
@@ -192,7 +192,7 @@ function CategoryDrawerForm({
         </div>
       </Field>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-400">
         Bu fazda tek seviyeli kategori omurgası korunur; ürün ve kural
         ilişkileri aynı akışta kalır.
       </div>
@@ -260,7 +260,7 @@ export default function AddCategoryDrawer({
       {isOpen ? (
         <div className="fixed inset-0 z-50 bg-black/70 p-4">
           <div className="ml-auto h-full w-full max-w-xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-5 py-4 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
                   Kategori Omurgası

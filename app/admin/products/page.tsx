@@ -58,18 +58,18 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-4 border-b border-zinc-800/80 pb-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1.5">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
             Admin · Ürün Kataloğu
           </div>
 
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-100">
               Ürün Yönetimi
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-zinc-400">
               Ürün kayıtlarını, kategori ilişkilerini, belge hazırlığını ve
               aktif / arşiv yaşam döngüsünü kompakt biçimde izle.
             </p>

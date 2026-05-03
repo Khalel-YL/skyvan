@@ -65,21 +65,24 @@ export function ModelFilters() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 md:p-5">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-zinc-100">Filtreler</div>
-            <div className="text-xs text-zinc-500">
-              Şasi kayıtlarını kod ve durum bilgisine göre daralt.
-            </div>
-          </div>
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <label className="text-xs font-medium text-zinc-400">Model ara</label>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Şasi kodu veya aile..."
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 transition focus:border-zinc-700"
+          />
+        </div>
 
-          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-0.5">
             <button
               type="button"
               onClick={() => applyStatus("all")}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${segmentedClass(
                 status,
                 "all"
               )}`}
@@ -90,7 +93,7 @@ export function ModelFilters() {
             <button
               type="button"
               onClick={() => applyStatus("draft")}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${segmentedClass(
                 status,
                 "draft"
               )}`}
@@ -101,7 +104,7 @@ export function ModelFilters() {
             <button
               type="button"
               onClick={() => applyStatus("active")}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${segmentedClass(
                 status,
                 "active"
               )}`}
@@ -112,7 +115,7 @@ export function ModelFilters() {
             <button
               type="button"
               onClick={() => applyStatus("archived")}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${segmentedClass(
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${segmentedClass(
                 status,
                 "archived"
               )}`}
@@ -120,44 +123,28 @@ export function ModelFilters() {
               Arşiv
             </button>
           </div>
-        </div>
 
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-200">
-              Model ara
-            </label>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Şasi kodu veya aile..."
-              className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 transition focus:border-zinc-700"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={applyFilters}
+            className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 transition hover:bg-white"
+          >
+            Uygula
+          </button>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={applyFilters}
-              className="rounded-full bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-white"
-            >
-              Uygula
-            </button>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+          >
+            Sıfırla
+          </button>
 
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="rounded-full border border-zinc-800 bg-zinc-900 px-5 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
-            >
-              Sıfırla
-            </button>
-
-            {hasActiveFilters ? (
-              <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-400">
-                Filtre aktif
-              </span>
-            ) : null}
-          </div>
+          {hasActiveFilters ? (
+            <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-400">
+              Aktif
+            </span>
+          ) : null}
         </div>
       </div>
     </div>
