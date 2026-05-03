@@ -32,8 +32,80 @@ type PackageRecord = {
   createdAt: Date | string | null;
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logPackageActionError(action: string, id: string | null, error: unknown) {
+  console.error(`packages/${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function getPackageSaveFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Yinelenen paket kaydı veya benzersiz alan çakışması nedeniyle kayıt tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "İlişkili kayıt doğrulanamadığı için paket işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Geçersiz kayıt kimliği nedeniyle paket işlemi durduruldu.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazım hatası nedeniyle paket kaydı tamamlanamadı.";
+  }
+
+  return "Paket kaydı işlenirken beklenmeyen bir hata oluştu.";
+}
+
+function getPackageMutationCode(error: unknown, fallback: string) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "invalid-id";
+  }
+
+  if (
+    message.includes("violates foreign key constraint") ||
+    message.includes("still referenced") ||
+    message.includes("restrict")
+  ) {
+    return "relation-blocked";
+  }
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "duplicate";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "db-write-failed";
+  }
+
+  return fallback;
 }
 
 function parseBoolean(value: string) {
@@ -214,6 +286,15 @@ export async function savePackage(
     const slug = normalizePackageSlug(requestedSlug);
     const tierLevel = requireTierLevel(getTrimmed(formData, "tierLevel"));
     const isDefault = parseBoolean(getTrimmed(formData, "isDefault"));
+
+    if (id && !isUuid(id)) {
+      return createGenericError("Geçersiz kayıt kimliği nedeniyle paket işlemi durduruldu.");
+    }
+
+    if (modelId && !isUuid(modelId)) {
+      return createFieldError("modelId", "Seçilen model kimliği geçersiz.");
+    }
+
     const existingPackage = id ? await findPackageById(id) : null;
 
     if (id && !existingPackage) {
@@ -265,92 +346,94 @@ export async function savePackage(
 
       let updatedPackage: PackageRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const updatedRows = await tx
-          .update(packages)
-          .set({
-            modelId,
-            name,
-            slug,
-            tierLevel,
-            isDefault,
-          })
-          .where(eq(packages.id, id))
-          .returning({
-            id: packages.id,
-            modelId: packages.modelId,
-            name: packages.name,
-            slug: packages.slug,
-            tierLevel: packages.tierLevel,
-            isDefault: packages.isDefault,
-            createdAt: packages.createdAt,
-          });
+      const updatedRows = await db
+        .update(packages)
+        .set({
+          modelId,
+          name,
+          slug,
+          tierLevel,
+          isDefault,
+        })
+        .where(eq(packages.id, id))
+        .returning({
+          id: packages.id,
+          modelId: packages.modelId,
+          name: packages.name,
+          slug: packages.slug,
+          tierLevel: packages.tierLevel,
+          isDefault: packages.isDefault,
+          createdAt: packages.createdAt,
+        });
 
-        updatedPackage = (updatedRows[0] as PackageRecord | undefined) ?? null;
+      updatedPackage = (updatedRows[0] as PackageRecord | undefined) ?? null;
 
-        if (!updatedPackage) {
-          return;
-        }
+      if (!updatedPackage) {
+        return createGenericError("Paket kaydı işlem sırasında güncellenemedi.");
+      }
 
-        savedSlug = updatedPackage.slug;
+      savedSlug = updatedPackage.slug;
 
+      try {
         await writePackageAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: updatedPackage.id,
           action: "update",
           previousState: existingPackage,
           newState: updatedPackage,
         });
-      });
-
-      if (!updatedPackage) {
-        return createGenericError("Paket kaydı işlem sırasında güncellenemedi.");
+      } catch (error) {
+        logPackageActionError("savePackage audit update", id, error);
+        return createGenericError(
+          "Paket kaydı güncellendi ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     } else {
       const resolvedSlug = existing ? await getNextAvailableSlug(slug) : slug;
       let insertedPackage: PackageRecord | null = null;
 
-      await db.transaction(async (tx) => {
-        const insertedRows = await tx
-          .insert(packages)
-          .values({
-            id: uuidv4(),
-            modelId,
-            name,
-            slug: resolvedSlug,
-            tierLevel,
-            isDefault,
-          })
-          .returning({
-            id: packages.id,
-            modelId: packages.modelId,
-            name: packages.name,
-            slug: packages.slug,
-            tierLevel: packages.tierLevel,
-            isDefault: packages.isDefault,
-            createdAt: packages.createdAt,
-          });
+      const insertedRows = await db
+        .insert(packages)
+        .values({
+          id: uuidv4(),
+          modelId,
+          name,
+          slug: resolvedSlug,
+          tierLevel,
+          isDefault,
+        })
+        .returning({
+          id: packages.id,
+          modelId: packages.modelId,
+          name: packages.name,
+          slug: packages.slug,
+          tierLevel: packages.tierLevel,
+          isDefault: packages.isDefault,
+          createdAt: packages.createdAt,
+        });
 
-        insertedPackage = (insertedRows[0] as PackageRecord | undefined) ?? null;
+      insertedPackage = (insertedRows[0] as PackageRecord | undefined) ?? null;
 
-        if (!insertedPackage) {
-          return;
-        }
+      if (!insertedPackage) {
+        return createGenericError("Paket kaydı oluşturulamadı.");
+      }
 
-        savedSlug = insertedPackage.slug;
+      savedSlug = insertedPackage.slug;
 
+      try {
         await writePackageAudit({
-          database: tx,
+          database: db,
           actor: auditActor,
           entityId: insertedPackage.id,
           action: "create",
           newState: insertedPackage,
         });
-      });
-
-      if (!insertedPackage) {
-        return createGenericError("Paket kaydı oluşturulamadı.");
+      } catch (error) {
+        logPackageActionError("savePackage audit create", insertedPackage.id, error);
+        return createGenericError(
+          "Paket kaydı oluşturuldu ancak audit kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+        );
       }
     }
 
@@ -384,8 +467,8 @@ export async function savePackage(
       );
     }
 
-    console.error("savePackage error:", error);
-    return createGenericError("Paket kaydı işlenirken beklenmeyen bir hata oluştu.");
+    logPackageActionError("savePackage", null, error);
+    return createGenericError(getPackageSaveFailureMessage(error));
   }
 }
 
@@ -393,7 +476,7 @@ export async function deletePackage(formData: FormData) {
   const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
-  if (!id) {
+  if (!id || !isUuid(id)) {
     redirect(
       buildPackagesRedirectUrl({
         packageAction: "error",
@@ -417,21 +500,20 @@ export async function deletePackage(formData: FormData) {
     const auditActor = await requireStrictAuditActor();
     let mutationCode: "in-use" | "invalid-id" | null = null;
 
-    await db.transaction(async (tx) => {
-      const usage = await tx
-        .select({
-          packageId: buildVersions.packageId,
-        })
-        .from(buildVersions)
-        .where(eq(buildVersions.packageId, id))
-        .limit(1);
+    const usage = await db
+      .select({
+        packageId: buildVersions.packageId,
+      })
+      .from(buildVersions)
+      .where(eq(buildVersions.packageId, id))
+      .limit(1);
 
-      if (usage.length > 0) {
-        mutationCode = "in-use";
-        return;
-      }
+    if (usage.length > 0) {
+      mutationCode = "in-use";
+    }
 
-      const deletedRows = await tx
+    if (!mutationCode) {
+      const deletedRows = await db
         .delete(packages)
         .where(eq(packages.id, id))
         .returning({
@@ -440,17 +522,28 @@ export async function deletePackage(formData: FormData) {
 
       if (deletedRows.length === 0) {
         mutationCode = "invalid-id";
-        return;
       }
 
-      await writePackageAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: existingPackage.id,
-        action: "delete",
-        previousState: existingPackage,
-      });
-    });
+      if (!mutationCode) {
+        try {
+          await writePackageAudit({
+            database: db,
+            actor: auditActor,
+            entityId: existingPackage.id,
+            action: "delete",
+            previousState: existingPackage,
+          });
+        } catch (error) {
+          logPackageActionError("deletePackage audit", id, error);
+          redirect(
+            buildPackagesRedirectUrl({
+              packageAction: "error",
+              packageCode: "audit-write-failed",
+            }),
+          );
+        }
+      }
+    }
 
     if (mutationCode === "in-use") {
       redirect(
@@ -486,12 +579,12 @@ export async function deletePackage(formData: FormData) {
       );
     }
 
-    console.error("deletePackage error:", error);
+    logPackageActionError("deletePackage", id, error);
 
     redirect(
       buildPackagesRedirectUrl({
         packageAction: "error",
-        packageCode: "delete-failed",
+        packageCode: getPackageMutationCode(error, "delete-failed"),
       }),
     );
   }
