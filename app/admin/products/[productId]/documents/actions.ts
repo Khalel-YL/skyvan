@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -39,7 +39,6 @@ import type {
 type KnowledgeDocType = "datasheet" | "manual" | "rulebook";
 type KnowledgeParsingStatus = "pending" | "processing" | "completed" | "failed";
 
-type LockableDatabase = Pick<ReturnType<typeof getDbOrThrow>, "execute">;
 type DocumentWriteDatabase = ReturnType<typeof getDbOrThrow>;
 
 type ProductDocumentIngestionRecord = {
@@ -419,15 +418,6 @@ function buildProductDocumentAuditState(document: ProductDocumentRecord) {
   };
 }
 
-async function lockKnowledgeIngestion(
-  database: LockableDatabase,
-  canonicalKey: string,
-) {
-  await database.execute(
-    sql`select pg_advisory_xact_lock(hashtext(${canonicalKey}))`,
-  );
-}
-
 async function writeKnowledgeAudit(input: {
   entityId: string;
   action: "create" | "update";
@@ -490,10 +480,6 @@ async function syncKnowledgeFromProductDocument(input: {
       ),
     ),
   );
-
-  for (const candidateKey of candidateKeys) {
-    await lockKnowledgeIngestion(input.database, candidateKey);
-  }
 
   const candidateRows =
     candidateKeys.length > 0
@@ -1402,8 +1388,6 @@ export async function ingestProductDocumentToAi(
     let completedKnowledgeDocument: KnowledgeDocumentRecord | null = null;
     let createdKnowledgeDocument = false;
 
-    await lockKnowledgeIngestion(database, canonicalKey);
-
     const existingRows = await database
         .select({
           id: aiKnowledgeDocuments.id,
@@ -1615,8 +1599,6 @@ export async function ingestProductDocumentToAi(
     console.error("ingestProductDocumentToAi error:", error);
 
     try {
-      await lockKnowledgeIngestion(database, canonicalKey);
-
       const rows = await database
           .select({
             id: aiKnowledgeDocuments.id,

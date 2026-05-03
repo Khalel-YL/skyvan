@@ -67,8 +67,58 @@ type RuleConflict =
     }
   | null;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logRuleActionError(action: string, id: string | null, error: unknown) {
+  console.error(`rules/${action} error`, {
+    action,
+    hasId: Boolean(id),
+    errorName: getSafeErrorName(error),
+    errorMessage: getSafeErrorMessage(error),
+  });
+}
+
+function getRuleFailureMessage(error: unknown) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("duplicate key") || message.includes("23505")) {
+    return "Yinelenen kural kaydı veya benzersiz alan çakışması nedeniyle işlem tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "İlişkili kayıt doğrulanamadığı için kural işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Geçersiz kayıt kimliği nedeniyle kural işlemi durduruldu.";
+  }
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı yazım hatası nedeniyle kural işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("audit")) {
+    return "Audit kaydı yazılamadığı için kural işlemi tam başarılı kabul edilmedi.";
+  }
+
+  return "Kural kaydı işlenirken beklenmeyen bir hata oluştu.";
 }
 
 function buildRulesRedirectUrl(
@@ -371,13 +421,18 @@ async function writeRuleAudit(input: {
         action: input.action,
         reason: result.reason,
       });
+
+      throw new Error(result.reason || "Rule audit write skipped.");
     }
   } catch (error) {
     console.warn("rule audit warning:", {
       entityId: input.entityId,
       action: input.action,
-      error,
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
     });
+
+    throw error;
   }
 }
 
@@ -486,10 +541,13 @@ export async function saveRule(
     const priority = parsePriority(getTrimmed(formData, "priority"));
     const message = getTrimmed(formData, "message");
     const parsedConditions = parseConditions(formData);
-    const existingRule = id ? await getRuleStateById(id) : null;
 
     if ("status" in parsedConditions) {
       return parsedConditions;
+    }
+
+    if (id && !isUuid(id)) {
+      return createGenericError("Geçersiz kayıt kimliği nedeniyle kural işlemi durduruldu.");
     }
 
     if (!sourceProductId) {
@@ -499,6 +557,29 @@ export async function saveRule(
     if (!targetProductId) {
       return createFieldError("targetProductId", "Hedef ürün zorunludur.");
     }
+
+    if (!isUuid(sourceProductId)) {
+      return createFieldError("sourceProductId", "Kaynak ürün kimliği geçersiz.");
+    }
+
+    if (!isUuid(targetProductId)) {
+      return createFieldError("targetProductId", "Hedef ürün kimliği geçersiz.");
+    }
+
+    for (const condition of parsedConditions) {
+      if (
+        (condition.conditionType === "model" ||
+          condition.conditionType === "package") &&
+        !isUuid(condition.targetId)
+      ) {
+        return createFieldError(
+          "conditions",
+          `${condition.conditionType} koşulu için seçilen kayıt kimliği geçersiz.`,
+        );
+      }
+    }
+
+    const existingRule = id ? await getRuleStateById(id) : null;
 
     const [sourceExists, targetExists] = await Promise.all([
       ensureProductExists(sourceProductId),
@@ -603,67 +684,65 @@ export async function saveRule(
     const ruleId = id || uuidv4();
     let mutationError: RuleFormState | null = null;
 
-    await database.transaction(async (tx) => {
-      if (id) {
-        const updatedRows = await tx
-          .update(compatibilityRules)
-          .set({
-            sourceProductId,
-            targetProductId,
-            ruleType,
-            severity,
-            priority,
-            message: message || null,
-          })
-          .where(eq(compatibilityRules.id, ruleId))
-          .returning({
-            id: compatibilityRules.id,
-          });
+    if (id) {
+      const updatedRows = await database
+        .update(compatibilityRules)
+        .set({
+          sourceProductId,
+          targetProductId,
+          ruleType,
+          severity,
+          priority,
+          message: message || null,
+        })
+        .where(eq(compatibilityRules.id, ruleId))
+        .returning({
+          id: compatibilityRules.id,
+        });
 
-        if (updatedRows.length === 0) {
-          mutationError = createGenericError(
-            "Kural kaydı işlem sırasında güncellenemedi.",
-          );
-          return;
-        }
-
-        await tx.delete(ruleConditions).where(eq(ruleConditions.ruleId, ruleId));
-      } else {
-        const insertedRows = await tx
-          .insert(compatibilityRules)
-          .values({
-            id: ruleId,
-            sourceProductId,
-            targetProductId,
-            ruleType,
-            severity,
-            priority,
-            message: message || null,
-          })
-          .returning({
-            id: compatibilityRules.id,
-          });
-
-        if (insertedRows.length === 0) {
-          mutationError = createGenericError("Kural kaydı oluşturulamadı.");
-          return;
-        }
-      }
-
-      if (parsedConditions.length > 0) {
-        await tx.insert(ruleConditions).values(
-          parsedConditions.map((condition) => ({
-            id: uuidv4(),
-            ruleId,
-            conditionType: condition.conditionType,
-            targetId: condition.targetId,
-          })),
+      if (updatedRows.length === 0) {
+        mutationError = createGenericError(
+          "Kural kaydı işlem sırasında güncellenemedi.",
         );
+      } else {
+        await database
+          .delete(ruleConditions)
+          .where(eq(ruleConditions.ruleId, ruleId));
       }
-    });
+    } else {
+      const insertedRows = await database
+        .insert(compatibilityRules)
+        .values({
+          id: ruleId,
+          sourceProductId,
+          targetProductId,
+          ruleType,
+          severity,
+          priority,
+          message: message || null,
+        })
+        .returning({
+          id: compatibilityRules.id,
+        });
+
+      if (insertedRows.length === 0) {
+        mutationError = createGenericError("Kural kaydı oluşturulamadı.");
+      }
+    }
 
     if (mutationError) {
       return mutationError;
+    }
+
+    if (parsedConditions.length > 0) {
+      await database.insert(ruleConditions).values(
+        parsedConditions.map((condition) => ({
+          id: uuidv4(),
+          ruleId,
+          conditionType: condition.conditionType,
+          targetId: condition.targetId,
+        })),
+      );
     }
 
     const savedRule = await getRuleStateById(ruleId);
@@ -702,9 +781,9 @@ export async function saveRule(
       return error as RuleFormState;
     }
 
-    console.error("saveRule error:", error);
+    logRuleActionError("saveRule", getTrimmed(formData, "id") || null, error);
 
-    return createGenericError("Kural kaydı işlenirken beklenmeyen bir hata oluştu.");
+    return createGenericError(getRuleFailureMessage(error));
   }
 }
 
@@ -712,7 +791,7 @@ export async function deleteRule(formData: FormData) {
   const database = getDbOrThrow();
   const id = getTrimmed(formData, "id");
 
-  if (!id) {
+  if (!id || !isUuid(id)) {
     redirect(
       buildRulesRedirectUrl({
         ruleAction: "error",
@@ -762,7 +841,7 @@ export async function deleteRule(formData: FormData) {
       throw error;
     }
 
-    console.error("deleteRule error:", error);
+    logRuleActionError("deleteRule", id, error);
 
     redirect(
       buildRulesRedirectUrl({
