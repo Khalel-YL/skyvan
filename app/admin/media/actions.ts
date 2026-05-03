@@ -14,13 +14,14 @@ import {
   requireStrictAuditActor,
   writeStrictAuditLogInTransaction,
 } from "@/app/lib/admin/audit";
-import { getMediaGuardrailBlockers } from "@/app/lib/admin/governance";
 import {
   type MediaContentJson,
   type MediaType,
   type MediaUsageScope,
-  detectDirectVideoUrl,
+  classifyVideoProvider,
+  extractVimeoVideoId,
   extractYouTubeVideoId,
+  getVimeoEmbedUrl,
   getYouTubeEmbedUrl,
   getYouTubeThumbnailUrl,
   isSafeHttpUrl,
@@ -211,26 +212,11 @@ export async function saveMedia(formData: FormData) {
   const primaryUrl = mediaType === "model3d" ? modelUrl : url;
   const safeUrl = parseSafeHttpUrl(primaryUrl);
   const youtubeVideoId = mediaType === "video" ? extractYouTubeVideoId(url) : null;
-  const videoProvider =
-    mediaType === "video"
-      ? youtubeVideoId
-        ? "youtube"
-        : detectDirectVideoUrl(url)
-          ? "direct"
-          : "external"
-      : undefined;
+  const vimeoVideoId = mediaType === "video" ? extractVimeoVideoId(url) : null;
+  const videoProvider = mediaType === "video" ? classifyVideoProvider(url) : undefined;
   const youtubePosterUrl = youtubeVideoId ? getYouTubeThumbnailUrl(youtubeVideoId) : "";
   const effectivePosterUrl = posterUrl || youtubePosterUrl;
-
-  const blockers = getMediaGuardrailBlockers({
-    imageUrl: primaryUrl,
-    fileName: title,
-    tags,
-  });
-
-  if (!safeUrl) {
-    blockers.push("Ana medya URL yalnızca http veya https formatında olmalı.");
-  }
+  const blockers: string[] = [];
 
   if (!title) {
     blockers.push("Başlık boş bırakılamaz.");
@@ -244,6 +230,10 @@ export async function saveMedia(formData: FormData) {
     blockers.push("Görsel medya için görsel URL zorunludur.");
   }
 
+  if (mediaType === "image" && url && !safeUrl) {
+    blockers.push("Görsel URL yalnızca http veya https formatında olmalı.");
+  }
+
   if (mediaType === "image" && !altText) {
     blockers.push("Görsel medya için alt text zorunludur.");
   }
@@ -252,15 +242,29 @@ export async function saveMedia(formData: FormData) {
     blockers.push("Video medya için video URL zorunludur.");
   }
 
+  if (mediaType === "video" && url && !safeUrl) {
+    blockers.push("Video URL yalnızca http veya https formatında olmalı.");
+  }
+
   if (mediaType === "model3d" && !modelUrl) {
     blockers.push("3D medya için model URL zorunludur.");
+  }
+
+  if (mediaType === "model3d" && modelUrl && !safeUrl) {
+    blockers.push("3D model bağlantısı geçerli bir http/https URL olmalıdır.");
   }
 
   if (mediaType === "model3d" && !thumbnailUrl) {
     blockers.push("3D medya için önizleme görseli URL zorunludur.");
   }
 
-  addOptionalUrlBlocker({ value: thumbnailUrl, label: "Thumbnail URL", blockers });
+  if (mediaType === "model3d" && thumbnailUrl && !isSafeHttpUrl(thumbnailUrl)) {
+    blockers.push("3D medya için önizleme görseli zorunlu ve geçerli bir http/https URL olmalıdır.");
+  }
+
+  if (mediaType !== "model3d") {
+    addOptionalUrlBlocker({ value: thumbnailUrl, label: "Thumbnail URL", blockers });
+  }
   addOptionalUrlBlocker({ value: posterUrl, label: "Poster URL", blockers });
 
   if (blockers.length > 0) {
@@ -283,7 +287,9 @@ export async function saveMedia(formData: FormData) {
     embedUrl:
       mediaType === "video" && youtubeVideoId
         ? getYouTubeEmbedUrl(youtubeVideoId)
-        : undefined,
+        : mediaType === "video" && vimeoVideoId
+          ? getVimeoEmbedUrl(vimeoVideoId)
+          : undefined,
     uploadDate: new Date().toISOString(),
   };
 

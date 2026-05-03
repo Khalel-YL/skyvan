@@ -18,6 +18,7 @@ import DeleteMediaButton from "./DeleteMediaButton";
 import {
   type MediaAsset,
   type MediaType,
+  detectModelFileExtension,
   mediaTypeLabels,
   usageScopeLabels,
 } from "./media-types";
@@ -46,13 +47,16 @@ function getTypeIcon(type: MediaType) {
 
 function getPreview(asset: MediaAsset) {
   if (asset.content.mediaType === "video") {
-    if (asset.content.provider === "youtube" && asset.content.embedUrl) {
+    if (
+      (asset.content.provider === "youtube" || asset.content.provider === "vimeo") &&
+      asset.content.embedUrl
+    ) {
       return (
         <iframe
           src={asset.content.embedUrl}
           title={asset.title}
           className="h-full min-h-[34rem] w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
         />
       );
@@ -108,12 +112,30 @@ function getPreview(asset: MediaAsset) {
   }
 
   if (asset.content.mediaType === "model3d") {
+    const modelFileExtension = detectModelFileExtension(asset.primaryUrl);
+
     return (
       <div className="relative flex h-full min-h-[34rem] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.16),transparent_28rem),linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02))] p-6 text-center">
+        {asset.previewUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- Admin media records store external URLs only; no Next image loader is configured for arbitrary sources. */}
+            <img
+              src={asset.previewUrl}
+              alt={asset.content.altText || asset.title}
+              className="absolute inset-0 h-full w-full object-cover opacity-20 blur-[2px]"
+            />
+            <div className="absolute inset-0 bg-black/62" />
+          </>
+        ) : null}
         <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[3rem] border border-zinc-700/70 bg-white/[0.035] shadow-[0_0_80px_rgba(255,255,255,0.08)]" />
         <div className="absolute left-[18%] top-[18%] h-24 w-24 rounded-3xl border border-zinc-800 bg-black/30" />
         <div className="absolute bottom-[16%] right-[16%] h-32 w-32 rounded-[2rem] border border-zinc-700/70 bg-white/[0.04]" />
         <div className="relative max-w-sm">
+          <div className="mb-5 flex justify-center">
+            <span className="rounded-full border border-zinc-700 bg-black/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300">
+              {modelFileExtension || "URL model"}
+            </span>
+          </div>
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-zinc-600 bg-black/50 text-zinc-100 shadow-[0_0_70px_rgba(255,255,255,0.12)]">
             <Box className="h-11 w-11" />
           </div>
@@ -121,16 +143,9 @@ function getPreview(asset: MediaAsset) {
           <p className="mt-3 text-sm leading-6 text-zinc-400">
             Viewer entegrasyonu sonraki fazda bağlanacak.
           </p>
-          {asset.previewUrl ? (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-800">
-              {/* eslint-disable-next-line @next/next/no-img-element -- Admin media records store external URLs only; no Next image loader is configured for arbitrary sources. */}
-              <img
-                src={asset.previewUrl}
-                alt={asset.content.altText || asset.title}
-                className="aspect-[16/9] w-full object-cover"
-              />
-            </div>
-          ) : null}
+          <p className="mt-3 text-xs leading-5 text-zinc-500">
+            Model dosyası URL olarak kayıtlıdır; gerçek viewer sonraki fazda bağlanacak.
+          </p>
         </div>
       </div>
     );

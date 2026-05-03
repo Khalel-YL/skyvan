@@ -5,7 +5,7 @@ export type PageBlockMedia = {
   url: string;
   previewUrl?: string;
   embedUrl?: string;
-  provider?: "direct" | "youtube" | "external";
+  provider?: "direct" | "youtube" | "vimeo" | "external";
   altText?: string;
 };
 
@@ -84,6 +84,7 @@ const supportedMediaTypes = new Set<PageBlockMedia["mediaType"]>([
 const supportedProviders = new Set<NonNullable<PageBlockMedia["provider"]>>([
   "direct",
   "youtube",
+  "vimeo",
   "external",
 ]);
 const uuidPattern =

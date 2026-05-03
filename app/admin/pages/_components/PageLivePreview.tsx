@@ -11,6 +11,26 @@ type PageLivePreviewProps = {
   blocks: PageContentBlock[];
 };
 
+function PreviewMediaShell({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-[1.35rem] bg-zinc-950 shadow-[0_18px_44px_rgba(0,0,0,0.16)]">
+      <div className="relative overflow-hidden">
+        {children}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1),transparent_45%,rgba(0,0,0,0.45))]" />
+        <p className="absolute bottom-3 left-3 right-3 truncate text-xs font-medium text-white/88">
+          {title}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function MediaPreview({ block }: { block: PageContentBlock }) {
   if (!("media" in block) || !block.media) {
     return null;
@@ -20,8 +40,8 @@ function MediaPreview({ block }: { block: PageContentBlock }) {
 
   if (media.mediaType === "video") {
     return (
-      <div className="mt-4 overflow-hidden rounded-2xl border border-black/10 bg-black/5">
-        {media.provider === "youtube" && media.embedUrl ? (
+      <PreviewMediaShell title={media.title}>
+        {(media.provider === "youtube" || media.provider === "vimeo") && media.embedUrl ? (
           <iframe
             src={media.embedUrl}
             title={media.title}
@@ -39,31 +59,33 @@ function MediaPreview({ block }: { block: PageContentBlock }) {
             <source src={media.url} />
           </video>
         ) : (
-          <div className="flex aspect-video items-center justify-center p-5 text-center text-sm text-black/55">
+          <div className="flex aspect-video items-center justify-center p-5 text-center text-sm text-white/68">
             Harici video bağlantısı: {media.title}
           </div>
         )}
-      </div>
+      </PreviewMediaShell>
     );
   }
 
   if (media.mediaType === "model3d") {
     return (
-      <div className="mt-4 flex aspect-video items-center justify-center rounded-2xl border border-black/10 bg-black/5 p-5 text-center text-sm text-black/55">
-        3D önizleme altyapısı hazır: {media.title}
-      </div>
+      <PreviewMediaShell title={media.title}>
+        <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.16),transparent_16rem),#09090b] p-5 text-center text-sm text-white/68">
+          3D önizleme altyapısı hazır.
+        </div>
+      </PreviewMediaShell>
     );
   }
 
   return media.previewUrl || media.url ? (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-black/10">
+    <PreviewMediaShell title={media.title}>
       {/* eslint-disable-next-line @next/next/no-img-element -- Admin live preview renders external media library URLs. */}
       <img
         src={media.previewUrl || media.url}
         alt={media.altText || media.title}
         className="aspect-video w-full object-cover"
       />
-    </div>
+    </PreviewMediaShell>
   ) : null;
 }
 
@@ -78,7 +100,7 @@ export function PageLivePreview({
     <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">Live preview</h3>
+          <h3 className="text-sm font-semibold text-white">Canlı önizleme</h3>
           <p className="mt-1 text-xs text-zinc-500">Public render yapısını kompakt admin panelinde gösterir.</p>
         </div>
         <span className="rounded-full border border-zinc-800 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
@@ -89,7 +111,7 @@ export function PageLivePreview({
       <div className="max-h-[34rem] overflow-y-auto rounded-[1.5rem] border border-zinc-800 bg-[#f6f3ee] text-[#151515]">
         <div className="border-b border-black/10 px-5 py-4">
           <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-black/45">
-            Skyvan public preview
+            Skyvan public önizleme
           </div>
           <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight">
             {title || "Untitled page"}

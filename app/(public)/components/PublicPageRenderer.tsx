@@ -3,7 +3,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Cpu,
+  Box,
   Factory,
+  ExternalLink,
+  Film,
   LockKeyhole,
   Route,
   ShieldCheck,
@@ -11,7 +14,8 @@ import {
 } from "lucide-react";
 
 import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
-import type { PublicBlock, PublicPageContent } from "../lib/launch-content";
+import { PublicHeroVideoPlayer } from "./PublicHeroVideoPlayer";
+import type { PublicBlock, PublicBlockMedia, PublicPageContent } from "../lib/launch-content";
 import { getLocalizedPath } from "../lib/public-routing";
 
 function safeHref(href: string | undefined, locale: PublicPageContent["locale"]) {
@@ -100,7 +104,227 @@ function isDecisionFlowBlock(block: PublicBlock) {
   );
 }
 
+function isSafeHttpUrl(value: string | undefined) {
+  try {
+    const url = new URL(String(value ?? ""));
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function getHeroMedia(media: PublicBlockMedia | undefined) {
+  if (!media || !isSafeHttpUrl(media.url)) {
+    return null;
+  }
+
+  if (!["image", "video", "model3d"].includes(media.mediaType)) {
+    return null;
+  }
+
+  if (
+    media.provider &&
+    !["direct", "youtube", "vimeo", "external"].includes(media.provider)
+  ) {
+    return null;
+  }
+
+  return {
+    ...media,
+    previewUrl: isSafeHttpUrl(media.previewUrl) ? media.previewUrl : undefined,
+    embedUrl: isSafeHttpUrl(media.embedUrl) ? media.embedUrl : undefined,
+  };
+}
+
+function HeroMediaShell({
+  children,
+  label,
+  title,
+  showCaption = true,
+}: {
+  children: React.ReactNode;
+  label: string;
+  title: string;
+  showCaption?: boolean;
+}) {
+  return (
+    <div className="relative h-full min-h-[25rem] overflow-hidden rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] shadow-[0_30px_90px_rgba(0,0,0,0.24)] md:min-h-[29rem] md:rounded-[2.4rem] xl:min-h-[30rem]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_0%,rgba(255,255,255,0.16),transparent_18rem),linear-gradient(145deg,rgba(255,255,255,0.065),transparent_42%)]" />
+      <div className="relative h-full min-h-[25rem] overflow-hidden md:min-h-[29rem] xl:min-h-[30rem]">
+        {children}
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.14),transparent_34%,rgba(0,0,0,0.46))]" />
+      <div className="absolute left-5 top-5 rounded-full border border-white/12 bg-black/22 px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/72 backdrop-blur md:left-6 md:top-6">
+        {label}
+      </div>
+      {showCaption ? (
+        <div className="absolute bottom-5 left-5 right-5 md:bottom-6 md:left-6 md:right-6">
+          <p className="max-w-[32rem] truncate text-sm font-medium text-white/88 drop-shadow">
+            {title}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function HeroVideoLinkCard({
+  media,
+  buttonLabel = "Video bağlantısını aç",
+}: {
+  media: PublicBlockMedia;
+  buttonLabel?: string;
+}) {
+  const linkUrl = isSafeHttpUrl(media.url) ? media.url : media.embedUrl;
+
+  return (
+    <div className="relative flex h-full min-h-[25rem] items-center justify-center overflow-hidden p-6 text-center md:min-h-[29rem] xl:min-h-[30rem]">
+      {media.previewUrl ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Public video poster renders admin-managed external media URLs. */}
+          <img
+            src={media.previewUrl}
+            alt={media.altText || media.title}
+            className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[2px]"
+          />
+          <div className="absolute inset-0 bg-[var(--public-bg)]/74" />
+        </>
+      ) : null}
+      <div className="relative max-w-sm">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/12 bg-white/12 text-white backdrop-blur">
+          <Film className="h-7 w-7" />
+        </div>
+        <p className="mt-5 text-lg font-semibold text-white">{media.title}</p>
+        <p className="mt-3 text-sm leading-6 text-white/68">
+          Video güvenli bağlantı olarak açılır.
+        </p>
+        {linkUrl ? (
+          <a
+            href={linkUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/14 bg-white px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white/90"
+          >
+            {buttonLabel}
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function HeroMediaVisual({ media }: { media: PublicBlockMedia }) {
+  const imageUrl = media.previewUrl || media.url;
+
+  if (media.mediaType === "image" && isSafeHttpUrl(imageUrl)) {
+    return (
+      <HeroMediaShell
+        label="Medya varlığı"
+        title={media.title}
+      >
+        <div className="relative h-full min-h-[25rem] md:min-h-[29rem] xl:min-h-[30rem]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Public hero media renders admin-managed external media URLs. */}
+          <img
+            src={imageUrl}
+            alt={media.altText || media.title}
+            className="h-full min-h-[25rem] w-full object-cover md:min-h-[29rem] xl:min-h-[30rem]"
+          />
+          <div className="absolute inset-x-10 bottom-8 h-20 rounded-full bg-black/30 blur-3xl" />
+        </div>
+      </HeroMediaShell>
+    );
+  }
+
+  if (media.mediaType === "video") {
+    if (media.provider === "youtube" && media.embedUrl) {
+      return (
+        <HeroMediaShell
+          label="Video"
+          title={media.title}
+          showCaption={false}
+        >
+          <HeroVideoLinkCard media={media} buttonLabel="Videoyu aç" />
+        </HeroMediaShell>
+      );
+    }
+
+    if (media.provider === "vimeo" && media.embedUrl) {
+      return (
+        <HeroMediaShell
+          label="Video"
+          title={media.title}
+          showCaption={false}
+        >
+          <HeroVideoLinkCard media={media} buttonLabel="Videoyu aç" />
+        </HeroMediaShell>
+      );
+    }
+
+    if (media.provider === "direct") {
+      return (
+        <HeroMediaShell
+          label="Video"
+          title={media.title}
+          showCaption={false}
+        >
+          <PublicHeroVideoPlayer src={media.url} poster={media.previewUrl} title={media.title} />
+        </HeroMediaShell>
+      );
+    }
+
+    return (
+      <HeroMediaShell
+        label="Video"
+        title={media.title}
+        showCaption={false}
+      >
+        <HeroVideoLinkCard media={media} />
+      </HeroMediaShell>
+    );
+  }
+
+  if (media.mediaType === "model3d") {
+    return (
+      <HeroMediaShell
+        label="3D önizleme"
+        title={media.title}
+      >
+        <div className="relative flex h-full min-h-[25rem] items-center justify-center overflow-hidden p-6 text-center md:min-h-[29rem] xl:min-h-[30rem]">
+          {media.previewUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Public model preview renders admin-managed external media URLs. */}
+              <img
+                src={media.previewUrl}
+                alt={media.altText || media.title}
+                className="absolute inset-0 h-full w-full object-cover opacity-34"
+              />
+              <div className="absolute inset-0 bg-black/64" />
+            </>
+          ) : null}
+          <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2.5rem] border border-white/12 bg-white/[0.055] shadow-[0_0_80px_rgba(255,255,255,0.08)]" />
+          <div className="relative max-w-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/12 bg-white/12 text-white backdrop-blur">
+              <Box className="h-7 w-7" />
+            </div>
+            <p className="mt-5 text-lg font-semibold text-white">{media.title}</p>
+            <p className="mt-3 text-sm leading-6 text-white/68">
+              3D önizleme yakında bu alanda gösterilecek.
+            </p>
+            <p className="mt-3 text-xs font-medium text-white/55">
+              Model varlığı URL olarak hazır.
+            </p>
+          </div>
+        </div>
+      </HeroMediaShell>
+    );
+  }
+
+  return null;
+}
+
 function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero" }>; page: PublicPageContent }) {
+  const media = getHeroMedia(block.media);
   const heroTrustLine =
     page.locale === "tr"
       ? "Admin kontrollü yayın. Simülasyon yok. Karar sizin, sistem sadece hazırlar."
@@ -111,7 +335,11 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
       <div className="absolute inset-x-0 top-0 h-px bg-[var(--public-border)]" />
       <div className="public-hero-glow absolute inset-x-0 top-[-7rem] mx-auto h-[42rem] w-full max-w-[62rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.2),rgba(255,255,255,0.055)_38%,transparent_68%)] opacity-45" />
       <div className="absolute left-1/2 top-28 h-[28rem] w-[86vw] max-w-5xl -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.075),transparent_68%)] opacity-60" />
-      <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+      <div
+        className={`mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.08fr_0.92fr] ${
+          media ? "lg:items-start" : "lg:items-center"
+        }`}
+      >
         <div className="relative min-w-0">
           <p className="public-hero-stage inline-flex max-w-full rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--public-muted)] md:tracking-[0.22em]">
             {page.slug === ""
@@ -162,10 +390,20 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
           </div>
         </div>
 
-        <div className="public-hero-visual relative min-h-[27rem] w-full max-w-full min-w-0 overflow-hidden rounded-[1.75rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-3 backdrop-blur sm:p-5 md:min-h-[31rem] md:rounded-[2.2rem]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_8%,rgba(255,255,255,0.2),transparent_18rem),radial-gradient(circle_at_82%_76%,rgba(255,255,255,0.08),transparent_15rem),linear-gradient(145deg,rgba(255,255,255,0.075),transparent_44%)]" />
-          <div className="absolute inset-x-6 bottom-10 h-24 rounded-[100%] bg-black/20 blur-3xl md:inset-x-12" />
-          <div className="public-hero-panel relative flex h-full min-h-[25rem] min-w-0 flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
+        <div
+          className={`public-hero-visual relative w-full max-w-full min-w-0 overflow-hidden ${
+            media
+              ? "min-h-[25rem] rounded-[2rem] md:min-h-[29rem] md:rounded-[2.4rem] xl:min-h-[30rem]"
+              : "min-h-[27rem] rounded-[1.75rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-3 backdrop-blur sm:p-5 md:min-h-[31rem] md:rounded-[2.2rem]"
+          }`}
+        >
+          {media ? (
+            <HeroMediaVisual media={media} />
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_8%,rgba(255,255,255,0.2),transparent_18rem),radial-gradient(circle_at_82%_76%,rgba(255,255,255,0.08),transparent_15rem),linear-gradient(145deg,rgba(255,255,255,0.075),transparent_44%)]" />
+              <div className="absolute inset-x-6 bottom-10 h-24 rounded-[100%] bg-black/20 blur-3xl md:inset-x-12" />
+              <div className="public-hero-panel relative flex h-full min-h-[25rem] min-w-0 flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)] md:tracking-[0.26em]">
@@ -220,7 +458,9 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
                 ? "Hayal edilen yolculuk, üretime hazırlanabilecek net bir sisteme dönüşür."
                 : "The imagined journey becomes a clear system ready for production preparation."}
             </p>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </section>

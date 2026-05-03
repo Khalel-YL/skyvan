@@ -10,6 +10,7 @@ import {
   fallbackSlugs,
   getFallbackPage,
   type PublicBlock,
+  type PublicBlockMedia,
   type PublicPageContent,
 } from "./launch-content";
 import {
@@ -73,6 +74,147 @@ function normalizeStats(value: unknown) {
     .slice(0, 6) as Array<{ label: string; value: string }>;
 }
 
+const mediaTypes = new Set<PublicBlockMedia["mediaType"]>([
+  "image",
+  "video",
+  "model3d",
+]);
+const mediaProviders = new Set<NonNullable<PublicBlockMedia["provider"]>>([
+  "direct",
+  "youtube",
+  "vimeo",
+  "external",
+]);
+
+function isSafeHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function detectDirectVideoUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.toLowerCase();
+
+    return [".mp4", ".webm", ".mov", ".m4v", ".ogv"].some((extension) =>
+      pathname.endsWith(extension),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function extractYouTubeVideoId(url: string) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+
+    if (hostname === "youtu.be") {
+      return parsed.pathname.split("/").filter(Boolean)[0] || null;
+    }
+
+    if (!["youtube.com", "m.youtube.com", "music.youtube.com"].includes(hostname)) {
+      return null;
+    }
+
+    if (parsed.pathname === "/watch") {
+      return parsed.searchParams.get("v") || null;
+    }
+
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    return (parts[0] === "shorts" || parts[0] === "embed") && parts[1] ? parts[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractVimeoVideoId(url: string) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+
+    if (hostname === "player.vimeo.com") {
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      return parts[0] === "video" && parts[1] && /^\d+$/.test(parts[1]) ? parts[1] : null;
+    }
+
+    if (hostname !== "vimeo.com") {
+      return null;
+    }
+
+    return parsed.pathname.split("/").filter(Boolean).reverse().find((part) => /^\d+$/.test(part)) || null;
+  } catch {
+    return null;
+  }
+}
+
+function classifyVideoProvider(url: string): NonNullable<PublicBlockMedia["provider"]> {
+  if (extractYouTubeVideoId(url)) {
+    return "youtube";
+  }
+
+  if (extractVimeoVideoId(url)) {
+    return "vimeo";
+  }
+
+  if (detectDirectVideoUrl(url)) {
+    return "direct";
+  }
+
+  return "external";
+}
+
+function normalizeMedia(value: unknown): PublicBlockMedia | undefined {
+  const raw = getContentObject(value);
+
+  if (!raw) {
+    return undefined;
+  }
+
+  const mediaId = asString(raw.mediaId);
+  const mediaType = asString(raw.mediaType).toLowerCase();
+  const title = asString(raw.title);
+  const url = asString(raw.url);
+
+  if (!mediaId || !mediaTypes.has(mediaType as PublicBlockMedia["mediaType"]) || !title || !isSafeHttpUrl(url)) {
+    return undefined;
+  }
+
+  const previewUrl = asString(raw.previewUrl);
+  const embedUrl = asString(raw.embedUrl);
+  const rawProvider = asString(raw.provider).toLowerCase();
+  const provider = mediaProviders.has(rawProvider as NonNullable<PublicBlockMedia["provider"]>)
+    ? (rawProvider as NonNullable<PublicBlockMedia["provider"]>)
+    : mediaType === "video"
+      ? classifyVideoProvider(url)
+      : undefined;
+  const youtubeId = provider === "youtube" ? extractYouTubeVideoId(url) : null;
+  const vimeoId = provider === "vimeo" ? extractVimeoVideoId(url) : null;
+  const normalizedEmbedUrl =
+    embedUrl && isSafeHttpUrl(embedUrl)
+      ? embedUrl
+      : youtubeId
+        ? `https://www.youtube.com/embed/${youtubeId}`
+        : vimeoId
+          ? `https://player.vimeo.com/video/${vimeoId}`
+          : undefined;
+
+  return {
+    mediaId,
+    mediaType: mediaType as PublicBlockMedia["mediaType"],
+    title,
+    url,
+    previewUrl: previewUrl && isSafeHttpUrl(previewUrl) ? previewUrl : undefined,
+    embedUrl: normalizedEmbedUrl,
+    provider,
+    altText: asString(raw.altText) || undefined,
+  };
+}
+
 function sanitizeBlock(value: unknown): PublicBlock | null {
   const raw = getContentObject(value);
 
@@ -96,6 +238,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       body: asString(raw.body) || undefined,
       ctaLabel: asString(raw.ctaLabel) || undefined,
       ctaHref: asString(raw.ctaHref) || undefined,
+      media: normalizeMedia(raw.media),
     };
   }
 

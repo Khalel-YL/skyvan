@@ -73,7 +73,7 @@ type PageBlock = {
     url: string;
     previewUrl?: string;
     embedUrl?: string;
-    provider?: "direct" | "youtube" | "external";
+    provider?: "direct" | "youtube" | "vimeo" | "external";
     altText?: string;
   };
 };
@@ -107,7 +107,7 @@ const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
   "cta",
 ]);
 const ALLOWED_MEDIA_TYPES = new Set(["image", "video", "model3d"]);
-const ALLOWED_MEDIA_PROVIDERS = new Set(["direct", "youtube", "external"]);
+const ALLOWED_MEDIA_PROVIDERS = new Set(["direct", "youtube", "vimeo", "external"]);
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -323,7 +323,7 @@ function sanitizeMedia(value: unknown): PageBlock["media"] {
     previewUrl: previewUrl && isSafeHttpUrl(previewUrl) ? previewUrl : undefined,
     embedUrl: embedUrl && isSafeHttpUrl(embedUrl) ? embedUrl : undefined,
     provider: ALLOWED_MEDIA_PROVIDERS.has(provider)
-      ? (provider as "direct" | "youtube" | "external")
+      ? (provider as "direct" | "youtube" | "vimeo" | "external")
       : undefined,
     altText: altText || undefined,
   };

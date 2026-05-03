@@ -15,7 +15,12 @@ import {
 } from "lucide-react";
 
 import { saveMedia } from "./actions";
-import { type MediaType, mediaTypeLabels, normalizeTags } from "./media-types";
+import {
+  type MediaType,
+  detectModelFileExtension,
+  mediaTypeLabels,
+  normalizeTags,
+} from "./media-types";
 
 function toneClasses(tone: "success" | "error" | "info") {
   if (tone === "success") {
@@ -54,6 +59,7 @@ export default function AddMediaDrawer({
       : mediaType === "video"
         ? posterUrl || thumbnailUrl
         : thumbnailUrl || posterUrl;
+  const modelFileExtension = mediaType === "model3d" ? detectModelFileExtension(modelUrl) : null;
 
   const typeOptions: Array<{
     type: MediaType;
@@ -68,7 +74,7 @@ export default function AddMediaDrawer({
     {
       type: "video",
       icon: Video,
-      helper: "YouTube, Shorts veya direkt video",
+      helper: "YouTube, Vimeo veya direkt video",
     },
     {
       type: "model3d",
@@ -212,9 +218,35 @@ export default function AddMediaDrawer({
                         : "3D model URL"}
                   </label>
                   {mediaType === "video" ? (
-                    <p className="text-xs leading-5 text-zinc-500">
-                      YouTube, Shorts veya direkt mp4/webm video bağlantısı ekleyebilirsin.
-                    </p>
+                    <div className="space-y-2 text-xs leading-5 text-zinc-500">
+                      <p>
+                        YouTube, Vimeo veya direkt mp4/webm video bağlantısı ekleyebilirsin.
+                      </p>
+                      <p>
+                        En temiz public oynatma için direkt mp4/webm bağlantısı önerilir.
+                        YouTube/Vimeo bağlantıları public alanda premium poster kartı
+                        olarak gösterilir ve videoyu harici bağlantıda açar.
+                      </p>
+                    </div>
+                  ) : null}
+                  {mediaType === "model3d" ? (
+                    <div className="space-y-2 text-xs leading-5 text-zinc-500">
+                      <p>
+                        GLB veya GLTF dosyası CDN/storage üzerinde yayınlanmış bir URL
+                        olmalı. Dosya veritabanına yüklenmez.
+                      </p>
+                      {modelUrl ? (
+                        <p
+                          className={
+                            modelFileExtension ? "text-emerald-300/80" : "text-amber-200/80"
+                          }
+                        >
+                          {modelFileExtension
+                            ? `${modelFileExtension} model bağlantısı algılandı.`
+                            : "GLB veya GLTF uzantısı algılanmadı; imzalı CDN URL kullanıyorsan güvenli http/https bağlantı yeterlidir."}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   <div className="relative">
@@ -257,7 +289,8 @@ export default function AddMediaDrawer({
                       Poster görseli URL (opsiyonel)
                     </label>
                     <p className="text-xs leading-5 text-zinc-500">
-                      YouTube bağlantılarında poster otomatik denenir.
+                      Poster görseli opsiyoneldir. YouTube için otomatik denenir;
+                      Vimeo ve harici videolarda istersen elle ekleyebilirsin.
                     </p>
                     <input
                       name="posterUrl"
@@ -275,6 +308,10 @@ export default function AddMediaDrawer({
                     <label className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
                       Önizleme görseli URL
                     </label>
+                    <p className="text-xs leading-5 text-zinc-500">
+                      Gerçek 3D viewer sonraki fazda bağlanacak; bu görsel public ve
+                      admin önizlemede kullanılır.
+                    </p>
                     <input
                       name="thumbnailUrl"
                       value={thumbnailUrl}

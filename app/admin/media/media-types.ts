@@ -1,6 +1,6 @@
 export type MediaType = "image" | "video" | "model3d";
 export type MediaUsageScope = "public" | "admin" | "workshop" | "product" | "general";
-export type MediaProvider = "direct" | "youtube" | "external";
+export type MediaProvider = "direct" | "youtube" | "vimeo" | "external";
 
 export type MediaContentJson = {
   mediaType: MediaType;
@@ -32,7 +32,7 @@ export type MediaAsset = {
 };
 
 const mediaTypes = new Set<MediaType>(["image", "video", "model3d"]);
-const providers = new Set<MediaProvider>(["direct", "youtube", "external"]);
+const providers = new Set<MediaProvider>(["direct", "youtube", "vimeo", "external"]);
 const usageScopes = new Set<MediaUsageScope>([
   "public",
   "admin",
@@ -77,6 +77,29 @@ export function detectDirectVideoUrl(url: string) {
   }
 }
 
+export function detectModelFileExtension(url: string) {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.toLowerCase();
+
+    if (pathname.endsWith(".glb")) {
+      return "GLB";
+    }
+
+    if (pathname.endsWith(".gltf")) {
+      return "GLTF";
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function detectModel3dUrl(url: string) {
+  return Boolean(detectModelFileExtension(url));
+}
+
 export function extractYouTubeVideoId(url: string) {
   try {
     const parsed = new URL(url);
@@ -116,6 +139,53 @@ export function getYouTubeEmbedUrl(videoId: string) {
 
 export function getYouTubeThumbnailUrl(videoId: string) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+export function extractVimeoVideoId(url: string) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+
+    if (hostname === "player.vimeo.com") {
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      return parts[0] === "video" && parts[1] && /^\d+$/.test(parts[1]) ? parts[1] : null;
+    }
+
+    if (hostname !== "vimeo.com") {
+      return null;
+    }
+
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    const id = [...parts].reverse().find((part) => /^\d+$/.test(part));
+
+    return id || null;
+  } catch {
+    return null;
+  }
+}
+
+export function detectVimeoUrl(url: string) {
+  return Boolean(extractVimeoVideoId(url));
+}
+
+export function getVimeoEmbedUrl(videoId: string) {
+  return `https://player.vimeo.com/video/${videoId}`;
+}
+
+export function classifyVideoProvider(url: string): MediaProvider {
+  if (detectYouTubeUrl(url)) {
+    return "youtube";
+  }
+
+  if (detectVimeoUrl(url)) {
+    return "vimeo";
+  }
+
+  if (detectDirectVideoUrl(url)) {
+    return "direct";
+  }
+
+  return "external";
 }
 
 export function normalizeTags(value: string) {
@@ -169,15 +239,7 @@ function normalizeProvider(value: unknown, url: string): MediaProvider | undefin
     return undefined;
   }
 
-  if (detectYouTubeUrl(url)) {
-    return "youtube";
-  }
-
-  if (detectDirectVideoUrl(url)) {
-    return "direct";
-  }
-
-  return "external";
+  return classifyVideoProvider(url);
 }
 
 function normalizeFocusPoint(value: unknown) {
@@ -209,9 +271,12 @@ export function normalizeMediaContent(value: unknown, fallbackTitle = ""): Media
   const url = cleanString(raw.url || modelUrl);
   const provider = mediaType === "video" ? normalizeProvider(raw.provider, url) : undefined;
   const youtubeId = provider === "youtube" ? extractYouTubeVideoId(url) : null;
+  const vimeoId = provider === "vimeo" ? extractVimeoVideoId(url) : null;
   const embedUrl =
     provider === "youtube"
       ? optionalString(raw.embedUrl) || (youtubeId ? getYouTubeEmbedUrl(youtubeId) : undefined)
+      : provider === "vimeo"
+        ? optionalString(raw.embedUrl) || (vimeoId ? getVimeoEmbedUrl(vimeoId) : undefined)
       : optionalString(raw.embedUrl);
   const youtubeThumbnail = youtubeId ? getYouTubeThumbnailUrl(youtubeId) : undefined;
   const tags = Array.isArray(raw.tags)

@@ -1,5 +1,16 @@
 import type { PublicLocale } from "./public-routing";
 
+export type PublicBlockMedia = {
+  mediaId: string;
+  mediaType: "image" | "video" | "model3d";
+  title: string;
+  url: string;
+  previewUrl?: string;
+  embedUrl?: string;
+  provider?: "direct" | "youtube" | "vimeo" | "external";
+  altText?: string;
+};
+
 export type PublicBlock =
   | {
       type: "hero";
@@ -8,6 +19,7 @@ export type PublicBlock =
       body?: string;
       ctaLabel?: string;
       ctaHref?: string;
+      media?: PublicBlockMedia;
     }
   | {
       type: "text";
