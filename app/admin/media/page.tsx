@@ -1,86 +1,45 @@
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import {
-  CalendarClock,
-  CheckCircle2,
-  ExternalLink,
+  Box,
+  Film,
   Image as ImageIcon,
-  Link2,
-  Search,
   ShieldAlert,
-  Tag,
-  Trash2,
+  Sparkles,
 } from "lucide-react";
 
 import { db, getDatabaseHealth } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 
 import AddMediaDrawer from "./AddMediaDrawer";
-import { deleteMedia } from "./actions";
+import MediaAssetStage from "./MediaAssetStage";
+import {
+  type MediaAsset,
+  getMediaPreviewUrl,
+  getMediaPrimaryUrl,
+  isSafeHttpUrl,
+  normalizeMediaContent,
+} from "./media-types";
 
 type MediaSearchParams = Promise<{
-  q?: string;
   mediaAction?: string;
   mediaMessage?: string;
 }>;
 
-type MediaContentJson = {
-  url?: string;
-  tags?: string[];
-  uploadDate?: string;
-};
-
 type MediaListItem = {
   id: string;
+  entityType: string;
   title: string | null;
   locale: string;
   contentJson: unknown;
 };
 
-function isSafeHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
-function parseMediaContent(value: unknown): MediaContentJson {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  const raw = value as Record<string, unknown>;
-
-  return {
-    url: typeof raw.url === "string" ? raw.url : "",
-    tags: Array.isArray(raw.tags)
-      ? raw.tags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
-      : [],
-    uploadDate:
-      typeof raw.uploadDate === "string" && raw.uploadDate.trim()
-        ? raw.uploadDate
-        : "",
-  };
-}
-
-function formatDate(value: string | undefined) {
-  if (!value) {
-    return "Tarih yok";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Tarih okunamadı";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
+type UsageScanItem = {
+  entityType: string;
+  title: string | null;
+  locale: string;
+  slug: string | null;
+  contentJson: unknown;
+};
 
 function getActionFeedback(params: Awaited<MediaSearchParams>) {
   if (params.mediaAction === "saved") {
@@ -113,28 +72,98 @@ function toneClasses(tone: "success" | "error") {
     : "border-rose-500/20 bg-rose-500/10 text-rose-100";
 }
 
+function getUsageLabels(asset: Omit<MediaAsset, "usageLabels">, usageRows: UsageScanItem[]) {
+  const tokens = [asset.id, asset.primaryUrl, asset.previewUrl].filter(Boolean);
+
+  if (tokens.length === 0) {
+    return [];
+  }
+
+  return usageRows
+    .filter((row) => {
+      const serialized = JSON.stringify(row.contentJson ?? "");
+      return tokens.some((token) => serialized.includes(token));
+    })
+    .map((row) => {
+      const label = row.title || row.slug || row.entityType;
+      return `${row.locale.toUpperCase()} · ${row.entityType} · ${label}`;
+    })
+    .slice(0, 6);
+}
+
+function metricCard({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  helper: string;
+  icon: typeof ImageIcon;
+  tone?: "neutral" | "featured";
+}) {
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3 ${
+        tone === "featured"
+          ? "border-amber-500/20 bg-amber-500/10 text-amber-200"
+          : "border-zinc-800 bg-zinc-950/70 text-white"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p
+          className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${
+            tone === "featured" ? "text-amber-300/80" : "text-zinc-500"
+          }`}
+        >
+          {label}
+        </p>
+        <Icon className={`h-4 w-4 ${tone === "featured" ? "text-amber-300" : "text-zinc-500"}`} />
+      </div>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+      <p className={`mt-2 text-xs ${tone === "featured" ? "text-amber-300/80" : "text-zinc-500"}`}>
+        {helper}
+      </p>
+    </div>
+  );
+}
+
 export default async function MediaLibraryPage({
   searchParams,
 }: {
   searchParams: MediaSearchParams;
 }) {
   const params = await searchParams;
-  const query = String(params.q ?? "").trim().toLowerCase();
   const dbHealth = getDatabaseHealth();
   let queryWarning: string | null = null;
   let rawMedia: MediaListItem[] = [];
+  let usageRows: UsageScanItem[] = [];
 
   if (db) {
     try {
       rawMedia = (await db
         .select({
           id: localizedContent.id,
+          entityType: localizedContent.entityType,
           title: localizedContent.title,
           locale: localizedContent.locale,
           contentJson: localizedContent.contentJson,
         })
         .from(localizedContent)
         .where(eq(localizedContent.entityType, "media"))) as MediaListItem[];
+
+      usageRows = (await db
+        .select({
+          entityType: localizedContent.entityType,
+          title: localizedContent.title,
+          locale: localizedContent.locale,
+          slug: localizedContent.slug,
+          contentJson: localizedContent.contentJson,
+        })
+        .from(localizedContent)
+        .where(ne(localizedContent.entityType, "media"))) as UsageScanItem[];
     } catch (error) {
       console.error("media page query error:", error);
       queryWarning =
@@ -142,40 +171,45 @@ export default async function MediaLibraryPage({
     }
   }
 
-  const allMedia = rawMedia
+  const mediaRecords = rawMedia.filter((item) => item.contentJson && item.title !== null);
+  const allMedia = mediaRecords
+    .filter((item) => {
+      const raw =
+        item.contentJson && typeof item.contentJson === "object" && !Array.isArray(item.contentJson)
+          ? (item.contentJson as Record<string, unknown>)
+          : {};
+
+      return raw.url || raw.modelUrl || raw.mediaType || item.title;
+    })
     .map((media) => {
-      const content = parseMediaContent(media.contentJson);
+      const content = normalizeMediaContent(media.contentJson, media.title || "");
+      const primaryUrl = getMediaPrimaryUrl(content);
+      const previewUrl = getMediaPreviewUrl(content);
+      const assetWithoutUsage = {
+        id: media.id,
+        title: content.title || media.title || "Adsız medya",
+        locale: media.locale,
+        content,
+        previewUrl,
+        primaryUrl,
+        hasValidUrl: isSafeHttpUrl(primaryUrl),
+      };
 
       return {
-        ...media,
-        mediaContent: content,
-        url: content.url || "",
-        tags: content.tags || [],
-        uploadDate: content.uploadDate || "",
-        hasValidUrl: isSafeHttpUrl(content.url || ""),
+        ...assetWithoutUsage,
+        usageLabels: getUsageLabels(assetWithoutUsage, usageRows),
       };
     })
     .sort((left, right) => {
-      const leftTime = new Date(left.uploadDate || "1970-01-01T00:00:00.000Z").getTime();
-      const rightTime = new Date(right.uploadDate || "1970-01-01T00:00:00.000Z").getTime();
+      const leftTime = new Date(left.content.uploadDate || "1970-01-01T00:00:00.000Z").getTime();
+      const rightTime = new Date(right.content.uploadDate || "1970-01-01T00:00:00.000Z").getTime();
       return rightTime - leftTime;
     });
 
-  const filteredMedia = query
-    ? allMedia.filter((media) => {
-        const haystacks = [
-          media.title || "",
-          media.url,
-          ...media.tags,
-        ].map((value) => value.toLowerCase());
-
-        return haystacks.some((value) => value.includes(query));
-      })
-    : allMedia;
-
-  const uniqueTags = new Set(allMedia.flatMap((media) => media.tags));
-  const validUrlCount = allMedia.filter((media) => media.hasValidUrl).length;
-  const latestUpload = allMedia[0]?.uploadDate || "";
+  const imageCount = allMedia.filter((media) => media.content.mediaType === "image").length;
+  const videoCount = allMedia.filter((media) => media.content.mediaType === "video").length;
+  const modelCount = allMedia.filter((media) => media.content.mediaType === "model3d").length;
+  const featuredCount = allMedia.filter((media) => media.content.isFeatured).length;
   const actionFeedback = getActionFeedback(params);
 
   return (
@@ -184,14 +218,14 @@ export default async function MediaLibraryPage({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="text-[11px] font-medium uppercase tracking-[0.22em] text-zinc-500">
-              Admin · Media
+              Admin · Asset Stage
             </div>
             <h1 className="mt-2 flex items-center gap-3 text-2xl font-semibold text-white">
               <ImageIcon className="h-6 w-6 text-zinc-300" />
               Medya Kütüphanesi
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
-              Gerçek kayıt, gerçek URL ve kontrollü medya yüzeyi
+              Görsel, video ve 3D medya varlıklarını tek merkezden yönet.
             </p>
           </div>
 
@@ -221,44 +255,40 @@ export default async function MediaLibraryPage({
         </div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Toplam kayıt
-          </p>
-          <p className="mt-3 text-3xl font-semibold text-white">{allMedia.length}</p>
-          <p className="mt-2 text-xs text-zinc-500">Medya kütüphanesindeki toplam öğe</p>
-        </div>
+      <MediaAssetStage assets={allMedia} />
 
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-200">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-            Doğrulanmış URL
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{validUrlCount}</p>
-          <p className="mt-2 text-xs text-emerald-300/80">
-            http/https formatına uyan kayıt
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Benzersiz etiket
-          </p>
-          <p className="mt-3 text-3xl font-semibold text-white">{uniqueTags.size}</p>
-          <p className="mt-2 text-xs text-zinc-500">Tekrarsız etiket havuzu</p>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Son yükleme
-          </p>
-          <p className="mt-3 text-lg font-semibold text-white">
-            {formatDate(latestUpload)}
-          </p>
-          <p className="mt-2 text-xs text-zinc-500">
-            Simüle depolama metriği gösterilmez
-          </p>
-        </div>
+      <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-5">
+        {metricCard({
+          label: "Toplam medya",
+          value: allMedia.length,
+          helper: "Kayıtlı medya varlığı",
+          icon: ImageIcon,
+        })}
+        {metricCard({
+          label: "Görsel",
+          value: imageCount,
+          helper: "Image tipindeki kayıt",
+          icon: ImageIcon,
+        })}
+        {metricCard({
+          label: "Video",
+          value: videoCount,
+          helper: "Video tipindeki kayıt",
+          icon: Film,
+        })}
+        {metricCard({
+          label: "3D",
+          value: modelCount,
+          helper: "Model viewer adayları",
+          icon: Box,
+        })}
+        {metricCard({
+          label: "Öne çıkan",
+          value: featuredCount,
+          helper: "Editoryal öncelikli varlık",
+          icon: Sparkles,
+          tone: "featured",
+        })}
       </section>
 
       <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
@@ -268,177 +298,16 @@ export default async function MediaLibraryPage({
           </div>
 
           <div>
-            <h2 className="text-base font-semibold text-white">
-              Operasyon notu
-            </h2>
+            <h2 className="text-base font-semibold text-white">Operasyon notu</h2>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
-              Bu yüzey yalnızca kayıtlı medya referanslarını yönetir. Depolama boyutu,
-              otomatik Vision AI skoru veya sahte etiket simülasyonu gösterilmez.
-              URL güvenliği ve etiket bütünlüğü action katmanında doğrulanır.
+              Bu yüzey gerçek medya referanslarını yönetir. Depolama boyutu, sahte
+              kullanım sayısı veya otomatik AI skoru gösterilmez. Kullanım bağlantısı
+              yalnızca içerik JSON içinde gerçek referans bulunduğunda görünür.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="min-w-0 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Kütüphane kayıtları</h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              {filteredMedia.length} kayıt görünür · Dosya adı, URL veya etiket ile filtrele.
-            </p>
-          </div>
-
-          <form method="get" className="w-full lg:max-w-xl">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-              <input
-                type="text"
-                name="q"
-                defaultValue={params.q ?? ""}
-                placeholder="Dosya adı, URL veya etiket ara"
-                className="w-full rounded-2xl border border-zinc-800 bg-black py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"
-              />
-            </div>
-          </form>
-        </div>
-
-        <div className="mt-6 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {filteredMedia.length === 0 ? (
-            <div className="col-span-full flex min-h-72 flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-zinc-800 px-5 py-12 text-center text-zinc-500">
-              <ImageIcon className="h-12 w-12 opacity-30" />
-              <div>
-                <p className="text-sm font-bold uppercase tracking-widest">
-                  {allMedia.length === 0
-                    ? "Henüz medya kaydı yok"
-                    : "Arama kriterine uyan medya bulunamadı"}
-                </p>
-                <p className="mt-2 text-xs">
-                  {allMedia.length === 0
-                    ? "Medya Ekle aksiyonu ile ilk gerçek URL referansını oluştur."
-                    : "Arama terimini sadeleştirip tekrar dene."}
-                </p>
-              </div>
-            </div>
-          ) : (
-            filteredMedia.map((media) => (
-              <article
-                key={media.id}
-                className="min-w-0 overflow-hidden rounded-2xl border border-zinc-800 bg-black/35 transition hover:border-zinc-700"
-              >
-                {media.hasValidUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- Admin media records store external URLs only; no Next image loader is configured for arbitrary sources.
-                  <img
-                    src={media.url}
-                    alt={media.title || "Medya"}
-                    className="aspect-[16/9] max-h-44 w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-[16/9] max-h-44 items-center justify-center bg-zinc-950 text-zinc-700">
-                    <div className="flex flex-col items-center gap-3">
-                      <ImageIcon className="h-8 w-8" />
-                      <span className="text-xs uppercase tracking-[0.2em]">
-                        Önizleme yok
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-base font-semibold text-white">
-                        {media.title || "Adsız medya"}
-                      </h3>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-400">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1">
-                          <CalendarClock className="h-3 w-3" />
-                          {formatDate(media.uploadDate)}
-                        </span>
-
-                        {media.hasValidUrl ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
-                            <CheckCircle2 className="h-3 w-3" />
-                            URL doğrulandı
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-amber-200">
-                            <ShieldAlert className="h-3 w-3" />
-                            Legacy URL
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      {media.hasValidUrl ? (
-                        <a
-                          href={media.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-zinc-300 transition hover:border-zinc-700 hover:text-white"
-                          title="Medyayı yeni sekmede aç"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      ) : null}
-
-                      <form action={deleteMedia.bind(null, media.id)}>
-                        <button
-                          type="submit"
-                          className="rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-zinc-300 transition hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-200"
-                          title="Medya kaydını sil"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
-                    <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      <Link2 className="h-3.5 w-3.5" />
-                      Kaynak URL
-                    </p>
-                    <p
-                      className="mt-2 truncate text-sm text-zinc-300"
-                      title={media.url || "URL bilgisi yok"}
-                    >
-                      {media.url || "URL bilgisi yok"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {media.tags.length > 0 ? (
-                      <>
-                        {media.tags.slice(0, 5).map((tag) => (
-                          <span
-                            key={`${media.id}-${tag}`}
-                            className="inline-flex max-w-full items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-300"
-                          >
-                            <Tag className="h-3 w-3 shrink-0 text-amber-500" />
-                            <span className="max-w-36 truncate">{tag}</span>
-                          </span>
-                        ))}
-
-                        {media.tags.length > 5 ? (
-                          <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-500">
-                            +{media.tags.length - 5} etiket
-                          </span>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-500">
-                        Etiket yok
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
     </div>
   );
 }

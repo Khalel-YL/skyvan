@@ -15,12 +15,17 @@ import {
   writeStrictAuditLogInTransaction,
 } from "@/app/lib/admin/audit";
 import { getMediaGuardrailBlockers } from "@/app/lib/admin/governance";
-
-type MediaContentJson = {
-  url: string;
-  tags: string[];
-  uploadDate: string;
-};
+import {
+  type MediaContentJson,
+  type MediaType,
+  type MediaUsageScope,
+  detectDirectVideoUrl,
+  extractYouTubeVideoId,
+  getYouTubeEmbedUrl,
+  getYouTubeThumbnailUrl,
+  isSafeHttpUrl,
+  normalizeTags,
+} from "./media-types";
 
 type MediaRecord = {
   id: string;
@@ -31,6 +36,16 @@ type MediaRecord = {
 };
 
 const MEDIA_ENTITY_TYPE = "media";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MEDIA_TYPES = new Set<MediaType>(["image", "video", "model3d"]);
+const USAGE_SCOPES = new Set<MediaUsageScope>([
+  "public",
+  "admin",
+  "workshop",
+  "product",
+  "general",
+]);
 
 function isMediaEntityRecord(
   value: MediaRecord | null,
@@ -38,15 +53,89 @@ function isMediaEntityRecord(
   return Boolean(value && value.entityType === MEDIA_ENTITY_TYPE);
 }
 
-function normalizeTags(value: string) {
-  return Array.from(
-    new Set(
-      value
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 12);
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function parseSafeHttpUrl(value: string) {
+  if (!isSafeHttpUrl(value)) {
+    return null;
+  }
+
+  return new URL(value);
+}
+
+function getSafeErrorName(error: unknown) {
+  return error instanceof Error ? error.name : "Error";
+}
+
+function getSafeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getMediaFailureMessage(error: unknown, fallback: string) {
+  const message = getSafeErrorMessage(error).toLowerCase();
+
+  if (message.includes("database_url")) {
+    return "Veritabanı bağlantısı yapılandırılamadığı için medya işlemi tamamlanamadı.";
+  }
+
+  if (message.includes("violates foreign key constraint")) {
+    return "Audit kullanıcısı doğrulanamadığı için medya işlemi güvenli şekilde tamamlanamadı.";
+  }
+
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "Medya kimliği UUID formatında olmadığı için işlem durduruldu.";
+  }
+
+  if (message.includes("violates not-null constraint")) {
+    return "Zorunlu bir medya alanı boş kaldığı için işlem tamamlanamadı.";
+  }
+
+  if (message.includes("fetch failed")) {
+    return "Veritabanı bağlantısına ulaşılamadığı için medya işlemi tamamlanamadı.";
+  }
+
+  return fallback;
+}
+
+function getUrlHost(value: string) {
+  return parseSafeHttpUrl(value)?.host || null;
+}
+
+function redirectMediaError(message: string): never {
+  redirect(
+    buildMediaRedirectUrl({
+      mediaAction: "error",
+      mediaMessage: message,
+    }),
+  );
+}
+
+function getTrimmed(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function normalizeMediaType(value: string): MediaType {
+  const normalized = value.toLowerCase().trim();
+  return MEDIA_TYPES.has(normalized as MediaType) ? (normalized as MediaType) : "image";
+}
+
+function normalizeUsageScope(value: string): MediaUsageScope {
+  const normalized = value.toLowerCase().trim();
+  return USAGE_SCOPES.has(normalized as MediaUsageScope)
+    ? (normalized as MediaUsageScope)
+    : "general";
+}
+
+function addOptionalUrlBlocker(params: {
+  value: string;
+  label: string;
+  blockers: string[];
+}) {
+  if (params.value && !isSafeHttpUrl(params.value)) {
+    params.blockers.push(`${params.label} yalnızca http veya https formatında olmalı.`);
+  }
 }
 
 function buildMediaRedirectUrl(params: Record<string, string | undefined>) {
@@ -108,80 +197,130 @@ async function writeMediaAudit(input: {
 }
 
 export async function saveMedia(formData: FormData) {
-  const db = getDbOrThrow();
-
-  const imageUrl = String(formData.get("imageUrl") ?? "").trim();
-  const fileName = String(formData.get("fileName") ?? "").trim();
-  const aiTags = String(formData.get("aiTags") ?? "").trim();
-  const tags = normalizeTags(aiTags);
+  const mediaType = normalizeMediaType(getTrimmed(formData, "mediaType"));
+  const title = getTrimmed(formData, "title") || getTrimmed(formData, "fileName");
+  const url = getTrimmed(formData, "url") || getTrimmed(formData, "imageUrl");
+  const modelUrl = getTrimmed(formData, "modelUrl");
+  const thumbnailUrl = getTrimmed(formData, "thumbnailUrl");
+  const posterUrl = getTrimmed(formData, "posterUrl");
+  const description = getTrimmed(formData, "description");
+  const altText = getTrimmed(formData, "altText");
+  const tags = normalizeTags(getTrimmed(formData, "tags") || getTrimmed(formData, "aiTags"));
+  const usageScope = normalizeUsageScope(getTrimmed(formData, "usageScope"));
+  const isFeatured = formData.get("isFeatured") === "true";
+  const primaryUrl = mediaType === "model3d" ? modelUrl : url;
+  const safeUrl = parseSafeHttpUrl(primaryUrl);
+  const youtubeVideoId = mediaType === "video" ? extractYouTubeVideoId(url) : null;
+  const videoProvider =
+    mediaType === "video"
+      ? youtubeVideoId
+        ? "youtube"
+        : detectDirectVideoUrl(url)
+          ? "direct"
+          : "external"
+      : undefined;
+  const youtubePosterUrl = youtubeVideoId ? getYouTubeThumbnailUrl(youtubeVideoId) : "";
+  const effectivePosterUrl = posterUrl || youtubePosterUrl;
 
   const blockers = getMediaGuardrailBlockers({
-    imageUrl,
-    fileName,
+    imageUrl: primaryUrl,
+    fileName: title,
     tags,
   });
 
+  if (!safeUrl) {
+    blockers.push("Ana medya URL yalnızca http veya https formatında olmalı.");
+  }
+
+  if (!title) {
+    blockers.push("Başlık boş bırakılamaz.");
+  }
+
+  if (tags.length === 0) {
+    blockers.push("En az bir medya etiketi girilmeli.");
+  }
+
+  if (mediaType === "image" && !url) {
+    blockers.push("Görsel medya için görsel URL zorunludur.");
+  }
+
+  if (mediaType === "image" && !altText) {
+    blockers.push("Görsel medya için alt text zorunludur.");
+  }
+
+  if (mediaType === "video" && !url) {
+    blockers.push("Video medya için video URL zorunludur.");
+  }
+
+  if (mediaType === "model3d" && !modelUrl) {
+    blockers.push("3D medya için model URL zorunludur.");
+  }
+
+  if (mediaType === "model3d" && !thumbnailUrl) {
+    blockers.push("3D medya için önizleme görseli URL zorunludur.");
+  }
+
+  addOptionalUrlBlocker({ value: thumbnailUrl, label: "Thumbnail URL", blockers });
+  addOptionalUrlBlocker({ value: posterUrl, label: "Poster URL", blockers });
+
   if (blockers.length > 0) {
-    redirect(
-      buildMediaRedirectUrl({
-        mediaAction: "error",
-        mediaMessage: blockers.join(" "),
-      }),
-    );
+    redirectMediaError(Array.from(new Set(blockers)).join(" "));
   }
 
   const contentJson: MediaContentJson = {
-    url: imageUrl,
+    mediaType,
+    url: mediaType === "model3d" ? modelUrl : url,
+    thumbnailUrl: thumbnailUrl || effectivePosterUrl || undefined,
+    posterUrl: effectivePosterUrl || undefined,
+    modelUrl: mediaType === "model3d" ? modelUrl : undefined,
+    title,
+    description: description || undefined,
+    altText: altText || undefined,
     tags,
+    isFeatured,
+    usageScope,
+    provider: videoProvider,
+    embedUrl:
+      mediaType === "video" && youtubeVideoId
+        ? getYouTubeEmbedUrl(youtubeVideoId)
+        : undefined,
     uploadDate: new Date().toISOString(),
   };
 
   try {
+    const db = getDbOrThrow();
     const auditActor = await requireStrictAuditActor();
-    let insertedMedia: MediaRecord | null = null;
-
-    await db.transaction(async (tx) => {
-      const insertedRows = await tx
-        .insert(localizedContent)
-        .values({
-          id: uuidv4(),
-          entityId: uuidv4(),
-          entityType: MEDIA_ENTITY_TYPE,
-          locale: "tr",
-          title: fileName,
-          contentJson,
-        })
-        .returning({
-          id: localizedContent.id,
-          entityType: localizedContent.entityType,
-          locale: localizedContent.locale,
-          title: localizedContent.title,
-          contentJson: localizedContent.contentJson,
-        });
-
-      insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
-
-      if (!isMediaEntityRecord(insertedMedia)) {
-        throw new Error("media-insert-invalid");
-      }
-
-      await writeMediaAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: insertedMedia.id,
-        action: "create",
-        newState: insertedMedia,
+    const insertedRows = await db
+      .insert(localizedContent)
+      .values({
+        id: uuidv4(),
+        entityId: uuidv4(),
+        entityType: MEDIA_ENTITY_TYPE,
+        locale: "tr",
+        title,
+        contentJson,
+      })
+      .returning({
+        id: localizedContent.id,
+        entityType: localizedContent.entityType,
+        locale: localizedContent.locale,
+        title: localizedContent.title,
+        contentJson: localizedContent.contentJson,
       });
-    });
+
+    const insertedMedia = (insertedRows[0] as MediaRecord | undefined) ?? null;
 
     if (!isMediaEntityRecord(insertedMedia)) {
-      redirect(
-        buildMediaRedirectUrl({
-          mediaAction: "error",
-          mediaMessage: "Medya kaydı güvenli şekilde oluşturulamadı.",
-        }),
-      );
+      redirectMediaError("Medya kaydı güvenli şekilde oluşturulamadı.");
     }
+
+    await writeMediaAudit({
+      database: db,
+      actor: auditActor,
+      entityId: insertedMedia.id,
+      action: "create",
+      newState: insertedMedia,
+    });
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
@@ -197,12 +336,20 @@ export async function saveMedia(formData: FormData) {
       );
     }
 
-    console.error("saveMedia error:", error);
+    console.error("saveMedia error:", {
+      action: "saveMedia",
+      urlHost: getUrlHost(primaryUrl),
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     redirect(
       buildMediaRedirectUrl({
         mediaAction: "error",
-        mediaMessage: "Medya kaydı sırasında beklenmeyen bir hata oluştu.",
+        mediaMessage: getMediaFailureMessage(
+          error,
+          "Medya kaydı sırasında beklenmeyen bir hata oluştu.",
+        ),
       }),
     );
   }
@@ -216,77 +363,48 @@ export async function saveMedia(formData: FormData) {
 }
 
 export async function deleteMedia(id: string) {
-  const db = getDbOrThrow();
   const normalizedId = String(id ?? "").trim();
 
-  if (!normalizedId) {
-    redirect(
-      buildMediaRedirectUrl({
-        mediaAction: "error",
-        mediaMessage: "Silinecek medya kimliği bulunamadı.",
-      }),
-    );
-  }
-
-  const existingMedia = await getMediaById(normalizedId);
-
-  if (!existingMedia) {
-    redirect(
-      buildMediaRedirectUrl({
-        mediaAction: "deleted",
-      }),
-    );
-  }
-
-  if (!isMediaEntityRecord(existingMedia)) {
-    redirect(
-      buildMediaRedirectUrl({
-        mediaAction: "error",
-        mediaMessage: "Silinecek kayıt media entity türünde değil.",
-      }),
-    );
+  if (!normalizedId || !isUuid(normalizedId)) {
+    redirectMediaError("Silinecek medya kimliği geçerli UUID formatında değil.");
   }
 
   try {
-    const auditActor = await requireStrictAuditActor();
-    let deletedCount = 0;
+    const db = getDbOrThrow();
+    const existingMedia = await getMediaById(normalizedId);
 
-    await db.transaction(async (tx) => {
-      const deletedRows = await tx
-        .delete(localizedContent)
-        .where(
-          and(
-            eq(localizedContent.id, normalizedId),
-            eq(localizedContent.entityType, MEDIA_ENTITY_TYPE),
-          ),
-        )
-        .returning({
-          id: localizedContent.id,
-        });
-
-      deletedCount = deletedRows.length;
-
-      if (deletedCount === 0) {
-        return;
-      }
-
-      await writeMediaAudit({
-        database: tx,
-        actor: auditActor,
-        entityId: existingMedia.id,
-        action: "delete",
-        previousState: existingMedia,
-      });
-    });
-
-    if (deletedCount === 0) {
-      redirect(
-        buildMediaRedirectUrl({
-          mediaAction: "error",
-          mediaMessage: "Medya kaydı işlem sırasında silinemedi.",
-        }),
-      );
+    if (!existingMedia) {
+      redirectMediaError("Silinecek medya kaydı bulunamadı.");
     }
+
+    if (!isMediaEntityRecord(existingMedia)) {
+      redirectMediaError("Silinecek kayıt media entity türünde değil.");
+    }
+
+    const auditActor = await requireStrictAuditActor();
+    const deletedRows = await db
+      .delete(localizedContent)
+      .where(
+        and(
+          eq(localizedContent.id, normalizedId),
+          eq(localizedContent.entityType, MEDIA_ENTITY_TYPE),
+        ),
+      )
+      .returning({
+        id: localizedContent.id,
+      });
+
+    if (deletedRows.length === 0) {
+      redirectMediaError("Medya kaydı işlem sırasında silinemedi.");
+    }
+
+    await writeMediaAudit({
+      database: db,
+      actor: auditActor,
+      entityId: existingMedia.id,
+      action: "delete",
+      previousState: existingMedia,
+    });
   } catch (error) {
     if (isNextRedirectError(error)) {
       throw error;
@@ -302,12 +420,20 @@ export async function deleteMedia(id: string) {
       );
     }
 
-    console.error("deleteMedia error:", error);
+    console.error("deleteMedia error:", {
+      action: "deleteMedia",
+      mediaId: normalizedId,
+      errorName: getSafeErrorName(error),
+      errorMessage: getSafeErrorMessage(error),
+    });
 
     redirect(
       buildMediaRedirectUrl({
         mediaAction: "error",
-        mediaMessage: "Medya kaydı silinirken beklenmeyen bir hata oluştu.",
+        mediaMessage: getMediaFailureMessage(
+          error,
+          "Medya kaydı silinirken beklenmeyen bir hata oluştu.",
+        ),
       }),
     );
   }
