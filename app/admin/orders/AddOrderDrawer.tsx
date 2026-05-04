@@ -35,31 +35,31 @@ export function AddOrderDrawer({ offers }: Props) {
   const values = state.values ?? initialState.values!;
 
   return (
-    <div className="w-full rounded-3xl border border-zinc-800 bg-black/40 p-4 lg:max-w-md">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-white">Yeni Order</h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          Yalnızca accepted ve henüz order’a bağlanmamış offer kayıtları listelenir.
+    <div className="w-full rounded-2xl border border-zinc-800 bg-black/40 p-3 lg:max-w-md">
+      <div className="mb-3">
+        <h2 className="text-base font-semibold text-white">Yeni Sipariş</h2>
+        <p className="mt-1 text-xs text-zinc-400">
+          Kabul edilmiş ve henüz siparişe bağlanmamış teklifler listelenir.
         </p>
       </div>
 
       {offers.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-4 text-sm text-zinc-400">
-          Uygun offer bulunamadı. Önce accepted duruma geçmiş ve boşta olan bir teklif oluşmalı.
+        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-3 text-sm text-zinc-400">
+          Uygun teklif bulunamadı. Önce kabul edilmiş ve siparişe bağlanmamış bir teklif oluşturulmalı.
         </div>
       ) : (
-        <form action={action} className="space-y-4">
+        <form action={action} className="space-y-3">
           <div className="space-y-1">
             <label htmlFor="offerId" className="text-xs text-zinc-400">
-              Offer
+              Teklif
             </label>
             <select
               id="offerId"
               name="offerId"
               defaultValue={values.offerId ?? ""}
-              className="w-full rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
+              className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
             >
-              <option value="">Offer seç</option>
+              <option value="">Teklif seç</option>
               {offers.map((item) => (
                 <option key={item.offerId} value={item.offerId}>
                   {item.offerReference} · {item.leadName} · V{item.buildVersionNumber}
@@ -80,7 +80,7 @@ export function AddOrderDrawer({ offers }: Props) {
               type="date"
               name="estimatedDeliveryDate"
               defaultValue={values.estimatedDeliveryDate ?? ""}
-              className="w-full rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
+              className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
             />
             {state.errors?.estimatedDeliveryDate ? (
               <div className="text-xs text-red-400">{state.errors.estimatedDeliveryDate}</div>
@@ -95,7 +95,7 @@ export function AddOrderDrawer({ offers }: Props) {
               id="productionStatus"
               name="productionStatus"
               defaultValue={values.productionStatus ?? "pending"}
-              className="w-full rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
+              className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none focus:border-zinc-700"
             >
               <option value="pending">Bekliyor</option>
               <option value="chassis">Şasi</option>
@@ -116,7 +116,7 @@ export function AddOrderDrawer({ offers }: Props) {
               name="vinNumber"
               placeholder="Opsiyonel"
               defaultValue={values.vinNumber ?? ""}
-              className="w-full rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+              className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
             />
             {state.errors?.vinNumber ? (
               <div className="text-xs text-red-400">{state.errors.vinNumber}</div>
@@ -124,7 +124,7 @@ export function AddOrderDrawer({ offers }: Props) {
           </div>
 
           <div className="rounded-2xl border border-zinc-900 bg-zinc-950/40 px-3 py-2 text-xs text-zinc-500">
-            Not: Aynı offer için ikinci order açılamaz. Offer bağı order tarafında korunur.
+            Not: Aynı teklif için ikinci sipariş açılamaz. Teklif bağı sipariş tarafında korunur.
           </div>
 
           {state.errors?.form ? (
@@ -146,9 +146,9 @@ export function AddOrderDrawer({ offers }: Props) {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full rounded-2xl border border-zinc-800 bg-zinc-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-full border border-zinc-800 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isPending ? "Oluşturuluyor..." : "Order oluştur"}
+            {isPending ? "Oluşturuluyor..." : "Sipariş oluştur"}
           </button>
         </form>
       )}

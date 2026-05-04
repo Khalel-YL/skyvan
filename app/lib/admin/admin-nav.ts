@@ -129,7 +129,7 @@ export const adminNavItems: AdminNavItem[] = [
     group: "engineering-core",
   },
   {
-    title: "Build Versions",
+    title: "Build Versiyonları",
     href: "/admin/build-versions",
     description: "Build ve versiyon bağı omurgası",
     icon: Waypoints,
@@ -139,7 +139,7 @@ export const adminNavItems: AdminNavItem[] = [
     badge: "Yeni",
   },
   {
-    title: "Lead'ler",
+    title: "Müşteri Adayları",
     href: "/admin/leads",
     description: "Müşteri adayı operasyon hattı",
     icon: Users,
@@ -149,7 +149,7 @@ export const adminNavItems: AdminNavItem[] = [
     badge: "CRM",
   },
   {
-    title: "Offers",
+    title: "Teklifler",
     href: "/admin/offers",
     description: "Teklif operasyonu ve satış geçişi",
     icon: BadgeEuro,

@@ -99,6 +99,15 @@ function isPastDate(value: Date | string | null | undefined) {
   return target.getTime() < Date.now();
 }
 
+function StatChip({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-xs">
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-semibold text-zinc-100">{value}</span>
+    </span>
+  );
+}
+
 export default async function Page({
   searchParams,
 }: {
@@ -270,24 +279,23 @@ export default async function Page({
     (summaryMap.get("expired") ?? 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1.5">
           <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Admin · Offers
+            Admin · Teklifler
           </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">
+          <h1 className="text-xl font-semibold tracking-tight text-white">
             Teklif Yönetimi
           </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
-            Offer çekirdeği lead kaydına bağlıdır. İmza, mühür ve order geçişi bu
-            omurga üstüne eklenecek.
+          <p className="max-w-3xl text-sm leading-5 text-zinc-400">
+            Müşteri adayına bağlı teklifleri durum, geçerlilik ve tutar sinyalleriyle izle.
           </p>
         </div>
 
         <Link
           href={leadOptions.length > 0 ? "/admin/offers?new=true" : "/admin/leads"}
-          className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
+          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             leadOptions.length > 0
               ? "bg-white text-black hover:bg-zinc-200"
               : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-white"
@@ -298,49 +306,22 @@ export default async function Page({
       </div>
 
       {leadOptions.length === 0 ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm leading-6 text-amber-200">
-          Teklif oluşturma kapalı. Çünkü gerçek şemada offers kaydı bir lead’e
-          bağlıdır ve lead kaydı da build version bağı ister. Önce uygun bir lead
-          oluşturulmalı.
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm leading-5 text-amber-200">
+          Teklif oluşturma kapalı. Çünkü teklif kaydı bir müşteri adayına
+          bağlıdır ve müşteri adayı da proje sürümü bağı ister. Önce uygun bir
+          müşteri adayı oluşturulmalı.
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Toplam teklif
-          </p>
-          <p className="mt-3 text-4xl font-semibold text-white">{totalOffers}</p>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Gönderildi
-          </p>
-          <p className="mt-3 text-4xl font-semibold text-white">
-            {summaryMap.get("sent") ?? 0}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Kabul
-          </p>
-          <p className="mt-3 text-4xl font-semibold text-white">
-            {summaryMap.get("accepted") ?? 0}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Riskli
-          </p>
-          <p className="mt-3 text-4xl font-semibold text-white">{riskyCount}</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatChip label="Toplam" value={totalOffers} />
+        <StatChip label="Gönderildi" value={summaryMap.get("sent") ?? 0} />
+        <StatChip label="Kabul" value={summaryMap.get("accepted") ?? 0} />
+        <StatChip label="Riskli" value={riskyCount} />
       </div>
 
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-        <form className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <form className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
             {statusTabs.map((tab) => {
               const isActive = selectedStatus === tab.key;
@@ -355,7 +336,7 @@ export default async function Page({
                   href={`/admin/offers${
                     nextParams.toString() ? `?${nextParams.toString()}` : ""
                   }`}
-                  className={`rounded-2xl px-4 py-2.5 text-sm transition ${
+                  className={`rounded-full px-2.5 py-1 text-xs transition ${
                     isActive
                       ? "bg-white text-black"
                       : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-white"
@@ -367,13 +348,13 @@ export default async function Page({
             })}
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               name="q"
               defaultValue={q}
-              placeholder="Referans, ad, e-posta, build veya model ara"
-              className="w-full min-w-[290px] rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+              placeholder="Referans, ad, e-posta veya proje kodu ara"
+              className="w-full min-w-[260px] rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
             />
 
             <input type="hidden" name="status" value={selectedStatus} />
@@ -381,14 +362,14 @@ export default async function Page({
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
               >
                 Uygula
               </button>
 
               <Link
                 href="/admin/offers"
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
               >
                 Sıfırla
               </Link>
@@ -398,25 +379,25 @@ export default async function Page({
       </div>
 
       {enrichedOffers.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/40 px-6 py-12 text-center">
+        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 px-6 py-8 text-center">
           <p className="text-lg font-medium text-white">Henüz teklif yok</p>
           <p className="mt-2 text-sm text-zinc-400">
             {leadOptions.length > 0
               ? "İlk teklifi oluşturup satış hattını başlat."
-              : "Önce lead üret, sonra teklif omurgasını aç."}
+              : "Önce müşteri adayı oluştur, sonra teklif omurgasını aç."}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {enrichedOffers.map((offer) => (
             <article
               key={offer.id}
-              className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5 transition hover:border-zinc-700"
+              className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 transition hover:border-zinc-700"
             >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-3xl font-semibold tracking-tight text-white">
+                    <h2 className="text-base font-semibold tracking-tight text-white">
                       {offer.offerReference}
                     </h2>
 
@@ -429,29 +410,29 @@ export default async function Page({
                     </span>
 
                     {offer.overdue ? (
-                      <span className="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                      <span className="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
                         geçerlilik geçmiş
                       </span>
                     ) : null}
                   </div>
 
-                  <p className="mt-3 text-base text-zinc-200">
-                    {offer.leadName ?? "Lead yok"}
+                  <p className="mt-2 text-sm text-zinc-200">
+                    {offer.leadName ?? "Müşteri adayı yok"}
                     {offer.leadEmail ? ` · ${offer.leadEmail}` : ""}
                   </p>
 
-                  <p className="mt-2 text-sm text-zinc-400">
+                  <p className="mt-1 text-xs text-zinc-400">
                     {offer.buildShortCode
                       ? `${offer.buildShortCode} · v${offer.versionNumber ?? "—"}`
-                      : "Build bağı yok"}
+                      : "Proje bağı yok"}
                     {offer.modelSlug ? ` · Model: ${offer.modelSlug}` : ""}
                   </p>
 
-                  <p className="mt-4 text-xl font-medium text-white">
+                  <p className="mt-2 text-base font-medium text-white">
                     ₺ {formatMoney(offer.totalAmount)}
                   </p>
 
-                  <p className="mt-2 text-sm text-zinc-500">
+                  <p className="mt-1 text-xs text-zinc-500">
                     Geçerlilik: {formatDate(offer.validUntil)} · Oluşturma:{" "}
                     {formatDate(offer.createdAt)}
                   </p>
@@ -460,7 +441,7 @@ export default async function Page({
                 <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end">
                   <Link
                     href={`/admin/offers?edit=${offer.id}`}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                    className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
                   >
                     Düzenle
                   </Link>
@@ -468,7 +449,7 @@ export default async function Page({
                   <form action={deleteOffer.bind(null, offer.id)}>
                     <button
                       type="submit"
-                      className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-300 transition hover:bg-rose-500/20"
+                      className="rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300 transition hover:bg-rose-500/20"
                     >
                       Sil
                     </button>

@@ -211,11 +211,11 @@ function operationNote(params: {
   }
 
   if (updatesCount === 0 && productionStatus !== "pending") {
-    return "Timeline boş";
+    return "Zaman çizelgesi boş";
   }
 
   if (updatesCount > 0) {
-    return "Timeline aktif";
+    return "Zaman çizelgesi aktif";
   }
 
   return "Normal";
@@ -341,26 +341,22 @@ export default async function OrdersPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
+    <div className="space-y-4">
+      <section className="flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1.5">
             <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-              Operasyon Merkezi
+              Admin · Siparişler
             </div>
-            <h1 className="text-2xl font-semibold text-white">Orders</h1>
-            <p className="max-w-3xl text-sm text-zinc-400">
-              Kabul edilmiş tekliflerdен açılan siparişleri yönet. Bu batch ile order
-              listesinden detay sayfasına geçiş yapılır; üretim güncellemeleri ise artık
-              order detayında timeline olarak izlenir.
+            <h1 className="text-xl font-semibold text-white">Siparişler</h1>
+            <p className="max-w-3xl text-sm leading-5 text-zinc-400">
+              Kabul edilmiş tekliflerden açılan siparişleri durum, teslim ve müşteri sinyalleriyle izle.
             </p>
           </div>
 
           <AddOrderDrawer offers={availableOffers} />
-        </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="flex flex-wrap items-center gap-2">
         <MetricCard label="Toplam" value={metrics.total} />
         <MetricCard label="Bekliyor" value={metrics.pending} />
         <MetricCard label="Üretimde" value={metrics.inProgress} />
@@ -371,8 +367,8 @@ export default async function OrdersPage({ searchParams }: Props) {
         <MetricCard label="Sessiz Kayıt" value={metrics.stale} />
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2">
             {STATUS_OPTIONS.map((item) => {
               const href =
@@ -390,7 +386,7 @@ export default async function OrdersPage({ searchParams }: Props) {
                 <Link
                   key={item.value}
                   href={href}
-                  className={`rounded-2xl border px-3 py-2 text-sm transition ${
+                  className={`rounded-full border px-2.5 py-1 text-xs transition ${
                     isActive
                       ? "border-zinc-200 bg-zinc-100 text-black"
                       : "border-zinc-800 bg-black text-zinc-300 hover:border-zinc-700 hover:text-white"
@@ -402,18 +398,18 @@ export default async function OrdersPage({ searchParams }: Props) {
             })}
           </div>
 
-          <form className="flex w-full gap-2 lg:max-w-md">
+          <form className="flex w-full gap-2 xl:max-w-md">
             <input type="hidden" name="status" value={status} />
             <input
               type="text"
               name="q"
               defaultValue={q}
-              placeholder="Offer, müşteri, e-posta veya VIN ara"
-              className="w-full rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+              placeholder="Teklif, müşteri, e-posta veya VIN ara"
+              className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-zinc-700"
             />
             <button
               type="submit"
-              className="rounded-2xl border border-zinc-800 bg-zinc-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white"
+              className="rounded-full border border-zinc-800 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-white"
             >
               Ara
             </button>
@@ -422,15 +418,15 @@ export default async function OrdersPage({ searchParams }: Props) {
       </section>
 
       {rows.length === 0 ? (
-        <section className="rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/40 p-8 text-center">
+        <section className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-6 text-center">
           <h2 className="text-lg font-medium text-white">Henüz order kaydı yok</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            İlk order yalnızca accepted durumundaki ve henüz order’a bağlanmamış bir
-            offer kaydından açılabilir.
+            İlk sipariş yalnızca kabul edilmiş ve henüz siparişe bağlanmamış bir
+            teklif kaydından açılabilir.
           </p>
         </section>
       ) : (
-        <section className="grid gap-4">
+        <section className="grid gap-2">
           {rows.map((row) => {
             const deliveryDays = daysUntil(row.estimatedDeliveryDate);
             const lastActivityAt = row.lastUpdateAt ?? row.updatedAt;
@@ -446,16 +442,16 @@ export default async function OrdersPage({ searchParams }: Props) {
             return (
               <article
                 key={row.id}
-                className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5"
+                className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3"
               >
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-3 xl:flex-1">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="space-y-2 xl:flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-xs text-zinc-400">
                         {row.offerReference}
                       </div>
                       <div
-                        className={`rounded-full border px-3 py-1 text-xs ${statusBadgeClass(
+                        className={`rounded-full border px-2 py-0.5 text-xs ${statusBadgeClass(
                           row.productionStatus,
                         )}`}
                       >
@@ -463,19 +459,19 @@ export default async function OrdersPage({ searchParams }: Props) {
                       </div>
 
                       {row.latestStage ? (
-                        <div className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-300">
+                          <div className="rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-300">
                           Son kayıt: {stageLabel(row.latestStage)}
                         </div>
                       ) : null}
 
                       {note === "VIN gerekli" ? (
-                        <div className="rounded-full border border-red-900/70 bg-red-950/50 px-3 py-1 text-xs text-red-200">
+                          <div className="rounded-full border border-red-900/70 bg-red-950/50 px-2 py-0.5 text-xs text-red-200">
                           VIN eksik
                         </div>
                       ) : null}
 
                       {note === "Teslim gecikmiş" ? (
-                        <div className="rounded-full border border-red-900/70 bg-red-950/50 px-3 py-1 text-xs text-red-200">
+                          <div className="rounded-full border border-red-900/70 bg-red-950/50 px-2 py-0.5 text-xs text-red-200">
                           Teslim gecikmiş
                         </div>
                       ) : null}
@@ -484,27 +480,27 @@ export default async function OrdersPage({ searchParams }: Props) {
                       deliveryDays >= 0 &&
                       deliveryDays <= 7 &&
                       row.productionStatus !== "completed" ? (
-                        <div className="rounded-full border border-amber-900/70 bg-amber-950/50 px-3 py-1 text-xs text-amber-200">
+                        <div className="rounded-full border border-amber-900/70 bg-amber-950/50 px-2 py-0.5 text-xs text-amber-200">
                           Teslim yakın
                         </div>
                       ) : null}
 
                       {note === "Sessiz kayıt" ? (
-                        <div className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
+                        <div className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300">
                           {staleDays} gündür sessiz
                         </div>
                       ) : null}
                     </div>
 
                     <div>
-                      <h2 className="text-xl font-semibold text-white">{row.leadName}</h2>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        Build Version: V{row.buildVersionNumber} · Tutar:{" "}
+                      <h2 className="text-base font-semibold text-white">{row.leadName}</h2>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Proje sürümü: V{row.buildVersionNumber} · Tutar:{" "}
                         {formatCurrency(row.totalAmount)}
                       </p>
                     </div>
 
-                    <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-2 text-xs text-zinc-300 md:grid-cols-2 xl:grid-cols-4">
                       <InfoLine label="E-posta" value={row.leadEmail || "-"} />
                       <InfoLine label="Telefon" value={row.leadPhoneNumber || "-"} />
                       <InfoLine label="Tahmini teslim" value={formatDate(row.estimatedDeliveryDate)} />
@@ -512,7 +508,7 @@ export default async function OrdersPage({ searchParams }: Props) {
                     </div>
                   </div>
 
-                  <div className="grid gap-2 text-sm text-zinc-400 xl:w-[240px] xl:min-w-[240px]">
+                  <div className="grid gap-1.5 text-xs text-zinc-400 xl:w-[220px] xl:min-w-[220px]">
                     <InfoLine label="Güncelleme sayısı" value={String(row.updatesCount)} />
                     <InfoLine label="Son hareket" value={formatDateTime(lastActivityAt)} />
                     <InfoLine label="Operasyon notu" value={note} />
@@ -520,7 +516,7 @@ export default async function OrdersPage({ searchParams }: Props) {
 
                     <Link
                       href={`/admin/orders/${row.id}`}
-                      className="mt-2 inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-black px-4 py-2 text-sm text-white transition hover:border-zinc-700"
+                      className="mt-1 inline-flex items-center justify-center rounded-full border border-zinc-800 bg-black px-3 py-1.5 text-xs text-white transition hover:border-zinc-700"
                     >
                       Detaya git
                     </Link>
@@ -537,18 +533,18 @@ export default async function OrdersPage({ searchParams }: Props) {
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{label}</div>
-      <div className="mt-2 text-2xl font-semibold text-white">{value}</div>
-    </div>
+    <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-xs">
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-semibold text-zinc-100">{value}</span>
+    </span>
   );
 }
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-900 bg-black/30 px-3 py-2">
+    <div className="rounded-xl border border-zinc-900 bg-black/30 px-2.5 py-1.5">
       <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{label}</div>
-      <div className="mt-1 text-sm text-zinc-200">{value}</div>
+      <div className="mt-0.5 text-xs text-zinc-200">{value}</div>
     </div>
   );
 }

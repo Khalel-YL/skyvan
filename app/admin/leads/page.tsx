@@ -8,15 +8,9 @@ import {
   or,
 } from "drizzle-orm";
 import {
-  Activity,
-  BadgeEuro,
-  ChevronRight,
-  FileText,
-  GitBranch,
   Pencil,
   Plus,
   Trash2,
-  UserRound,
 } from "lucide-react";
 
 import { db } from "@/db/db";
@@ -117,6 +111,15 @@ function normalizeStatusFilter(value: string | undefined): StatusFilter {
   return "all";
 }
 
+function StatChip({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-xs">
+      <span className="text-zinc-400">{label}</span>
+      <span className="font-semibold text-zinc-100">{value}</span>
+    </span>
+  );
+}
+
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = (await searchParams) ?? {};
   const query = (params.q ?? "").trim();
@@ -133,11 +136,13 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       <section className="space-y-6">
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
-            Admin · Leads
+            Admin · Müşteri Adayları
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">Leads</h1>
+          <h1 className="mt-3 text-3xl font-semibold text-zinc-100">
+            Müşteri Adayları
+          </h1>
           <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-            Veritabanı bağlantısı olmadığı için Leads modülü güvenli pasif modda.
+            Veritabanı bağlantısı olmadığı için müşteri adayları modülü güvenli pasif modda.
           </p>
         </div>
       </section>
@@ -194,14 +199,14 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     .orderBy(desc(buildVersions.createdAt));
 
   const buildVersionOptions = buildVersionRows.map((row) => {
-    const shortCode = row.buildShortCode ?? "BUILD";
+    const shortCode = row.buildShortCode ?? "PROJE";
     const versionLabel = `V${row.versionNumber}`;
     const createdAtLabel = formatDate(row.createdAt);
 
     return {
       id: row.id,
       label: `${shortCode} · ${versionLabel}`,
-      meta: `Build: ${shortCode} · Versiyon: ${versionLabel} · Oluşturulma: ${createdAtLabel}`,
+      meta: `Proje: ${shortCode} · Sürüm: ${versionLabel} · Oluşturulma: ${createdAtLabel}`,
     };
   });
 
@@ -314,46 +319,43 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const createEnabled = buildVersionOptions.length > 0;
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
-              Admin · Leads
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+              Admin · Müşteri Adayları
             </p>
-            <h1 className="mt-3 text-3xl font-semibold text-zinc-100">
-              Leads
+            <h1 className="text-xl font-semibold text-zinc-100">
+              Müşteri Adayları
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-              Lead akışı doğal dependency ile çalışır. Her lead bir build
-              version kaydına bağlıdır ve offer hattı buradan beslenir.
+            <p className="max-w-2xl text-sm leading-5 text-zinc-400">
+              Müşteri adaylarını proje sürümü, iletişim durumu ve teklif hattı ile izle.
             </p>
           </div>
 
           {createEnabled ? (
             <Link
               href="/admin/leads?new=true"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               <Plus size={16} />
-              Yeni Lead
+              Yeni Aday
             </Link>
           ) : (
             <button
               type="button"
               disabled
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-800 px-5 py-3 text-sm font-medium text-zinc-500"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-500"
             >
               <Plus size={16} />
-              Önce Build Version Gerekli
+              Önce Proje Sürümü Gerekli
             </button>
           )}
-        </div>
       </div>
 
       {notice ? (
         <div
-          className={`rounded-3xl border px-5 py-4 text-sm ${getNoticeClassName(
+          className={`rounded-2xl border px-3 py-2 text-sm ${getNoticeClassName(
             noticeTone,
           )}`}
         >
@@ -362,121 +364,32 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       ) : null}
 
       {!createEnabled ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
-          Leads create akışı için en az bir build version kaydı gerekli.
-          Build version oluşmadan lead açılmıyor.
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          Müşteri adayı oluşturmak için en az bir proje sürümü kaydı gerekli.
+          Proje sürümü oluşmadan aday kaydı açılamaz.
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <UserRound size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Toplam
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.total}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <Activity size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Yeni
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.new}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <ChevronRight size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                İletişim
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.contacted}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <GitBranch size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Nitelikli
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.qualified}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <BadgeEuro size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Dönüşen
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.converted}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-300">
-              <FileText size={18} />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Teklifli
-              </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">
-                {stats.withOffers}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatChip label="Toplam" value={stats.total} />
+        <StatChip label="Yeni" value={stats.new} />
+        <StatChip label="İletişim" value={stats.contacted} />
+        <StatChip label="Nitelikli" value={stats.qualified} />
+        <StatChip label="Dönüşen" value={stats.converted} />
+        <StatChip label="Teklifli" value={stats.withOffers} />
       </div>
 
       <form
         method="GET"
-        className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4"
+        className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <input
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="Ad, e-posta, telefon, build kodu ara..."
-            className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700 lg:max-w-md"
+            placeholder="Ad, e-posta, telefon veya proje kodu ara..."
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-500 focus:border-zinc-700 xl:max-w-md"
           />
 
           <div className="flex flex-wrap gap-2">
@@ -496,7 +409,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   type="submit"
                   name="status"
                   value={item.value}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                  className={`rounded-full border px-2.5 py-1 text-xs transition ${
                     isActive
                       ? "border-zinc-200 bg-zinc-100 text-zinc-900"
                       : "border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100"
@@ -510,9 +423,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
       </form>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {enrichedLeads.length === 0 ? (
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 text-sm text-zinc-400">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-400">
             Eşleşen lead kaydı bulunamadı.
           </div>
         ) : (
@@ -526,17 +439,17 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
             return (
               <div
                 key={lead.id}
-                className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5"
+                className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3"
               >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold text-zinc-100">
+                      <h2 className="text-base font-semibold text-zinc-100">
                         {lead.fullName}
                       </h2>
 
                       <span
-                        className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusClassName(
+                        className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusClassName(
                           lead.status,
                         )}`}
                       >
@@ -544,26 +457,26 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                       </span>
 
                       {lead.whatsappOptIn ? (
-                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
                           WhatsApp Onaylı
                         </span>
                       ) : null}
 
                       {hasOffer ? (
-                        <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
+                        <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-300">
                           {lead.offerCount} teklif
                         </span>
                       ) : (
-                        <span className="rounded-full border border-zinc-700 bg-zinc-800/80 px-3 py-1 text-xs font-medium text-zinc-300">
+                        <span className="rounded-full border border-zinc-700 bg-zinc-800/80 px-2 py-0.5 text-xs font-medium text-zinc-300">
                           Teklif yok
                         </span>
                       )}
                     </div>
 
-                    <div className="grid gap-4 text-sm text-zinc-400 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-2 text-xs text-zinc-400 md:grid-cols-2 xl:grid-cols-5">
                       <div className="min-w-0">
-                        <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                          Build Version
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                          Proje Sürümü
                         </p>
                         <p className="mt-1 truncate text-zinc-200">
                           {buildLabel}
@@ -612,18 +525,16 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                     </div>
 
                     {hasOffer ? (
-                      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-                        Bu lead kaydına bağlı teklif olduğu için silme işlemi
-                        engellenir. Gerekirse önce teklif tarafını kapat veya
-                        yönet.
-                      </div>
+                      <p className="text-xs text-amber-300">
+                        Bağlı teklif olduğu için silme kapalı.
+                      </p>
                     ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 lg:w-auto lg:flex-col lg:items-end">
                     <Link
                       href={`/admin/leads?edit=${lead.id}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
                     >
                       <Pencil size={15} />
                       Düzenle
@@ -633,12 +544,12 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                       <input type="hidden" name="id" value={lead.id} />
                       <button
                         type="submit"
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:border-red-500/30 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-500/30 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={hasOffer}
                         title={
                           hasOffer
                             ? "Bağlı teklif varken silme kapalıdır."
-                            : "Lead kaydını sil"
+                            : "Müşteri adayı kaydını sil"
                         }
                       >
                         <Trash2 size={15} />

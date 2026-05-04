@@ -100,10 +100,10 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
         />
 
         <aside className="flex h-full w-full max-w-xl flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl">
-          <div className="flex items-start justify-between border-b border-zinc-800 px-6 py-5">
+          <div className="flex items-start justify-between border-b border-zinc-800 px-5 py-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Admin · Offers</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Yeni teklif oluştur</h2>
+              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Admin · Teklifler</p>
+              <h2 className="mt-1.5 text-xl font-semibold text-white">Yeni teklif oluştur</h2>
             </div>
 
             <button
@@ -115,18 +115,17 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
             </button>
           </div>
 
-          <div className="px-6 py-6">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5">
-              <h3 className="text-base font-medium text-white">Lead bulunamadı</h3>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Teklif oluşturmak için önce uygun bir lead kaydı bulunmalı. Offers modülü bağımsız
-                çalışmaz; mevcut lead kaydına bağlanır.
+          <div className="px-5 py-5">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
+              <h3 className="text-base font-medium text-white">Müşteri adayı bulunamadı</h3>
+              <p className="mt-2 text-sm leading-5 text-zinc-400">
+                Teklif oluşturmak için önce uygun bir lead kaydı bulunmalı.
               </p>
 
               <button
                 type="button"
                 onClick={() => router.replace("/admin/offers")}
-                className="mt-5 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
+                className="mt-4 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200"
               >
                 Geri dön
               </button>
@@ -147,15 +146,14 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
       />
 
       <aside className="flex h-full w-full max-w-xl flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl">
-        <div className="flex items-start justify-between border-b border-zinc-800 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-zinc-800 px-5 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Admin · Offers</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
+            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Admin · Teklifler</p>
+            <h2 className="mt-1.5 text-xl font-semibold text-white">
               {initialData ? "Teklif düzenle" : "Yeni teklif oluştur"}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Offer çekirdeği lead kaydına bağlı çalışır. Bu katman daha sonra imza, mühür ve
-              order geçişi için temel olacak.
+            <p className="mt-1 text-xs leading-5 text-zinc-400">
+              Teklif kaydı lead, geçerlilik ve tutar üzerinden yönetilir.
             </p>
           </div>
 
@@ -171,20 +169,20 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
         <form action={formAction} className="flex flex-1 flex-col overflow-y-auto">
           {initialData?.id ? <input type="hidden" name="id" value={initialData.id} /> : null}
 
-          <div className="space-y-5 px-6 py-6">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+          <div className="space-y-4 px-5 py-5">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
                   <User2 className="h-4 w-4 text-zinc-400" />
-                  Lead
+                  Müşteri adayı
                 </span>
 
                 <select
                   name="leadId"
                   defaultValue={String(getValue(state, initialData, "leadId"))}
-                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
                 >
-                  <option value="">Lead seç</option>
+                  <option value="">Müşteri adayı seç</option>
                   {leadOptions.map((lead) => (
                     <option key={lead.id} value={lead.id}>
                       {lead.label}
@@ -195,12 +193,10 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
 
               <FieldError message={state.errors?.leadId} />
 
-              <p className="mt-2 text-xs text-zinc-500">
-                Seçilen lead, mevcut build version bağını zaten taşıyor.
-              </p>
+              <p className="mt-2 text-xs text-zinc-500">Müşteri adayı proje sürümü bağını taşır.</p>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
                   <FileText className="h-4 w-4 text-zinc-400" />
@@ -212,7 +208,7 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
                   type="text"
                   placeholder="BOŞ BIRAKILIRSA OTOMATİK ÜRETİLİR"
                   defaultValue={String(getValue(state, initialData, "offerReference"))}
-                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm uppercase text-white outline-none transition focus:border-zinc-600"
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm uppercase text-white outline-none transition focus:border-zinc-600"
                 />
               </label>
 
@@ -221,8 +217,8 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
               <p className="mt-2 text-xs text-zinc-500">Örnek format: OFF-2026-0001</p>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
                     <Calendar className="h-4 w-4 text-zinc-400" />
@@ -233,14 +229,14 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
                     name="validUntil"
                     type="date"
                     defaultValue={String(getValue(state, initialData, "validUntil"))}
-                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
                   />
                 </label>
 
                 <FieldError message={state.errors?.validUntil} />
               </div>
 
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
                     <Receipt className="h-4 w-4 text-zinc-400" />
@@ -253,7 +249,7 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
                     inputMode="decimal"
                     placeholder="0,00"
                     defaultValue={String(getValue(state, initialData, "totalAmount"))}
-                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
                   />
                 </label>
 
@@ -261,14 +257,14 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
               <label className="block">
                 <span className="mb-3 block text-sm font-medium text-white">Durum</span>
 
                 <select
                   name="status"
                   defaultValue={String(getValue(state, initialData, "status"))}
-                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-600"
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition focus:border-zinc-600"
                 >
                   <option value="draft">Taslak</option>
                   <option value="sent">Gönderildi</option>
@@ -280,14 +276,14 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
             </div>
 
             {state.errors?.form ? (
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 {state.errors.form}
               </div>
             ) : null}
 
             {state.message ? (
               <div
-                className={`rounded-2xl px-4 py-3 text-sm ${
+                className={`rounded-2xl px-3 py-2 text-sm ${
                   state.ok
                     ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
                     : "border border-zinc-800 bg-zinc-900 text-zinc-300"
@@ -298,11 +294,11 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
             ) : null}
           </div>
 
-          <div className="mt-auto flex items-center justify-end gap-3 border-t border-zinc-800 px-6 py-5">
+          <div className="mt-auto flex items-center justify-end gap-3 border-t border-zinc-800 px-5 py-4">
             <button
               type="button"
               onClick={() => router.replace("/admin/offers")}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               Vazgeç
             </button>
@@ -310,7 +306,7 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
             <button
               type="submit"
               disabled={isPending}
-              className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isPending
                 ? "Kaydediliyor..."

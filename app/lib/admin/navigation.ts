@@ -20,7 +20,7 @@ export const adminNavigation: AdminNavGroup[] = [
     title: "Genel",
     items: [
       {
-        title: "Dashboard",
+        title: "Genel Bakış",
         href: "/admin",
         icon: LayoutDashboard,
       },
@@ -50,7 +50,7 @@ export const adminNavigation: AdminNavGroup[] = [
     title: "Ticari Operasyon",
     items: [
       {
-        title: "Lead'ler",
+        title: "Müşteri Adayları",
         href: "/admin/leads",
         icon: Users,
       },
@@ -90,7 +90,7 @@ export const adminNavigation: AdminNavGroup[] = [
         icon: BrainCircuit,
       },
       {
-        title: "Datasheets",
+        title: "Datasheet Merkezi",
         href: "/admin/datasheets",
         icon: Wrench,
       },

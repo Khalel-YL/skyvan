@@ -13,7 +13,7 @@ type AdminTopbarProps = {
 
 const quickLinks = [
   {
-    label: "Public Site",
+    label: "Yayındaki Site",
     href: "/tr",
     icon: ExternalLink,
     note: "Canlı yayın yüzeyi",

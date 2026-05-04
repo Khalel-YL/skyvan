@@ -23,11 +23,11 @@ export async function getAdminDashboardData(): Promise<DashboardData> {
       { label: "Kurallar", value: "-", hint: "Statik mod" },
       { label: "İçerikler", value: "-", hint: "Statik mod" },
       { label: "Medya", value: "-", hint: "Statik mod" },
-      { label: "Lead'ler", value: "-", hint: "Statik mod" },
+      { label: "Müşteri Adayları", value: "-", hint: "Statik mod" },
     ],
     health: {
       database: "degraded",
-      note: "Dashboard statik modda çalışıyor.",
+      note: "Genel bakış statik modda çalışıyor.",
     },
   };
 }
