@@ -110,6 +110,30 @@ export function isImageLikeAsset(value: string) {
   return /\.(png|jpe?g|webp|svg)$/i.test(pathname);
 }
 
+export function getAssetReferenceKind(value: string) {
+  const pathname = (() => {
+    try {
+      return new URL(value).pathname;
+    } catch {
+      return value;
+    }
+  })().toLowerCase();
+
+  if (/\.(png|jpe?g|webp|svg)$/i.test(pathname)) {
+    return "image" as const;
+  }
+
+  if (/\.(glb|gltf)$/i.test(pathname)) {
+    return "model3d" as const;
+  }
+
+  if (/\.(mp4|webm|mov|m4v)$/i.test(pathname)) {
+    return "video" as const;
+  }
+
+  return "link" as const;
+}
+
 export function shortenMiddle(value: string, maxLength = 54) {
   if (value.length <= maxLength) {
     return value;

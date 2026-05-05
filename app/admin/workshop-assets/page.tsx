@@ -15,6 +15,9 @@ type WorkshopAssetsPageProps = {
     productId?: string;
     modelId?: string;
     cameraView?: string;
+    fallbackState?: string;
+    minLayer?: string;
+    maxLayer?: string;
     assetAction?: string;
     assetCode?: string;
     mode?: string;
@@ -169,6 +172,17 @@ function statChip(label: string, value: number) {
   );
 }
 
+function parseLayerFilter(value?: string) {
+  const normalized = String(value ?? "").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 async function getWorkshopAssetsSafely() {
   if (!db) {
     return [] satisfies WorkshopAssetListItem[];
@@ -192,23 +206,48 @@ async function getWorkshopAssetsSafely() {
       .from(visualAssets2d)
       .leftJoin(products, eq(visualAssets2d.productId, products.id))
       .leftJoin(models, eq(visualAssets2d.modelId, models.id))
-      .orderBy(asc(visualAssets2d.cameraView), asc(visualAssets2d.zIndexLayer))) as RawWorkshopAssetRow[];
+      .orderBy(
+        asc(products.name),
+        asc(products.slug),
+        asc(models.slug),
+        asc(visualAssets2d.cameraView),
+        asc(visualAssets2d.zIndexLayer),
+      )) as RawWorkshopAssetRow[];
 
-    return rows.map((row) => ({
-      id: row.id,
-      productId: row.productId,
-      productLabel: row.productName || row.productSlug ? getProductLabel(row) : "Ürün kaydı bulunamadı",
-      productSlug: row.productSlug,
-      productMissing: !row.productName && !row.productSlug,
-      modelId: row.modelId,
-      modelLabel: row.modelSlug ? getModelLabel(row) : "Model kaydı bulunamadı",
-      modelSlug: row.modelSlug,
-      modelMissing: !row.modelSlug,
-      cameraView: row.cameraView,
-      zIndexLayer: row.zIndexLayer,
-      assetUrl: row.assetUrl,
-      fallbackUrl: row.fallbackUrl,
-    }));
+    return rows
+      .map((row) => ({
+        id: row.id,
+        productId: row.productId,
+        productLabel:
+          row.productName || row.productSlug
+            ? getProductLabel(row)
+            : "Ürün kaydı bulunamadı",
+        productSlug: row.productSlug,
+        productMissing: !row.productName && !row.productSlug,
+        modelId: row.modelId,
+        modelLabel: row.modelSlug ? getModelLabel(row) : "Model kaydı bulunamadı",
+        modelSlug: row.modelSlug,
+        modelMissing: !row.modelSlug,
+        cameraView: row.cameraView,
+        zIndexLayer: row.zIndexLayer,
+        assetUrl: row.assetUrl,
+        fallbackUrl: row.fallbackUrl,
+      }))
+      .sort((left, right) => {
+        const productDiff = left.productLabel.localeCompare(right.productLabel, "tr");
+        if (productDiff !== 0) return productDiff;
+
+        const modelDiff = (left.modelSlug ?? left.modelLabel).localeCompare(
+          right.modelSlug ?? right.modelLabel,
+          "tr",
+        );
+        if (modelDiff !== 0) return modelDiff;
+
+        const cameraDiff = left.cameraView.localeCompare(right.cameraView, "tr");
+        if (cameraDiff !== 0) return cameraDiff;
+
+        return left.zIndexLayer - right.zIndexLayer;
+      });
   } catch (error) {
     console.error("Workshop assets fetch error:", error);
     return [] satisfies WorkshopAssetListItem[];
@@ -282,6 +321,12 @@ export default async function WorkshopAssetsPage({
   const productId = (params.productId ?? "").trim();
   const modelId = (params.modelId ?? "").trim();
   const cameraView = (params.cameraView ?? "").trim();
+  const fallbackState =
+    params.fallbackState === "present" || params.fallbackState === "missing"
+      ? params.fallbackState
+      : "all";
+  const minLayer = parseLayerFilter(params.minLayer);
+  const maxLayer = parseLayerFilter(params.maxLayer);
 
   const cameraViewOptions = Array.from(
     new Set(allAssets.map((asset) => asset.cameraView).filter(Boolean)),
@@ -303,8 +348,24 @@ export default async function WorkshopAssetsPage({
     const matchesProduct = productId ? asset.productId === productId : true;
     const matchesModel = modelId ? asset.modelId === modelId : true;
     const matchesCamera = cameraView ? asset.cameraView === cameraView : true;
+    const matchesFallback =
+      fallbackState === "present"
+        ? Boolean(asset.fallbackUrl)
+        : fallbackState === "missing"
+          ? !asset.fallbackUrl
+          : true;
+    const matchesMinLayer = minLayer === null ? true : asset.zIndexLayer >= minLayer;
+    const matchesMaxLayer = maxLayer === null ? true : asset.zIndexLayer <= maxLayer;
 
-    return matchesQuery && matchesProduct && matchesModel && matchesCamera;
+    return (
+      matchesQuery &&
+      matchesProduct &&
+      matchesModel &&
+      matchesCamera &&
+      matchesFallback &&
+      matchesMinLayer &&
+      matchesMaxLayer
+    );
   });
 
   const stats = {
@@ -369,7 +430,7 @@ export default async function WorkshopAssetsPage({
         action="/admin/workshop-assets"
         className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3"
       >
-        <div className="grid gap-2 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(150px,0.8fr)_auto] lg:items-end">
+        <div className="grid gap-2 lg:grid-cols-[minmax(180px,1.35fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(140px,0.8fr)] lg:items-end">
           <label className="space-y-1">
             <span className="text-xs font-medium text-zinc-500">Arama</span>
             <div className="relative">
@@ -429,6 +490,45 @@ export default async function WorkshopAssetsPage({
                 </option>
               ))}
             </select>
+          </label>
+        </div>
+
+        <div className="mt-2 grid gap-2 md:grid-cols-[minmax(150px,0.8fr)_120px_120px_auto] md:items-end">
+          <label className="space-y-1">
+            <span className="text-xs font-medium text-zinc-500">Yedek durumu</span>
+            <select
+              name="fallbackState"
+              defaultValue={fallbackState}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-zinc-600"
+            >
+              <option value="all">Tümü</option>
+              <option value="present">Yedeği olan</option>
+              <option value="missing">Yedeği eksik</option>
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-xs font-medium text-zinc-500">Min katman</span>
+            <input
+              name="minLayer"
+              type="number"
+              step="1"
+              defaultValue={minLayer ?? ""}
+              placeholder="Min"
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-xs font-medium text-zinc-500">Max katman</span>
+            <input
+              name="maxLayer"
+              type="number"
+              step="1"
+              defaultValue={maxLayer ?? ""}
+              placeholder="Max"
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-zinc-600"
+            />
           </label>
 
           <div className="flex gap-2">

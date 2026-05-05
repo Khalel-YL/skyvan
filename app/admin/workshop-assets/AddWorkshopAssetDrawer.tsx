@@ -22,6 +22,16 @@ type WorkshopAssetFormProps = {
 const inputClassName =
   "w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-zinc-600";
 
+const cameraViewSuggestions = [
+  "isometric",
+  "side",
+  "front",
+  "rear",
+  "texture-preview",
+  "interior",
+  "exterior",
+];
+
 function Field({
   label,
   hint,
@@ -56,6 +66,7 @@ function WorkshopAssetForm({
     initialWorkshopAssetFormState,
   );
   const isEdit = Boolean(initialData?.id);
+  const [cameraView, setCameraView] = useState(initialData?.cameraView ?? "");
 
   return (
     <form action={formAction} className="space-y-4 p-4">
@@ -106,17 +117,32 @@ function WorkshopAssetForm({
       <div className="grid gap-3 md:grid-cols-[1fr_160px]">
         <Field
           label="Kamera görünümü"
-          hint="Örn: isometric, side, front, texture-preview"
+          hint="Görselin hangi açı veya önizleme bağlamında kullanılacağını belirtir."
           error={state.fieldErrors.cameraView}
         >
-          <input
-            name="cameraView"
-            defaultValue={initialData?.cameraView ?? ""}
-            className={inputClassName}
-            placeholder="isometric"
-            aria-invalid={Boolean(state.fieldErrors.cameraView)}
-            required
-          />
+          <div className="space-y-2">
+            <input
+              name="cameraView"
+              value={cameraView}
+              onChange={(event) => setCameraView(event.target.value)}
+              className={inputClassName}
+              placeholder="isometric"
+              aria-invalid={Boolean(state.fieldErrors.cameraView)}
+              required
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {cameraViewSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setCameraView(suggestion)}
+                  className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-100"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
         </Field>
 
         <Field
@@ -160,7 +186,7 @@ function WorkshopAssetForm({
           name="fallbackUrl"
           defaultValue={initialData?.fallbackUrl ?? ""}
           className={inputClassName}
-          placeholder="assets/workshop/fallback.png"
+          placeholder="assets/workshop/yedek-preview.png"
           aria-invalid={Boolean(state.fieldErrors.fallbackUrl)}
         />
       </Field>

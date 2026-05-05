@@ -1,9 +1,9 @@
-import { ImageIcon, Layers3 } from "lucide-react";
+import { Box, Film, ImageIcon, Layers3, Link2 } from "lucide-react";
 
 import AddWorkshopAssetDrawer from "./AddWorkshopAssetDrawer";
 import DeleteWorkshopAssetButton from "./DeleteWorkshopAssetButton";
 import type { WorkshopAssetListItem, WorkshopAssetOption } from "./types";
-import { isImageLikeAsset, shortenMiddle } from "./validation";
+import { getAssetReferenceKind, shortenMiddle } from "./validation";
 
 type WorkshopAssetsListProps = {
   assets: WorkshopAssetListItem[];
@@ -12,15 +12,24 @@ type WorkshopAssetsListProps = {
   databaseReady: boolean;
 };
 
-function chip(label: string, tone: "neutral" | "warning" = "neutral", title?: string) {
+function chip(
+  label: string,
+  tone: "neutral" | "warning" | "success" | "info" = "neutral",
+  title?: string,
+) {
+  const toneClassName =
+    tone === "warning"
+      ? "border-amber-500/25 bg-amber-500/10 text-amber-200"
+      : tone === "success"
+        ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+        : tone === "info"
+          ? "border-sky-500/25 bg-sky-500/10 text-sky-200"
+          : "border-zinc-800 bg-zinc-900 text-zinc-300";
+
   return (
     <span
       title={title}
-      className={`inline-flex max-w-full rounded-full border px-2 py-0.5 text-xs ${
-        tone === "warning"
-          ? "border-amber-500/25 bg-amber-500/10 text-amber-200"
-          : "border-zinc-800 bg-zinc-900 text-zinc-300"
-      }`}
+      className={`inline-flex max-w-full rounded-full border px-2 py-0.5 text-xs ${toneClassName}`}
     >
       {label}
     </span>
@@ -28,18 +37,29 @@ function chip(label: string, tone: "neutral" | "warning" = "neutral", title?: st
 }
 
 function AssetPreview({ assetUrl }: { assetUrl: string }) {
-  if (!isImageLikeAsset(assetUrl)) {
+  const referenceKind = getAssetReferenceKind(assetUrl);
+
+  if (referenceKind === "image") {
     return (
-      <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-[10px] font-medium text-zinc-500">
-        Varlık bağlantısı
+      <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Workshop registry stores external or storage-path preview references. */}
+        <img src={assetUrl} alt="" className="h-full w-full object-cover" />
       </div>
     );
   }
 
+  const placeholder =
+    referenceKind === "model3d"
+      ? { label: "3D varlık bağlantısı", icon: Box }
+      : referenceKind === "video"
+        ? { label: "Video varlık bağlantısı", icon: Film }
+        : { label: "Varlık bağlantısı", icon: Link2 };
+  const Icon = placeholder.icon;
+
   return (
-    <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-      {/* eslint-disable-next-line @next/next/no-img-element -- Workshop asset registry stores external or storage-path preview references. */}
-      <img src={assetUrl} alt="" className="h-full w-full object-cover" />
+    <div className="flex h-12 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900 px-1.5 text-center text-[9px] font-medium leading-3 text-zinc-500">
+      <Icon className="h-3.5 w-3.5" />
+      <span>{placeholder.label}</span>
     </div>
   );
 }
@@ -89,8 +109,21 @@ export function WorkshopAssetsList({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {chip(
+                    getAssetReferenceKind(asset.assetUrl) === "image"
+                      ? "Görsel"
+                      : getAssetReferenceKind(asset.assetUrl) === "model3d"
+                        ? "3D bağlantı"
+                        : getAssetReferenceKind(asset.assetUrl) === "video"
+                          ? "Video bağlantı"
+                          : "Bağlantı",
+                    "info",
+                  )}
                   {chip(`Görünüm ${asset.cameraView}`, "neutral", asset.cameraView)}
                   {chip(`Katman ${asset.zIndexLayer}`)}
+                  {asset.fallbackUrl
+                    ? chip("Yedek var", "success")
+                    : chip("Yedek eksik", "warning")}
                   {asset.productMissing ? chip("Ürün kaydı bulunamadı", "warning") : null}
                   {asset.modelMissing ? chip("Model kaydı bulunamadı", "warning") : null}
                 </div>
