@@ -617,13 +617,13 @@ export async function getProductGroundedExplanation(input: {
   if (!usageRecords.length) {
     return {
       available: false,
-      note: "Bu ürün için grounded AI açıklaması henüz hazır değil.",
+      note: "Bu ürün için kaynaklı AI açıklaması henüz hazır değil.",
       preview: null,
       eligibleKnowledgeCount: 0,
       groundedChunkCount: 0,
       contributingDocTypes: [],
       coverageLabel: null,
-      readinessReason: "Knowledge yok",
+      readinessReason: "Bilgi yok",
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -643,10 +643,10 @@ export async function getProductGroundedExplanation(input: {
     return {
       available: false,
       note: hasQueue
-        ? "Knowledge sync var, ancak grounded AI açıklaması için manuel işleme henüz tamamlanmadı."
+        ? "Bilgi eşlemesi var, ancak kaynaklı AI açıklaması için manuel işleme henüz tamamlanmadı."
         : hasFailure
-          ? "Knowledge kayıtları hatalı olduğu için grounded AI açıklaması üretilemiyor."
-          : "Knowledge kayıtları var, ancak mevcut governance şartları grounded kullanım için yeterli değil.",
+          ? "Bilgi kayıtları hatalı olduğu için kaynaklı AI açıklaması üretilemiyor."
+          : "Bilgi kayıtları var, ancak mevcut yönetim şartları kaynaklı kullanım için yeterli değil.",
       preview: null,
       eligibleKnowledgeCount: 0,
       groundedChunkCount: 0,
@@ -655,8 +655,8 @@ export async function getProductGroundedExplanation(input: {
       readinessReason: hasQueue
         ? "Manuel işleme bekliyor"
         : hasFailure
-          ? "Hatalı knowledge"
-          : "Governance yeterli değil",
+          ? "Hatalı bilgi"
+          : "Yönetim yeterli değil",
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -672,7 +672,7 @@ export async function getProductGroundedExplanation(input: {
   if (!groundedChunks.length) {
     return {
       available: false,
-      note: "Eligible knowledge bulundu, ancak okunabilir grounded chunk henüz görünmüyor.",
+      note: "Uygun bilgi bulundu, ancak okunabilir kaynak parçası henüz görünmüyor.",
       preview: null,
       eligibleKnowledgeCount: eligibleRecords.length,
       groundedChunkCount: 0,
@@ -680,7 +680,7 @@ export async function getProductGroundedExplanation(input: {
         new Set(eligibleRecords.map((record) => record.docType)),
       ),
       coverageLabel: null,
-      readinessReason: "Grounded chunk yok",
+      readinessReason: "Kaynak parçası yok",
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -707,7 +707,7 @@ export async function getProductGroundedExplanation(input: {
     groundedChunkCount: groundedChunks.length,
     contributingDocTypes,
     coverageLabel,
-    readinessReason: "Eligible knowledge ve grounded chunk hazır",
+    readinessReason: "Uygun bilgi ve kaynak parçası hazır",
     ruleAlignmentStatus: ruleAlignment.ruleAlignmentStatus,
     ruleAlignmentReason: ruleAlignment.ruleAlignmentReason,
     sourceRuleCount: ruleAlignment.sourceRuleCount,

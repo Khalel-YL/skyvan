@@ -95,9 +95,9 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
     return (
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Admin · Build Versions"
-          title="Build Versions"
-          description="Veritabanı yapılandırılmadığı için build version işlemleri şu an pasif durumda."
+          eyebrow="Admin · Build Versiyonları"
+          title="Build Versiyonları"
+          description="Veritabanı yapılandırılmadığı için build versiyon işlemleri şu an pasif durumda."
         />
 
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 text-sm text-zinc-400">
@@ -249,9 +249,9 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Admin · Build Versions"
-        title="Build Versions"
-        description="Lead hattını açan gerçek dependency omurgası burada yönetilir. Build, version ve current bağları operasyonel olarak bu modülde korunur."
+        eyebrow="Admin · Build Versiyonları"
+        title="Build Versiyonları"
+        description="Müşteri adayı hattını açan gerçek bağımlılık omurgası burada yönetilir. Build, versiyon ve güncel bağlar operasyonel olarak korunur."
         actions={
           hasModels ? (
             <Link
@@ -259,7 +259,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
               className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               <Plus className="h-4 w-4" />
-              Yeni build version
+              Yeni build versiyonu
             </Link>
           ) : (
             <Link
@@ -287,15 +287,15 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
         </div>
 
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5">
-          <div className="text-sm text-zinc-400">Toplam version</div>
+          <div className="text-sm text-zinc-400">Toplam versiyon</div>
           <div className="mt-3 text-3xl font-semibold text-white">{totalVersions}</div>
           <div className="mt-2 text-xs text-zinc-500">
-            Lead bağı için kullanılabilir version havuzu
+            Müşteri adayı bağı için kullanılabilir versiyon havuzu
           </div>
         </div>
 
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5">
-          <div className="text-sm text-zinc-400">Current version bağlı</div>
+          <div className="text-sm text-zinc-400">Güncel versiyon bağlı</div>
           <div className="mt-3 text-3xl font-semibold text-white">
             {currentLinkedCount}
           </div>
@@ -380,7 +380,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
           </h3>
 
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Build ve version omurgası boşsa Leads tarafı doğal şekilde kilitli kalır.
+            Build ve versiyon omurgası boşsa müşteri adayı tarafı doğal şekilde kilitli kalır.
           </p>
         </div>
       ) : (

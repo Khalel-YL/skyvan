@@ -204,10 +204,10 @@ export function ProductDocumentsSummary({
 
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-            Knowledge {groundedExplanation.eligibleKnowledgeCount}
+            Bilgi {groundedExplanation.eligibleKnowledgeCount}
           </span>
           <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-            Chunk {groundedExplanation.groundedChunkCount}
+            Parça {groundedExplanation.groundedChunkCount}
           </span>
           {groundedExplanation.coverageLabel ? (
             <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
@@ -216,7 +216,7 @@ export function ProductDocumentsSummary({
           ) : null}
           {groundedExplanation.sourceRuleCount > 0 ? (
             <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-              Rule {groundedExplanation.sourceRuleCount}
+              Kural {groundedExplanation.sourceRuleCount}
             </span>
           ) : null}
           {groundedExplanation.ruleConflictCount > 0 ? (

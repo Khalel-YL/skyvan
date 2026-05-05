@@ -527,12 +527,12 @@ export default async function AdminDashboardPage() {
             <div>
               <p className="text-sm font-semibold">
                 {governanceReady
-                  ? "Governance runtime doğrulandı"
-                  : "Governance runtime closure için henüz hazır değil"}
+                  ? "Yönetim çalışma durumu doğrulandı"
+                  : "Yönetim kapanışı için henüz hazır değil"}
               </p>
               <p className="mt-1 text-xs leading-5 opacity-90">
-                Audit log ve publish revision yazımı aynı actor runtime bağına dayanır.
-                Override açık durumları ise korumaların manuel gevşetildiğini gösterir.
+                İz kaydı ve yayın izi yazımı aynı aktör bağına dayanır.
+                Manuel açık durumlar korumaların gevşetildiğini gösterir.
               </p>
             </div>
           </div>
@@ -540,7 +540,7 @@ export default async function AdminDashboardPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
             <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Database
+                DB
               </div>
               <div className="mt-2 text-sm font-semibold">
                 {databaseHealth.status === "online" ? "Hazır" : "Güvenli mod"}
@@ -549,31 +549,31 @@ export default async function AdminDashboardPage() {
 
             <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Audit actor
+                Audit aktörü
               </div>
               <div className="mt-2 text-sm font-semibold">
                 {auditRuntime.actorRecordStatus === "resolved"
                   ? auditRuntime.roleAligned
                     ? "Doğrulandı"
-                    : "Role dikkat"
+                    : "Rol dikkat istiyor"
                   : "Doğrulanmadı"}
               </div>
             </div>
 
             <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Audit / revision
+                İz / yayın
               </div>
               <div className="mt-2 text-sm font-semibold">
                 {auditRuntime.writeActive && auditRuntime.publishWriteActive
                   ? "Yazım aktif"
-                  : "Safe-degrade"}
+                  : "Güvenli düşüş"}
               </div>
             </div>
 
             <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Açık override
+                Manuel açık
               </div>
               <div className="mt-2 text-sm font-semibold">{openOverrideCount}</div>
             </div>
@@ -781,7 +781,7 @@ export default async function AdminDashboardPage() {
                           : "AI hazırlık tarafında dikkat isteyen sinyaller var"}
                       </p>
                       <p className="mt-1 text-xs leading-5 opacity-90">
-                        Hazır belge, kuyruk, failed kayıt ve chunk üretimi
+                        Hazır belge, kuyruk, hatalı kayıt ve parça üretimi
                         birlikte izleniyor.
                       </p>
                     </div>
@@ -818,7 +818,7 @@ export default async function AdminDashboardPage() {
                       Hazır belgeleri aç
                     </p>
                     <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Completed ve üretime yakın kayıtları incele.
+                      Tamamlandı ve üretime yakın kayıtları incele.
                     </p>
                   </Link>
 
@@ -830,7 +830,7 @@ export default async function AdminDashboardPage() {
                       Kural motorunu aç
                     </p>
                     <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Rule engine omurgasını belge kalitesiyle birlikte ilerlet.
+                      Kural motoru omurgasını belge kalitesiyle birlikte ilerlet.
                     </p>
                   </Link>
                 </div>
@@ -890,13 +890,13 @@ export default async function AdminDashboardPage() {
 
             <div className="mt-4 space-y-3 text-sm leading-6 text-neutral-400">
               <p>
-                Veri modeline dokunmuyor. Sadece mevcut tablo ve chunk
+                Veri modeline dokunmuyor. Sadece mevcut tablo ve parça
                 üretiminden hazırlık sinyali çıkarıyor.
               </p>
 
               <p>
-                Dashboard’u sadece sayı gösteren ekran olmaktan çıkarıp AI ve
-                rule engine hazırlık seviyesini izleyen bir merkeze yaklaştırıyor.
+                Genel bakışı sadece sayı gösteren ekran olmaktan çıkarıp AI ve
+                kural motoru hazırlık seviyesini izleyen bir merkeze yaklaştırıyor.
               </p>
 
               <p>
@@ -914,7 +914,7 @@ export default async function AdminDashboardPage() {
                       Hazır belge oranı
                     </p>
                     <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Completed belgeler içinde chunk üreten kayıt sayısı:{" "}
+                      Tamamlandı belgeler içinde parça üreten kayıt sayısı:{" "}
                       <span className="font-semibold text-white">
                         {metrics.datasheetsReady}
                       </span>

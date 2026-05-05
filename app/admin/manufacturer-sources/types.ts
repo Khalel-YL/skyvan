@@ -169,20 +169,20 @@ export const manufacturerSourceTypeOptions: Array<{
   label: string;
 }> = [
   { value: "all", label: "Tüm içerikler" },
-  { value: "manuals", label: "Manuals" },
-  { value: "datasheets", label: "Datasheets" },
+  { value: "manuals", label: "Kılavuzlar" },
+  { value: "datasheets", label: "Datasheetler" },
   { value: "technical_pages", label: "Teknik sayfalar" },
-  { value: "support_pages", label: "Support sayfaları" },
+  { value: "support_pages", label: "Destek sayfaları" },
 ];
 
 export const manufacturerSourceContentTypeLabels: Record<
   ManufacturerSourceContentType,
   string
 > = {
-  manuals: "Manuals",
-  datasheets: "Datasheets",
+  manuals: "Kılavuzlar",
+  datasheets: "Datasheetler",
   technical_pages: "Teknik sayfalar",
-  support_pages: "Support sayfaları",
+  support_pages: "Destek sayfaları",
 };
 
 export const manufacturerSourceFetchModeOptions: Array<{

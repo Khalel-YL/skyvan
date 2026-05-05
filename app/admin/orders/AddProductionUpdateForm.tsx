@@ -43,13 +43,13 @@ export function AddProductionUpdateForm({ orderId, currentStatus, hasVin }: Prop
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-white">Üretim Güncellemesi Ekle</h2>
         <p className="mt-1 text-sm text-zinc-400">
-          Yeni kayıt eklenince order durumu da aynı aşamaya güncellenir.
+          Yeni kayıt eklenince sipariş durumu da aynı aşamaya güncellenir.
         </p>
       </div>
 
       {!hasVin ? (
         <div className="mb-4 rounded-2xl border border-amber-900/70 bg-amber-950/20 px-3 py-2 text-sm text-amber-200">
-          VIN henüz girilmemiş. Testing ve Completed güncellemeleri öncesinde VIN eklenmelidir.
+          VIN henüz girilmemiş. Test ve Tamamlandı güncellemeleri öncesinde VIN eklenmelidir.
         </div>
       ) : null}
 

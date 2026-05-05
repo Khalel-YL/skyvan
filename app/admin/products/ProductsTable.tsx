@@ -362,12 +362,12 @@ function getReadinessMeta(
 
   if (knowledgeCounts.total > 0) {
     return {
-      label: "AI Bloklu",
+      label: "AI Engelli",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
       detail:
         documentCounts.active > 0
-          ? "Knowledge kaydı var ama AI-ready şartlarını henüz sağlamıyor."
-          : "Knowledge kaydı var ancak AI-ready seviyesine ulaşmamış.",
+          ? "Bilgi kaydı var ama AI hazır şartlarını henüz sağlamıyor."
+          : "Bilgi kaydı var ancak AI hazır seviyesine ulaşmamış.",
     };
   }
 
@@ -375,7 +375,7 @@ function getReadinessMeta(
     return {
       label: "İşleme Eksik",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "Aktif belge var ancak knowledge / chunk hazır değil.",
+      detail: "Aktif belge var ancak bilgi / parça hazır değil.",
     };
   }
 

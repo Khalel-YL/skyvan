@@ -1083,7 +1083,7 @@ function buildRuleSuggestions(
     );
     const caution =
       evidenceExcerpts.length > 0
-        ? "Bu öneri mevcut sinyal skorlamasına ek olarak AI parse edilmiş belge chunk’larıyla desteklendi. Kaydetmeden önce teknik kontrol önerilir."
+        ? "Bu öneri mevcut sinyal skorlamasına ek olarak AI analiz edilmiş belge parçalarıyla desteklendi. Kaydetmeden önce teknik kontrol önerilir."
         : "Bu öneri belge başlığı/notu, spec alanları ve senaryo sinyallerinden üretildi. Kaydetmeden önce teknik kontrol önerilir.";
 
     let bestCandidate: (RuleSuggestionItem & { score: number }) | null = null;
@@ -1122,7 +1122,7 @@ function buildRuleSuggestions(
       if (evidenceExcerpts.length > 0) {
         evidence.push({
           kind: "chunk",
-          label: `AI kanıt chunk ${evidenceExcerpts.length}`,
+          label: `AI kanıt parçası ${evidenceExcerpts.length}`,
         });
       }
 
@@ -1195,7 +1195,7 @@ function buildRuleSuggestions(
       if (evidenceExcerpts.length > 0) {
         evidence.push({
           kind: "chunk",
-          label: `AI kanıt chunk ${evidenceExcerpts.length}`,
+          label: `AI kanıt parçası ${evidenceExcerpts.length}`,
         });
       }
 
@@ -1247,7 +1247,7 @@ function buildRuleSuggestions(
       if (evidenceExcerpts.length > 0) {
         evidence.push({
           kind: "chunk",
-          label: `AI kanıt chunk ${evidenceExcerpts.length}`,
+          label: `AI kanıt parçası ${evidenceExcerpts.length}`,
         });
       }
 

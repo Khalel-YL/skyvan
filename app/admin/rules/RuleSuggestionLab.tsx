@@ -121,7 +121,7 @@ function summaryLine(sourceSummary: RuleSuggestionSourceSummary | null) {
     return "Kaynak ürün seçildiğinde parse edilmiş AI belge özeti burada görünür.";
   }
 
-  return `${sourceSummary.documentCount} belge · ${sourceSummary.completedDocumentCount} tamamlanan parse · ${sourceSummary.chunkCount} chunk`;
+  return `${sourceSummary.documentCount} belge · ${sourceSummary.completedDocumentCount} tamamlanan analiz · ${sourceSummary.chunkCount} parça`;
 }
 
 export default function RuleSuggestionLab({
@@ -140,15 +140,15 @@ export default function RuleSuggestionLab({
 
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Suggestion Lab
+            Öneri Laboratuvarı
           </p>
           <h2 className="mt-2 text-lg font-semibold text-zinc-100">
             AI-ready öneri laboratuvarı
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Belge, spec, senaryo ve parse edilmiş AI chunk sinyallerinden
+            Belge, teknik özellik, senaryo ve analiz edilmiş AI parça sinyallerinden
             kontrollü öneriler üretir. Öneriler otomatik kaydolmaz; sadece
-            drawer prefill olarak açılır.
+            form ön dolumu olarak açılır.
           </p>
         </div>
       </div>

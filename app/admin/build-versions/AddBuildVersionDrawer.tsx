@@ -114,14 +114,14 @@ export function AddBuildVersionDrawer({
         <div className="flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
           <div>
             <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Admin · Build Versions
+              Admin · Build Versiyonları
             </div>
             <h2 className="mt-2 text-xl font-semibold text-white">
-              Yeni build version oluştur
+              Yeni build versiyonu oluştur
             </h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Build ve version bağı gerçek şemaya sadık şekilde burada yönetilir.
-              Her yeni version, current version bağını da doğal olarak günceller.
+              Build ve versiyon bağı gerçek şemaya sadık şekilde burada yönetilir.
+              Her yeni versiyon, güncel versiyon bağını da doğal olarak günceller.
             </p>
           </div>
 

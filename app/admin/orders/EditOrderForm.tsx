@@ -44,7 +44,7 @@ export function EditOrderForm({
   return (
     <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-white">Order Düzenle</h2>
+        <h2 className="text-lg font-semibold text-white">Sipariş Düzenle</h2>
         <p className="mt-1 text-sm text-zinc-400">
           Durum, teslim tarihi ve VIN bu karttan yönetilir.
         </p>
@@ -55,7 +55,7 @@ export function EditOrderForm({
         <input type="hidden" name="offerId" value={offerId} />
 
         <div className="rounded-2xl border border-zinc-900 bg-black/30 px-3 py-2 text-xs text-zinc-500">
-          Offer bağı korunur. Timeline kaydı sayısı: {updatesCount}
+          Teklif bağı korunur. Zaman akışı kaydı sayısı: {updatesCount}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
@@ -117,7 +117,7 @@ export function EditOrderForm({
         </div>
 
         <div className="rounded-2xl border border-zinc-900 bg-black/30 px-3 py-2 text-xs text-zinc-500">
-          Not: Testing ve Completed aşamalarında VIN zorunludur. Completed geçişinde ayrıca
+          Not: Test ve Tamamlandı aşamalarında VIN zorunludur. Tamamlandı geçişinde ayrıca
           en az bir üretim güncellemesi aranır.
         </div>
 
@@ -142,7 +142,7 @@ export function EditOrderForm({
           disabled={isPending}
           className="w-full rounded-2xl border border-zinc-800 bg-zinc-100 px-4 py-2 text-sm font-medium text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending ? "Kaydediliyor..." : "Order güncelle"}
+          {isPending ? "Kaydediliyor..." : "Siparişi güncelle"}
         </button>
       </form>
     </div>
