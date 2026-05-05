@@ -1,17 +1,14 @@
 import Link from "next/link";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import {
   ExternalLink,
   FileClock,
-  History,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 
 import { db, getDatabaseHealth } from "@/db/db";
 import { auditLogs, publishRevisions, users } from "@/db/schema";
-import { PageHeader } from "../_components/page-header";
-import { StatCard } from "../_components/stat-card";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 
 type AuditSearchParams = Promise<{
@@ -19,10 +16,17 @@ type AuditSearchParams = Promise<{
   action?: string;
   entityType?: string;
   revisionStatus?: string;
+  auditPage?: string;
+  revisionPage?: string;
+  view?: string;
 }>;
 
 type AuditActionFilter = "all" | "create" | "update" | "delete";
 type RevisionStatusFilter = "all" | "draft" | "published" | "rolled_back";
+type AuditView = "audit" | "revisions";
+
+const AUDIT_PAGE_SIZE = 25;
+const REVISION_PAGE_SIZE = 25;
 
 type AuditLogRow = {
   id: string;
@@ -66,6 +70,16 @@ function normalizeRevisionStatus(value: string): RevisionStatusFilter {
   }
 
   return "all";
+}
+
+function normalizeView(value: string): AuditView {
+  return value === "revisions" ? "revisions" : "audit";
+}
+
+function normalizePage(value: string | undefined) {
+  const page = Number.parseInt(String(value ?? "1"), 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
 function formatDateTime(value: Date | string) {
@@ -156,34 +170,34 @@ function getWriteTone(enabled: boolean) {
 
 function getClosureLabel(runtime: AuditRuntimeValidation) {
   if (runtime.closureState === "ready") {
-    return "Runtime doğrulandı";
+    return "Çalışma durumu doğrulandı";
   }
 
   if (runtime.closureState === "warning") {
     return "Dikkat gerekli";
   }
 
-  return "Closure blocker";
+  return "Kapanış engeli";
 }
 
 function getAuditRuntimeLabel(runtime: AuditRuntimeValidation) {
-  return runtime.writeActive ? "Yazım aktif" : "Safe-degrade";
+  return runtime.writeActive ? "Yazım aktif" : "Güvenli düşüş";
 }
 
 function getPublishRuntimeLabel(runtime: AuditRuntimeValidation) {
-  return runtime.publishWriteActive ? "Yazım aktif" : "Safe-degrade";
+  return runtime.publishWriteActive ? "Yazım aktif" : "Güvenli düşüş";
 }
 
 function getActorBindingLabel(runtime: AuditRuntimeValidation) {
   if (runtime.actorRecordStatus === "resolved") {
-    return runtime.roleAligned ? "Actor doğrulandı" : "Role dikkat";
+    return runtime.roleAligned ? "Aktör doğrulandı" : "Rol dikkat istiyor";
   }
 
   if (runtime.actorRecordStatus === "not_found") {
-    return "Actor bağlanmamış";
+    return "Aktör bağlanmamış";
   }
 
-  return runtime.actorStatus === "invalid" ? "Actor geçersiz" : "Actor eksik";
+  return runtime.actorStatus === "invalid" ? "Aktör geçersiz" : "Aktör eksik";
 }
 
 function getActorRoleLabel(runtime: AuditRuntimeValidation) {
@@ -191,7 +205,53 @@ function getActorRoleLabel(runtime: AuditRuntimeValidation) {
     return "Rol doğrulanamadı";
   }
 
-  return runtime.actorRole === "admin" ? "Rol: admin" : "Rol: user";
+  return runtime.actorRole === "admin" ? "Rol: admin" : "Rol: standart";
+}
+
+function actionLabel(action: AuditLogRow["action"]) {
+  if (action === "create") {
+    return "Oluşturma";
+  }
+
+  if (action === "update") {
+    return "Güncelleme";
+  }
+
+  return "Silme";
+}
+
+function revisionLabel(status: PublishRevisionRow["status"]) {
+  if (status === "published") {
+    return "Yayında";
+  }
+
+  if (status === "rolled_back") {
+    return "Geri alındı";
+  }
+
+  return "Taslak";
+}
+
+function StatPill({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          {label}
+        </span>
+        <span className="text-lg font-semibold text-white">{value}</span>
+      </div>
+      <p className="mt-1 truncate text-xs text-zinc-500">{hint}</p>
+    </div>
+  );
 }
 
 function asObject(value: unknown) {
@@ -219,41 +279,59 @@ function getChangedKeys(previousState: unknown, newState: unknown) {
     .filter((key) => {
       return JSON.stringify(previousObject?.[key] ?? null) !== JSON.stringify(nextObject?.[key] ?? null);
     })
-    .sort((left, right) => left.localeCompare(right, "tr"))
-    .slice(0, 6);
+    .sort((left, right) => left.localeCompare(right, "tr"));
 }
 
 function buildChangeSummary(row: AuditLogRow) {
   const changedKeys = getChangedKeys(row.previousState, row.newState);
+  const visibleKeys = changedKeys.slice(0, 3);
+  const extraCount = Math.max(0, changedKeys.length - visibleKeys.length);
 
   if (row.action === "create") {
-    const nextKeys = Object.keys(asObject(row.newState) ?? {}).slice(0, 6);
+    const nextKeys = Object.keys(asObject(row.newState) ?? {});
+    const visibleNextKeys = nextKeys.slice(0, 3);
     return {
       label:
-        nextKeys.length > 0
-          ? `Yeni kayıt alanları: ${nextKeys.join(", ")}`
+        visibleNextKeys.length > 0
+          ? `Yeni kayıt alanları: ${visibleNextKeys.join(", ")}`
           : "Yeni kayıt oluşturuldu.",
-      changedKeys: nextKeys,
+      changedKeys: visibleNextKeys,
+      extraCount: Math.max(0, nextKeys.length - visibleNextKeys.length),
+      detailLabel:
+        nextKeys.length > 0
+          ? `${nextKeys.length} alan yeni kayıt içinde izleniyor.`
+          : "Yeni kayıt için alan özeti bulunamadı.",
     };
   }
 
   if (row.action === "delete") {
-    const previousKeys = Object.keys(asObject(row.previousState) ?? {}).slice(0, 6);
+    const previousKeys = Object.keys(asObject(row.previousState) ?? {});
+    const visiblePreviousKeys = previousKeys.slice(0, 3);
     return {
       label:
-        previousKeys.length > 0
-          ? `Silinen kayıt alanları: ${previousKeys.join(", ")}`
+        visiblePreviousKeys.length > 0
+          ? `Silinen kayıt alanları: ${visiblePreviousKeys.join(", ")}`
           : "Kayıt silindi.",
-      changedKeys: previousKeys,
+      changedKeys: visiblePreviousKeys,
+      extraCount: Math.max(0, previousKeys.length - visiblePreviousKeys.length),
+      detailLabel:
+        previousKeys.length > 0
+          ? `${previousKeys.length} alan silinen kayıt içinde izleniyor.`
+          : "Silinen kayıt için alan özeti bulunamadı.",
     };
   }
 
   return {
     label:
-      changedKeys.length > 0
-        ? `Güncellenen alanlar: ${changedKeys.join(", ")}`
+      visibleKeys.length > 0
+        ? `Güncellenen alanlar: ${visibleKeys.join(", ")}`
         : "Alan bazlı fark tespit edilemedi.",
-    changedKeys,
+    changedKeys: visibleKeys,
+    extraCount,
+    detailLabel:
+      changedKeys.length > 0
+        ? `${changedKeys.length} alan değişikliği tespit edildi.`
+        : "Bu kayıtta sınırlı özet dışında gösterilecek değişim yok.",
   };
 }
 
@@ -308,6 +386,95 @@ function getEntityHref(entityType: string, entityId: string) {
   }
 }
 
+function buildAuditHref(params: {
+  q: string;
+  entityType: string;
+  action: AuditActionFilter;
+  revisionStatus: RevisionStatusFilter;
+  view: AuditView;
+  auditPage: number;
+  revisionPage: number;
+}) {
+  const search = new URLSearchParams();
+
+  if (params.q.trim()) {
+    search.set("q", params.q.trim());
+  }
+
+  if (params.entityType.trim()) {
+    search.set("entityType", params.entityType.trim());
+  }
+
+  if (params.action !== "all") {
+    search.set("action", params.action);
+  }
+
+  if (params.revisionStatus !== "all") {
+    search.set("revisionStatus", params.revisionStatus);
+  }
+
+  if (params.view !== "audit") {
+    search.set("view", params.view);
+  }
+
+  if (params.auditPage > 1) {
+    search.set("auditPage", String(params.auditPage));
+  }
+
+  if (params.revisionPage > 1) {
+    search.set("revisionPage", String(params.revisionPage));
+  }
+
+  const query = search.toString();
+  return query ? `/admin/audit?${query}` : "/admin/audit";
+}
+
+function PaginationControls({
+  page,
+  hasNextPage,
+  previousHref,
+  nextHref,
+}: {
+  page: number;
+  hasNextPage: boolean;
+  previousHref: string;
+  nextHref: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800 pt-3">
+      {page > 1 ? (
+        <Link
+          href={previousHref}
+          className="rounded-xl border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+        >
+          Önceki
+        </Link>
+      ) : (
+        <span className="rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-600">
+          Önceki
+        </span>
+      )}
+
+      <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
+        Sayfa {page}
+      </span>
+
+      {hasNextPage ? (
+        <Link
+          href={nextHref}
+          className="rounded-xl border border-zinc-800 bg-black px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+        >
+          Sonraki
+        </Link>
+      ) : (
+        <span className="rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-600">
+          Sonraki
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default async function AuditVisibilityPage({
   searchParams,
 }: {
@@ -322,9 +489,16 @@ export default async function AuditVisibilityPage({
   const revisionStatusFilter = normalizeRevisionStatus(
     String(params.revisionStatus ?? "all"),
   );
+  const activeView = normalizeView(String(params.view ?? "audit"));
+  const auditPage = normalizePage(params.auditPage);
+  const revisionPage = normalizePage(params.revisionPage);
+  const auditOffset = (auditPage - 1) * AUDIT_PAGE_SIZE;
+  const revisionOffset = (revisionPage - 1) * REVISION_PAGE_SIZE;
 
   let auditRows: AuditLogRow[] = [];
   let revisionRows: PublishRevisionRow[] = [];
+  let hasNextAuditPage = false;
+  let hasNextRevisionPage = false;
   let actorMap = new Map<string, ActorRecord>();
   let loadWarning: string | null = null;
 
@@ -345,6 +519,22 @@ export default async function AuditVisibilityPage({
         revisionWhere.push(eq(publishRevisions.status, revisionStatusFilter));
       }
 
+      if (query) {
+        const pattern = `%${query}%`;
+        auditWhere.push(
+          or(
+            ilike(auditLogs.entityType, pattern),
+            ilike(auditLogs.entityId, pattern),
+          )!,
+        );
+        revisionWhere.push(
+          or(
+            ilike(publishRevisions.revisionName, pattern),
+            ilike(publishRevisions.status, pattern),
+          )!,
+        );
+      }
+
       const [rawAuditRows, rawRevisionRows] = await Promise.all([
         db
           .select({
@@ -360,7 +550,8 @@ export default async function AuditVisibilityPage({
           .from(auditLogs)
           .where(auditWhere.length > 0 ? and(...auditWhere) : undefined)
           .orderBy(desc(auditLogs.createdAt))
-          .limit(200),
+          .limit(AUDIT_PAGE_SIZE + 1)
+          .offset(auditOffset),
         db
           .select({
             id: publishRevisions.id,
@@ -372,11 +563,14 @@ export default async function AuditVisibilityPage({
           .from(publishRevisions)
           .where(revisionWhere.length > 0 ? and(...revisionWhere) : undefined)
           .orderBy(desc(publishRevisions.publishedAt))
-          .limit(80),
+          .limit(REVISION_PAGE_SIZE + 1)
+          .offset(revisionOffset),
       ]);
 
-      auditRows = rawAuditRows as AuditLogRow[];
-      revisionRows = rawRevisionRows as PublishRevisionRow[];
+      hasNextAuditPage = rawAuditRows.length > AUDIT_PAGE_SIZE;
+      hasNextRevisionPage = rawRevisionRows.length > REVISION_PAGE_SIZE;
+      auditRows = rawAuditRows.slice(0, AUDIT_PAGE_SIZE) as AuditLogRow[];
+      revisionRows = rawRevisionRows.slice(0, REVISION_PAGE_SIZE) as PublishRevisionRow[];
 
       const actorIds = Array.from(
         new Set([
@@ -411,36 +605,12 @@ export default async function AuditVisibilityPage({
     } catch (error) {
       console.error("audit visibility page error:", error);
       loadWarning =
-        "Audit veya publish kayıtları okunurken beklenmeyen bir hata oluştu. Sayfa güvenli görünür modda kaldı.";
+        "Audit veya yayın izi kayıtları okunurken beklenmeyen bir hata oluştu. Sayfa güvenli görünür modda kaldı.";
     }
   }
 
-  const filteredAuditRows = query
-    ? auditRows.filter((row) => {
-        const actorLabel = getActorLabel(row.adminUserId, actorMap).toLowerCase();
-        const changeSummary = buildChangeSummary(row).label.toLowerCase();
-        const searchFields = [
-          row.entityType.toLowerCase(),
-          row.entityId.toLowerCase(),
-          row.action.toLowerCase(),
-          actorLabel,
-          changeSummary,
-        ];
-
-        return searchFields.some((field) => field.includes(query));
-      })
-    : auditRows;
-
-  const filteredRevisionRows = query
-    ? revisionRows.filter((row) => {
-        const actorLabel = getActorLabel(row.publishedBy, actorMap).toLowerCase();
-        return (
-          row.revisionName.toLowerCase().includes(query) ||
-          row.status.toLowerCase().includes(query) ||
-          actorLabel.includes(query)
-        );
-      })
-    : revisionRows;
+  const filteredAuditRows = auditRows;
+  const filteredRevisionRows = revisionRows;
 
   const auditStats = {
     total: filteredAuditRows.length,
@@ -455,24 +625,87 @@ export default async function AuditVisibilityPage({
     published: filteredRevisionRows.filter((row) => row.status === "published").length,
     rolledBack: filteredRevisionRows.filter((row) => row.status === "rolled_back").length,
   };
+  const auditViewHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "audit",
+    auditPage,
+    revisionPage,
+  });
+  const revisionsViewHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "revisions",
+    auditPage,
+    revisionPage,
+  });
+  const previousAuditHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "audit",
+    auditPage: Math.max(1, auditPage - 1),
+    revisionPage,
+  });
+  const nextAuditHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "audit",
+    auditPage: auditPage + 1,
+    revisionPage,
+  });
+  const previousRevisionHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "revisions",
+    auditPage,
+    revisionPage: Math.max(1, revisionPage - 1),
+  });
+  const nextRevisionHref = buildAuditHref({
+    q: query,
+    entityType: entityTypeFilter,
+    action: actionFilter,
+    revisionStatus: revisionStatusFilter,
+    view: "revisions",
+    auditPage,
+    revisionPage: revisionPage + 1,
+  });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin · Audit & Publish"
-        title="İzlenebilirlik Merkezi"
-        description="Audit logları ile publish revision kayıtlarını tek ekranda görünür kılar. Bu yüzey yeni bir audit sistemi kurmaz; mevcut tablo gerçekliğini operasyonel olarak izlenebilir hale getirir."
-      />
+    <div className="space-y-4">
+      <header className="flex flex-col gap-3 border-b border-zinc-800 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            ADMIN · İZ KAYITLARI
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            İzlenebilirlik Merkezi
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-400">
+            İz kayıtlarını ve yayın izlerini kompakt bir operasyon günlüğü
+            olarak gösterir.
+          </p>
+        </div>
+      </header>
 
       {!db ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           {databaseHealth.note}
         </div>
       ) : null}
 
       {auditRuntime.closureState !== "ready" ? (
         <div
-          className={`rounded-3xl border p-5 text-sm ${
+          className={`rounded-2xl border px-3 py-2 text-sm ${
             auditRuntime.closureState === "blocked"
               ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
               : "border-amber-500/20 bg-amber-500/10 text-amber-200"
@@ -484,8 +717,8 @@ export default async function AuditVisibilityPage({
               <p className="font-medium">{getClosureLabel(auditRuntime)}</p>
               <p className="mt-2 leading-6">
                 {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
-                {auditRuntime.reason} Bu nedenle boş audit veya revision listesi tek başına
-                “işlem yapılmadı” anlamına gelmez; işlem yapılmış ama iz bırakmamış olabilir.
+                {auditRuntime.reason} Bu nedenle boş iz listesi tek başına
+                “işlem yapılmadı” anlamına gelmez.
               </p>
             </div>
           </div>
@@ -493,153 +726,154 @@ export default async function AuditVisibilityPage({
       ) : null}
 
       {loadWarning ? (
-        <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-5 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
           {loadWarning}
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Audit Kayıt"
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <StatPill
+          label="İz Kayıt"
           value={String(auditStats.total)}
-          hint="Mevcut filtrelerle görünen audit log sayısı"
+          hint="Bu sayfada görünen iz kayıtları"
         />
-        <StatCard
-          label="Create / Update"
+        <StatPill
+          label="Oluşturma / Güncelleme"
           value={`${auditStats.create} / ${auditStats.update}`}
           hint="Oluşturma ve güncelleme dağılımı"
         />
-        <StatCard
-          label="Delete"
+        <StatPill
+          label="Silme"
           value={String(auditStats.delete)}
-          hint="Silme aksiyonu audit görünürlüğü"
+          hint="Silme aksiyonu iz görünürlüğü"
         />
-        <StatCard
-          label="Revision"
+        <StatPill
+          label="Yayın İzi"
           value={`${revisionStats.published} / ${revisionStats.rolledBack}`}
-          hint="Published ve rollback revision görünürlüğü"
+          hint="Yayın ve geri alma izleri"
         />
       </div>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
         <div className="flex items-center gap-3">
           {auditRuntime.closureState === "ready" ? (
             <ShieldCheck className="h-5 w-5 text-zinc-300" />
           ) : (
             <ShieldAlert className="h-5 w-5 text-zinc-300" />
           )}
-          <h2 className="text-lg font-semibold text-white">Runtime durumu</h2>
+          <h2 className="text-sm font-semibold text-white">Çalışma durumu</h2>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className={`rounded-2xl border p-4 ${getRuntimeCardClass(getClosureTone(auditRuntime))}`}>
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <div className={`rounded-2xl border p-3 ${getRuntimeCardClass(getClosureTone(auditRuntime))}`}>
             <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Closure validation
+              Kapanış kontrolü
             </div>
-            <div className="mt-2 text-lg font-semibold">{getClosureLabel(auditRuntime)}</div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              {auditRuntime.blocker ?? "Governance runtime temel doğrulamaları geçti."}
+            <div className="mt-1 text-base font-semibold">{getClosureLabel(auditRuntime)}</div>
+            <div className="mt-1 text-xs leading-5 opacity-90">
+              {auditRuntime.blocker ?? "Temel doğrulamalar geçti."}
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-4 ${getRuntimeCardClass(getBindingTone(auditRuntime))}`}>
+          <div className={`rounded-2xl border p-3 ${getRuntimeCardClass(getBindingTone(auditRuntime))}`}>
             <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Audit actor
+              Audit aktörü
             </div>
-            <div className="mt-2 text-lg font-semibold">{auditRuntime.actorPreview}</div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
+            <div className="mt-1 truncate text-base font-semibold">{auditRuntime.actorPreview}</div>
+            <div className="mt-1 text-xs leading-5 opacity-90">
               {getActorBindingLabel(auditRuntime)} · {getActorRoleLabel(auditRuntime)}
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-4 ${getWriteTone(auditRuntime.writeActive)}`}>
+          <div className={`rounded-2xl border p-3 ${getWriteTone(auditRuntime.writeActive)}`}>
             <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Audit yazımı
+              İz yazımı
             </div>
-            <div className="mt-2 text-lg font-semibold">
+            <div className="mt-1 text-base font-semibold">
               {getAuditRuntimeLabel(auditRuntime)}
             </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              `audit_logs` yazımı `SKYVAN_ADMIN_AUDIT_USER_ID` bağına dayanır.
+            <div className="mt-1 text-xs leading-5 opacity-90">
+              İz yazımı doğrulanmış admin bağına dayanır.
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-4 ${getWriteTone(auditRuntime.publishWriteActive)}`}>
+          <div className={`rounded-2xl border p-3 ${getWriteTone(auditRuntime.publishWriteActive)}`}>
             <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-              Publish revision
+              Yayın izi
             </div>
-            <div className="mt-2 text-lg font-semibold">
+            <div className="mt-1 text-base font-semibold">
               {getPublishRuntimeLabel(auditRuntime)}
             </div>
-            <div className="mt-2 text-xs leading-5 opacity-90">
-              `publish_revisions` helper’ı aynı actor runtime bağıyla çalışır.
+            <div className="mt-1 text-xs leading-5 opacity-90">
+              Yayın izleri aynı doğrulanmış aktör bağıyla çalışır.
             </div>
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+        <div className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-400">
           {auditRuntime.reason}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">Filtreler</h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Audit kayıtlarında aksiyon, entity type ve serbest arama ile daraltma yap.
+            <h2 className="text-sm font-semibold text-white">Filtreler</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Aksiyon, kayıt tipi ve serbest arama ile daralt.
             </p>
           </div>
 
-          <form className="flex flex-col gap-3 md:flex-row">
+          <form className="flex flex-col gap-2 md:flex-row">
+            <input type="hidden" name="view" value={activeView} />
             <input
               type="text"
               name="q"
               defaultValue={params.q ?? ""}
-              placeholder="Entity, actor, revision veya değişim ara"
-              className="min-w-[280px] rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
+              placeholder="Kayıt, aktör, yayın izi veya değişim ara"
+              className="min-w-[260px] rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
             />
 
             <input
               type="text"
               name="entityType"
               defaultValue={params.entityType ?? ""}
-              placeholder="entityType"
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
+              placeholder="Kayıt tipi"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
             />
 
             <select
               name="action"
               defaultValue={actionFilter}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-700"
             >
-              <option value="all">Tüm audit aksiyonları</option>
-              <option value="create">Create</option>
-              <option value="update">Update</option>
-              <option value="delete">Delete</option>
+              <option value="all">Tüm aksiyonlar</option>
+              <option value="create">Oluşturma</option>
+              <option value="update">Güncelleme</option>
+              <option value="delete">Silme</option>
             </select>
 
             <select
               name="revisionStatus"
               defaultValue={revisionStatusFilter}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-700"
             >
-              <option value="all">Tüm revision durumları</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="rolled_back">Rolled back</option>
+              <option value="all">Tüm yayın durumları</option>
+              <option value="draft">Taslak</option>
+              <option value="published">Yayında</option>
+              <option value="rolled_back">Geri alındı</option>
             </select>
 
             <button
               type="submit"
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               Uygula
             </button>
 
             <Link
               href="/admin/audit"
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               Sıfırla
             </Link>
@@ -647,21 +881,48 @@ export default async function AuditVisibilityPage({
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-zinc-300" />
-            <h2 className="text-lg font-semibold text-white">Son audit kayıtları</h2>
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <div className="flex flex-col gap-3 border-b border-zinc-800 pb-3 md:flex-row md:items-center md:justify-between">
+          <div className="inline-flex w-fit rounded-xl border border-zinc-800 bg-black p-1">
+            <Link
+              href={auditViewHref}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                activeView === "audit"
+                  ? "bg-white text-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              İz kayıtları
+            </Link>
+            <Link
+              href={revisionsViewHref}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                activeView === "revisions"
+                  ? "bg-white text-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Yayın izleri
+            </Link>
           </div>
 
+          <div className="text-xs text-zinc-500">
+            {activeView === "audit"
+              ? `${AUDIT_PAGE_SIZE} kayıtlık sayfalı iz listesi`
+              : `${REVISION_PAGE_SIZE} kayıtlık sayfalı yayın izi listesi`}
+          </div>
+        </div>
+
+        {activeView === "audit" ? (
+          <div className="mt-3">
           {filteredAuditRows.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+            <div className="mt-3 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
               {auditRuntime.writeActive
-                ? "Audit filtresine uyan kayıt bulunamadı."
-                : "Audit filtresine uyan kayıt bulunamadı. Runtime safe-degrade olduğu için yeni audit satırı oluşmamış olabilir."}
+                ? "İz filtresine uyan kayıt bulunamadı."
+                : "İz filtresine uyan kayıt bulunamadı. Güvenli düşüş modunda yeni iz satırı oluşmamış olabilir."}
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
+            <div className="mt-3 space-y-2">
               {filteredAuditRows.map((row) => {
                 const actorLabel = getActorLabel(row.adminUserId, actorMap);
                 const changeSummary = buildChangeSummary(row);
@@ -670,53 +931,68 @@ export default async function AuditVisibilityPage({
                 return (
                   <article
                     key={row.id}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
+                    className="rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2"
                   >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-[11px] text-zinc-300">
+                          <span className="rounded-full border border-zinc-800 bg-black px-2.5 py-0.5 text-[11px] text-zinc-300">
                             {row.entityType}
                           </span>
                           <span
-                            className={`rounded-full border px-3 py-1 text-[11px] ${actionClasses(
+                            className={`rounded-full border px-2.5 py-0.5 text-[11px] ${actionClasses(
                               row.action,
                             )}`}
                           >
-                            {row.action}
+                            {actionLabel(row.action)}
                           </span>
-                          <span className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-[11px] text-zinc-500">
+                          <span className="rounded-full border border-zinc-800 bg-black px-2.5 py-0.5 text-[11px] text-zinc-500">
                             {formatDateTime(row.createdAt)}
                           </span>
                         </div>
 
-                        <p className="mt-3 text-sm font-medium text-white">
+                        <p className="mt-2 line-clamp-1 text-sm font-medium text-white">
                           {changeSummary.label}
                         </p>
 
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-400">
-                          <span>Actor: {actorLabel}</span>
-                          <span>Entity: {shortenId(row.entityId)}</span>
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-zinc-400">
+                          <span className="truncate">Aktör: {actorLabel}</span>
+                          <span>Kayıt: {shortenId(row.entityId)}</span>
                         </div>
 
                         {changeSummary.changedKeys.length > 0 ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
+                          <div className="mt-2 flex flex-wrap gap-1.5">
                             {changeSummary.changedKeys.map((key) => (
                               <span
                                 key={`${row.id}-${key}`}
-                                className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-300"
+                                className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300"
                               >
                                 {key}
                               </span>
                             ))}
+                            {changeSummary.extraCount > 0 ? (
+                              <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400">
+                                +{changeSummary.extraCount} alan daha
+                              </span>
+                            ) : null}
                           </div>
                         ) : null}
+
+                        <details className="mt-2 text-xs text-zinc-500">
+                          <summary className="cursor-pointer select-none text-zinc-400 transition hover:text-white">
+                            Detay
+                          </summary>
+                          <div className="mt-2 max-h-20 overflow-hidden rounded-xl border border-zinc-800 bg-black px-3 py-2 leading-5">
+                            {changeSummary.detailLabel} Tam JSON farkı bu listede
+                            açık gösterilmez.
+                          </div>
+                        </details>
                       </div>
 
                       {entityHref ? (
                         <Link
                           href={entityHref}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                          className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-black px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           İlgili yüzey
@@ -728,64 +1004,67 @@ export default async function AuditVisibilityPage({
               })}
             </div>
           )}
-        </section>
-
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <div className="flex items-center gap-3">
-            <History className="h-5 w-5 text-zinc-300" />
-            <h2 className="text-lg font-semibold text-white">Publish revisions</h2>
+          <div className="mt-3">
+            <PaginationControls
+              page={auditPage}
+              hasNextPage={hasNextAuditPage}
+              previousHref={previousAuditHref}
+              nextHref={nextAuditHref}
+            />
           </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Toplam revision
+        </div>
+        ) : (
+          <div className="mt-3">
+            <div className="mb-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Bu sayfa
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-white">
+                  {revisionStats.total}
+                </div>
               </div>
-              <div className="mt-2 text-2xl font-semibold text-white">
-                {revisionStats.total}
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  Yayın / geri alma
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-white">
+                  {revisionStats.published} / {revisionStats.rolledBack}
+                </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Draft / Published
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-white">
-                {revisionStats.draft} / {revisionStats.published}
-              </div>
-            </div>
-          </div>
 
           {filteredRevisionRows.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+            <div className="mt-3 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
               {auditRuntime.publishWriteActive
-                ? "Publish revision kaydı bulunamadı."
-                : "Publish revision kaydı bulunamadı. Pages publish veya rollback akışı çalışmış olsa bile runtime safe-degrade nedeniyle kayıt üretilmemiş olabilir."}
+                ? "Yayın izi kaydı bulunamadı."
+                : "Yayın izi kaydı bulunamadı. Güvenli düşüş modunda kayıt üretilmemiş olabilir."}
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
+            <div className="mt-3 space-y-2">
               {filteredRevisionRows.map((row) => (
                 <article
                   key={row.id}
-                  className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
+                  className="rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2"
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`rounded-full border px-3 py-1 text-[11px] ${revisionClasses(
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] ${revisionClasses(
                           row.status,
                         )}`}
                       >
-                        {row.status}
+                        {revisionLabel(row.status)}
                       </span>
-                      <span className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-[11px] text-zinc-500">
+                      <span className="rounded-full border border-zinc-800 bg-black px-2.5 py-0.5 text-[11px] text-zinc-500">
                         {formatDateTime(row.publishedAt)}
                       </span>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium text-white">{row.revisionName}</p>
-                      <p className="mt-2 text-xs text-zinc-400">
-                        Actor: {getActorLabel(row.publishedBy, actorMap)}
+                      <p className="line-clamp-1 text-sm font-medium text-white">{row.revisionName}</p>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Aktör: {getActorLabel(row.publishedBy, actorMap)}
                       </p>
                     </div>
                   </div>
@@ -794,21 +1073,26 @@ export default async function AuditVisibilityPage({
             </div>
           )}
 
-          <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-            Pages modülü publish ve rollback geçişlerinde `publish_revisions` kaydı üretir. Bu ekran yeni bir publish sistemi kurmaz; mevcut revision izini görünür hale getirir.
+          <div className="mt-3">
+            <PaginationControls
+              page={revisionPage}
+              hasNextPage={hasNextRevisionPage}
+              previousHref={previousRevisionHref}
+              nextHref={nextRevisionHref}
+            />
           </div>
-        </section>
-      </div>
+        </div>
+        )}
+      </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
         <div className="flex items-start gap-3">
           <FileClock className="mt-0.5 h-5 w-5 text-zinc-300" />
           <div>
-            <h2 className="text-lg font-semibold text-white">Kapanış notu</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
-              Bu yüzey yalnızca repo içindeki gerçek `audit_logs` ve `publish_revisions`
-              tablolarını okur. Audit yazım mantığı, publish helper akışı veya actor
-              çözümlemesi yeniden tasarlanmadı; sadece operasyonel görünürlük tamamlandı.
+            <h2 className="text-sm font-semibold text-white">Kapanış notu</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-zinc-400">
+              Bu yüzey yalnızca gerçek audit ve yayın izi kayıtlarını okur. Yazım
+              mantığı, yayın akışı veya aktör çözümlemesi yeniden tasarlanmadı.
             </p>
           </div>
         </div>

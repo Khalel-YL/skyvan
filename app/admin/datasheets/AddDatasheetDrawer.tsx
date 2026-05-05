@@ -62,6 +62,14 @@ const parsingStatusOptions = [
   { value: "failed", label: "Hatalı" },
 ] as const;
 
+function toVisibleCopy(value: string) {
+  return value
+    .replaceAll("storage anahtarı", "depo anahtarı")
+    .replaceAll("Storage anahtarı", "Depo anahtarı")
+    .replaceAll("s3Key", "belge anahtarı")
+    .replaceAll("AI parsing, chunking ve embedding pipeline", "AI analiz hattı");
+}
+
 export default function AddDatasheetDrawer({
   initialData,
   availableProducts,
@@ -98,7 +106,7 @@ export default function AddDatasheetDrawer({
         : "border-amber-500/20 bg-amber-500/10 text-amber-200";
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+    <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-200">
@@ -106,13 +114,12 @@ export default function AddDatasheetDrawer({
             {isEdit ? "Düzenleme" : "Yeni kayıt"}
           </div>
 
-          <h2 className="mt-3 text-lg font-semibold text-white">
+          <h2 className="mt-2 text-base font-semibold text-white">
             {isEdit ? "Datasheet kaydını güncelle" : "Yeni teknik doküman kaydı"}
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-neutral-400">
-            Bu alan belge kayıt merkezidir. Parsing hattını değil, belge
-            envanterini kontrollü ve güvenli şekilde tutar.
+          <p className="mt-1 text-xs leading-5 text-neutral-400">
+            Belge envanteri, güvenli bağlantı ve ürün bağı.
           </p>
         </div>
 
@@ -127,18 +134,18 @@ export default function AddDatasheetDrawer({
       </div>
 
       {disabled ? (
-        <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           Veritabanı çevrimdışı olduğu için kayıt işlemi pasif.
         </div>
       ) : null}
 
       {state.status === "error" && state.message ? (
-        <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
           {state.message}
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs leading-6 text-emerald-200">
+      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs leading-5 text-emerald-200">
         <div className="flex items-start gap-2">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
@@ -148,20 +155,17 @@ export default function AddDatasheetDrawer({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 h-4 w-4 text-sky-300" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-white">
               Canlı ön kontrol
             </p>
-            <p className="mt-1 text-xs leading-5 text-neutral-400">
-              Kaydetmeden önce bu girdinin nasıl sınıflanacağını gör.
-            </p>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <span
             className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${simulationTone}`}
           >
@@ -171,21 +175,17 @@ export default function AddDatasheetDrawer({
           <span
             className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${keyTone}`}
           >
-            {simulation.label}
+            {toVisibleCopy(simulation.label)}
           </span>
         </div>
 
-        <p className="mt-3 text-xs leading-5 text-neutral-300">
-          {simulation.reason}
+        <p className="mt-2 text-xs leading-5 text-neutral-300">
+          {toVisibleCopy(simulation.reason)}
         </p>
 
-        <p className="mt-2 text-[11px] leading-5 text-neutral-500">
-          Not: aynı `s3Key` tekrarı sunucu tarafında veritabanı kontrolü ile
-          kesin olarak denetlenir.
-        </p>
       </div>
 
-      <form action={formAction} className="mt-5 space-y-5">
+      <form action={formAction} className="mt-4 space-y-3">
         {isEdit ? (
           <input type="hidden" name="id" value={initialData?.id ?? ""} />
         ) : null}
@@ -199,7 +199,7 @@ export default function AddDatasheetDrawer({
             name="productId"
             defaultValue={initialData?.productId ?? ""}
             disabled={disabled || isPending}
-            className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="">Genel doküman</option>
 
@@ -223,7 +223,7 @@ export default function AddDatasheetDrawer({
             onChange={(event) => setDraftTitle(event.target.value)}
             disabled={disabled || isPending}
             placeholder="Örn: MultiPlus-II 3000VA Teknik Datasheet"
-            className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
           />
 
           {state.fieldErrors.title ? (
@@ -231,7 +231,7 @@ export default function AddDatasheetDrawer({
           ) : null}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
               Doküman tipi
@@ -241,7 +241,7 @@ export default function AddDatasheetDrawer({
               name="docType"
               defaultValue={initialData?.docType ?? "datasheet"}
               disabled={disabled || isPending}
-              className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {docTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -264,7 +264,7 @@ export default function AddDatasheetDrawer({
               name="parsingStatus"
               defaultValue={initialData?.parsingStatus ?? "pending"}
               disabled={disabled || isPending}
-              className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {parsingStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -283,7 +283,7 @@ export default function AddDatasheetDrawer({
 
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-            Belge bağlantısı / storage anahtarı
+            Belge bağlantısı / depo anahtarı
           </label>
 
           <div className="relative">
@@ -293,14 +293,13 @@ export default function AddDatasheetDrawer({
               value={draftS3Key}
               onChange={(event) => setDraftS3Key(event.target.value)}
               disabled={disabled || isPending}
-              placeholder="https://... veya storage/path/document.pdf"
-              className="w-full rounded-2xl border border-white/10 bg-neutral-950 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              placeholder="https://... veya depo/yol/belge.pdf"
+              className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2 pl-11 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
 
           <p className="text-xs leading-5 text-neutral-500">
-            Tarayıcıda açılabilen bir web bağlantısı veya sistem içi storage
-            anahtarı girebilirsin.
+            Web bağlantısı veya sistem içi depo anahtarı.
           </p>
 
           {state.fieldErrors.s3Key ? (
@@ -308,16 +307,14 @@ export default function AddDatasheetDrawer({
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs leading-6 text-neutral-400">
-          Kayıt edilen belge daha sonra AI parsing, chunking ve embedding
-          pipeline’ına bağlanabilir. Bu batch yalnızca kayıt katmanını ve
-          ön-kontrol görünürlüğünü sağlamlaştırır.
+        <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-neutral-400">
+          AI analiz hattı için kayıt ve ön kontrol görünürlüğü sağlar.
         </div>
 
         <button
           type="submit"
           disabled={disabled || isPending}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:border-sky-500/30 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-sm font-medium text-sky-100 transition hover:border-sky-500/30 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending
             ? "Kaydediliyor..."

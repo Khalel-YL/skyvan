@@ -4,8 +4,6 @@ import Link from "next/link";
 
 import { db, getDatabaseHealth } from "@/db/db";
 import { users } from "@/db/schema";
-import { PageHeader } from "../_components/page-header";
-import { StatCard } from "../_components/stat-card";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 import { updateUserRole } from "./actions";
 
@@ -140,6 +138,28 @@ function noticeClassName(tone: "success" | "error" | "info") {
   return "border-sky-500/20 bg-sky-500/10 text-sky-200";
 }
 
+function StatPill({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          {label}
+        </span>
+        <span className="text-lg font-semibold text-white">{value}</span>
+      </div>
+      <p className="mt-1 truncate text-xs text-zinc-500">{hint}</p>
+    </div>
+  );
+}
+
 export default async function UsersAdminPage({
   searchParams,
 }: {
@@ -211,112 +231,121 @@ export default async function UsersAdminPage({
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin · Users"
-        title="Kullanıcı ve Rol Çekirdeği"
-        description="Bu yüzey yeni bir permission sistemi kurmaz. Repo içindeki mevcut `users` tablosu ve `role` alanı üstünden minimum gerçek yönetim görünürlüğü sağlar."
-      />
+    <div className="space-y-4">
+      <header className="flex flex-col gap-3 border-b border-zinc-800 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            ADMIN · KULLANICILAR
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            Kullanıcı ve Rol Çekirdeği
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-400">
+            Mevcut kullanıcı kayıtlarını, rol durumunu ve son giriş sinyallerini
+            hızlıca izleyin.
+          </p>
+        </div>
+      </header>
 
       {!db ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           {databaseHealth.note}
         </div>
       ) : null}
 
       {auditRuntime.closureState !== "ready" ? (
         <div
-          className={`rounded-3xl border p-5 text-sm ${
+          className={`rounded-2xl border px-3 py-2 text-sm ${
             auditRuntime.closureState === "blocked"
               ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
               : "border-amber-500/20 bg-amber-500/10 text-amber-200"
           }`}
         >
           {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
-          Rol değişimi uygulanabilir, ancak bu değişim governance closure açısından tam
-          güvenilir iz bırakmayabilir. Actor: {auditRuntime.actorPreview}
+          Rol değişimi uygulanabilir, ancak iz kaydı doğrulaması tam hazır değil.
+          İşlem aktörü: {auditRuntime.actorPreview}
           {auditRuntime.actorRole ? ` · rol ${auditRuntime.actorRole}` : ""}.
         </div>
       ) : null}
 
       {loadWarning ? (
-        <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-5 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
           {loadWarning}
         </div>
       ) : null}
 
       {notice ? (
-        <div className={`rounded-3xl border p-5 text-sm ${noticeClassName(notice.tone)}`}>
+        <div className={`rounded-2xl border px-3 py-2 text-sm ${noticeClassName(notice.tone)}`}>
           {notice.message}
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        <StatPill
           label="Toplam Kullanıcı"
           value={String(stats.total)}
           hint="Filtreye uyan kullanıcı kayıtları"
         />
-        <StatCard
+        <StatPill
           label="Admin"
           value={String(stats.adminCount)}
           hint="Rolü admin olan kullanıcılar"
         />
-        <StatCard
+        <StatPill
           label="Standart"
           value={String(stats.userCount)}
-          hint="Rolü user olan kullanıcılar"
+          hint="Standart role sahip kullanıcılar"
         />
-        <StatCard
+        <StatPill
           label="Son 30 Gün"
           value={String(stats.signedInLast30Days)}
           hint="Yakın dönemde giriş yapan kullanıcılar"
         />
-        <StatCard
+        <StatPill
           label="Sessiz"
           value={String(stats.staleCount)}
           hint="30 günden uzun süredir giriş yapmayanlar"
         />
       </div>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">Filtreler</h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Ad, e-posta, openId veya rol ile kullanıcı kümesini daralt.
+            <h2 className="text-sm font-semibold text-white">Filtreler</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Ad, e-posta, kimlik veya rol ile daralt.
             </p>
           </div>
 
-          <form className="flex flex-col gap-3 md:flex-row">
+          <form className="flex flex-col gap-2 md:flex-row">
             <input
               type="text"
               name="q"
               defaultValue={params.q ?? ""}
-              placeholder="Ad, e-posta veya openId ara"
-              className="min-w-[280px] rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
+              placeholder="Ad, e-posta veya kimlik ara"
+              className="min-w-[260px] rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-zinc-700"
             />
 
             <select
               name="role"
               defaultValue={roleFilter}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-700"
             >
               <option value="all">Tüm roller</option>
               <option value="admin">Admin</option>
-              <option value="user">User</option>
+              <option value="user">Standart</option>
             </select>
 
             <button
               type="submit"
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               Uygula
             </button>
 
             <Link
               href="/admin/users"
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               Sıfırla
             </Link>
@@ -342,12 +371,12 @@ export default async function UsersAdminPage({
             return (
               <article
                 key={userRow.id}
-                className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5"
+                className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3"
               >
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold text-white">
+                      <h2 className="text-base font-semibold text-white">
                         {userRow.name?.trim() || "İsimsiz kullanıcı"}
                       </h2>
                       <span
@@ -355,7 +384,7 @@ export default async function UsersAdminPage({
                           userRow.role,
                         )}`}
                       >
-                        {userRow.role === "admin" ? "Admin" : "User"}
+                        {userRow.role === "admin" ? "Admin" : "Standart"}
                       </span>
                       {lastSeenDays !== null && lastSeenDays > 30 ? (
                         <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs text-amber-200">
@@ -368,7 +397,7 @@ export default async function UsersAdminPage({
                       )}
                     </div>
 
-                    <div className="grid gap-3 text-sm text-zinc-300 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-2 xl:grid-cols-5">
                       <div className="rounded-2xl border border-zinc-900 bg-black/30 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                           E-posta
@@ -389,7 +418,7 @@ export default async function UsersAdminPage({
 
                       <div className="rounded-2xl border border-zinc-900 bg-black/30 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-                          Login yöntemi
+                          Giriş yöntemi
                         </div>
                         <div className="mt-1 text-sm text-zinc-200">
                           {userRow.loginMethod?.trim() || "—"}
@@ -443,7 +472,7 @@ export default async function UsersAdminPage({
                         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-black px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <UserCog className="h-4 w-4" />
-                        User yap
+                        Standart yap
                       </button>
                     </form>
                   </div>
@@ -454,7 +483,7 @@ export default async function UsersAdminPage({
         )}
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
         <div className="flex items-start gap-3">
           {auditRuntime.closureState === "ready" ? (
             <ShieldCheck className="mt-0.5 h-5 w-5 text-zinc-300" />
@@ -462,12 +491,12 @@ export default async function UsersAdminPage({
             <ShieldAlert className="mt-0.5 h-5 w-5 text-zinc-300" />
           )}
           <div>
-            <h2 className="text-lg font-semibold text-white">Kapsam sınırı</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
-              Bu ekran yalnızca mevcut `users` tablosundaki kayıtları ve `role`
-              alanını yönetir. Yeni permission tablosu, yeni auth akışı veya kullanıcı
-              oluşturma akışı eklenmedi. Audit actor doğrulanmadıysa rol değişimi işlem
-              olarak başarılı görünse bile closure seviyesinde eksik kabul edilmelidir.
+            <h2 className="text-sm font-semibold text-white">Kapsam sınırı</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-zinc-400">
+              Bu ekran mevcut kullanıcı kayıtları ve rol alanıyla sınırlıdır. Yeni
+              yetki tablosu, giriş akışı veya kullanıcı oluşturma akışı eklenmedi.
+              Audit aktörü doğrulanmadıysa rol değişimi izlenebilirlik açısından eksik
+              kabul edilir.
             </p>
           </div>
         </div>

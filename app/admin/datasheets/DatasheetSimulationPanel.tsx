@@ -11,7 +11,7 @@ import {
 
 export default function DatasheetSimulationPanel() {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-start gap-3">
         <div className="rounded-2xl bg-sky-500/10 p-2 text-sky-300">
           <FlaskConical className="h-4 w-4" />
@@ -19,16 +19,16 @@ export default function DatasheetSimulationPanel() {
 
         <div>
           <h2 className="text-sm font-semibold text-white">
-            Simülasyon laboratuvarı
+            Ön kontrol senaryoları
           </h2>
           <p className="mt-1 text-sm leading-6 text-neutral-400">
-            Kayıt mantığının beklenen davranışını hızlıca doğrulamak için sabit
-            smoke-test senaryoları.
+            Kayıt mantığının beklenen davranışını hızlıca doğrulayan sabit
+            senaryolar.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3">
+      <div className="mt-3 grid gap-2">
         {datasheetSimulationCases.map((testCase) => {
           const result = simulateDatasheetInput({
             title: testCase.title,
@@ -42,7 +42,7 @@ export default function DatasheetSimulationPanel() {
           return (
             <div
               key={testCase.id}
-              className="rounded-2xl border border-white/8 bg-black/20 p-4"
+              className="rounded-2xl border border-white/8 bg-black/20 p-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -95,7 +95,7 @@ export default function DatasheetSimulationPanel() {
               </p>
 
               <p className="mt-2 text-xs leading-5 text-neutral-500">
-                Motor çıktısı: {result.reason}
+                Kontrol sonucu: {result.reason}
               </p>
             </div>
           );

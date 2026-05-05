@@ -13,8 +13,6 @@ import {
 } from "lucide-react";
 import { asc, count, desc } from "drizzle-orm";
 
-import { PageHeader } from "../_components/page-header";
-import { StatCard } from "../_components/stat-card";
 import AddDatasheetDrawer from "./AddDatasheetDrawer";
 import DeleteDatasheetButton from "./DeleteDatasheetButton";
 
@@ -227,6 +225,28 @@ function buildHref(params: {
 
   const query = search.toString();
   return query ? `/admin/datasheets?${query}` : "/admin/datasheets";
+}
+
+function StatPill({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+          {label}
+        </span>
+        <span className="text-lg font-semibold text-white">{value}</span>
+      </div>
+      <p className="mt-1 truncate text-xs text-neutral-500">{hint}</p>
+    </div>
+  );
 }
 
 async function getProductsSafely(): Promise<ProductOption[]> {
@@ -524,28 +544,37 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
   ] as const;
 
   const auditTabs: { key: AuditKey; label: string }[] = [
-    { key: "all", label: `Tüm auditler (${summary.total})` },
+    { key: "all", label: `Tüm kontroller (${summary.total})` },
     { key: "duplicates", label: `Tekrar anahtar (${summary.duplicates})` },
     { key: "unsafe", label: `Güvensiz bağlantı (${summary.unsafe})` },
     { key: "orphan-product", label: `Eksik ürün (${summary.orphanProduct})` },
     {
       key: "completed-no-chunks",
-      label: `Chunk'sız tamamlandı (${summary.completedNoChunks})`,
+      label: `Parçasız tamamlandı (${summary.completedNoChunks})`,
     },
     { key: "queue", label: `Kuyruk (${summary.queue})` },
     { key: "failed", label: `Hatalı (${summary.failed})` },
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin / AI Bilgi Kayıt Katmanı"
-        title="Datasheet Merkezi"
-        description="AI bilgi tabanı, rule engine ve ileride mobil/API istemcilerinin besleneceği teknik belge kayıt katmanı."
-      />
+    <div className="space-y-4">
+      <header className="flex flex-col gap-3 border-b border-white/10 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+            ADMIN · AI BİLGİ KAYITLARI
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            Datasheet Merkezi
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-400">
+            Teknik belge kayıtlarını, ürün bağlarını ve AI hazırlık sinyallerini
+            kompakt biçimde izleyin.
+          </p>
+        </div>
+      </header>
 
       {!databaseReady ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-200">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           Veritabanı yapılandırılmadığı için liste ve kayıt işlemleri pasif
           durumda.
         </div>
@@ -553,7 +582,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
 
       {flashMessage ? (
         <div
-          className={`rounded-3xl px-5 py-4 text-sm ${
+          className={`rounded-2xl px-3 py-2 text-sm ${
             flashMessage.tone === "success"
               ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
               : "border border-rose-500/20 bg-rose-500/10 text-rose-200"
@@ -563,37 +592,37 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <StatPill
           label="Toplam Kayıt"
           value={String(summary.total)}
           hint="Belge envanteri"
         />
-        <StatCard
+        <StatPill
           label="Ürüne Bağlı"
           value={String(summary.linked)}
           hint="Ürün referanslı kayıtlar"
         />
-        <StatCard
+        <StatPill
           label="Genel Doküman"
           value={String(summary.general)}
           hint="Üründen bağımsız kayıtlar"
         />
-        <StatCard
+        <StatPill
           label="Kuyruk"
           value={String(summary.queue)}
           hint="Bekleyen + işlenen kayıtlar"
         />
-        <StatCard
+        <StatPill
           label="Hatalı"
           value={String(summary.failed)}
           hint="İnceleme gerektiren kayıtlar"
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="space-y-4">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="space-y-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
             <div className="flex items-start gap-3">
               <div
                 className={`rounded-2xl p-2 ${
@@ -610,31 +639,29 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-semibold text-white">
-                  Datasheet simülasyon radarı
+                <h2 className="text-sm font-semibold text-white">
+                  Kayıt kontrol radarı
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-neutral-400">
-                  Bu panel gerçek kayıtlar üstünden canlı smoke-check üretir.
-                  Local uygulamayı burada çalıştırmadığım için, güvenli test
-                  katmanını doğrudan modül içine ekliyorum.
+                <p className="mt-1 text-xs leading-5 text-neutral-400">
+                  Gerçek kayıtlar üstünden tekrar, güvenlik ve ürün bağı
+                  kontrollerini gösterir.
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
+            <div className="mt-3 rounded-xl border border-white/8 bg-black/20 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-white">
                     Kritik kontrol sonucu
                   </p>
                   <p className="mt-1 text-xs text-neutral-400">
-                    Duplicate anahtar, güvensiz bağlantı, eksik ürün referansı ve
-                    chunk&apos;sız tamamlanan kayıtlar denetlenir.
+                    Tekrar, güvenlik, ürün bağı ve parça üretimi denetlenir.
                   </p>
                 </div>
 
                 <div className="text-right">
-                  <p className="text-2xl font-semibold text-white">
+                  <p className="text-xl font-semibold text-white">
                     {passedChecks}/{totalChecks}
                   </p>
                   <p className="text-xs text-neutral-400">geçen kontrol</p>
@@ -642,7 +669,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               <Link
                 href={buildHref({
                   q,
@@ -650,7 +677,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "duplicates",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.duplicates,
                   "critical",
                 )}`}
@@ -658,9 +685,9 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
                   Tekrar anahtar
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{summary.duplicates}</p>
-                <p className="mt-1 text-xs opacity-90">
-                  Aynı belge bağlantısı / storage anahtarı birden fazla kayıtta
+                <p className="mt-1 text-xl font-semibold">{summary.duplicates}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
+                  Aynı belge bağlantısı veya depo anahtarı birden fazla kayıtta
                   geçiyor mu?
                 </p>
               </Link>
@@ -672,7 +699,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "unsafe",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.unsafe,
                   "critical",
                 )}`}
@@ -680,8 +707,8 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
                   Güvensiz bağlantı
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{summary.unsafe}</p>
-                <p className="mt-1 text-xs opacity-90">
+                <p className="mt-1 text-xl font-semibold">{summary.unsafe}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
                   `javascript:` benzeri riskli şema tespiti.
                 </p>
               </Link>
@@ -693,7 +720,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "orphan-product",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.orphanProduct,
                   "critical",
                 )}`}
@@ -701,10 +728,10 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
                   Eksik ürün referansı
                 </p>
-                <p className="mt-2 text-2xl font-semibold">
+                <p className="mt-1 text-xl font-semibold">
                   {summary.orphanProduct}
                 </p>
-                <p className="mt-1 text-xs opacity-90">
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
                   Ürün bağı zorunlu olan kayıtlar için eksik ya da bozuk referans.
                 </p>
               </Link>
@@ -716,19 +743,19 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "completed-no-chunks",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.completedNoChunks,
                   "critical",
                 )}`}
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
-                  Chunk&apos;sız tamamlandı
+                  Parçasız tamamlandı
                 </p>
-                <p className="mt-2 text-2xl font-semibold">
+                <p className="mt-1 text-xl font-semibold">
                   {summary.completedNoChunks}
                 </p>
-                <p className="mt-1 text-xs opacity-90">
-                  `completed` olup içerik parçası üretmeyen kayıtlar.
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
+                  Tamamlandı görünüp içerik parçası üretmeyen kayıtlar.
                 </p>
               </Link>
 
@@ -739,7 +766,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "queue",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.queue,
                   "warning",
                 )}`}
@@ -747,8 +774,8 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
                   Kuyruk yoğunluğu
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{summary.queue}</p>
-                <p className="mt-1 text-xs opacity-90">
+                <p className="mt-1 text-xl font-semibold">{summary.queue}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
                   Bekleyen + işlenen kayıt toplamı.
                 </p>
               </Link>
@@ -760,7 +787,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   parsingStatus: "all",
                   audit: "failed",
                 })}
-                className={`rounded-2xl border p-4 transition hover:opacity-90 ${getAuditTone(
+                className={`rounded-xl border p-2.5 transition hover:opacity-90 ${getAuditTone(
                   summary.failed,
                   "warning",
                 )}`}
@@ -768,16 +795,16 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em]">
                   Hatalı kayıtlar
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{summary.failed}</p>
-                <p className="mt-1 text-xs opacity-90">
+                <p className="mt-1 text-xl font-semibold">{summary.failed}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs opacity-90">
                   Operasyon müdahalesi gerektiren belge kayıtları.
                 </p>
               </Link>
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-emerald-500/10 p-2 text-emerald-300">
                   <ShieldCheck className="h-4 w-4" />
@@ -787,20 +814,20 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   <h2 className="text-sm font-semibold text-white">
                     Kayıt güvenliği özeti
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-neutral-400">
-                    Aynı storage anahtarı tekrar kullanılamaz. Riskli bağlantı
+                  <p className="mt-1 text-xs leading-5 text-neutral-400">
+                    Aynı depo anahtarı tekrar kullanılamaz. Riskli bağlantı
                     şemaları kayıt aşamasında bloklanır.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm text-neutral-300">
+              <div className="mt-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2 text-sm text-neutral-300">
                 Şüpheli bağlantı sayısı:{" "}
                 <span className="font-semibold text-white">{summary.unsafe}</span>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-amber-500/10 p-2 text-amber-300">
                   <Clock3 className="h-4 w-4" />
@@ -810,14 +837,14 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   <h2 className="text-sm font-semibold text-white">
                     Operasyon sinyali
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-neutral-400">
+                  <p className="mt-1 text-xs leading-5 text-neutral-400">
                     Kuyruk ve hatalı belge yoğunluğu AI hazırlık kalitesini
                     doğrudan etkiler.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
                     Kuyruk
@@ -839,7 +866,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
             <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
@@ -847,14 +874,14 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   name="q"
                   defaultValue={q}
                   placeholder="Başlık, ürün veya bağlantı ara"
-                  className="w-full rounded-2xl border border-white/10 bg-neutral-950 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40"
+                  className="w-full rounded-xl border border-white/10 bg-neutral-950 py-2 pl-11 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-sky-500/40"
                 />
               </div>
 
               <select
                 name="docType"
                 defaultValue={docTypeFilter}
-                className="rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40"
+                className="rounded-xl border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40"
               >
                 <option value="all">Tüm tipler</option>
                 <option value="datasheet">Teknik datasheet</option>
@@ -865,14 +892,14 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white transition hover:bg-white/[0.08]"
                 >
                   Filtrele
                 </button>
 
                 <Link
                   href="/admin/datasheets"
-                  className="rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm font-medium text-neutral-300 transition hover:bg-white/[0.04] hover:text-white"
+                  className="rounded-xl border border-white/10 bg-transparent px-3 py-2 text-sm font-medium text-neutral-300 transition hover:bg-white/[0.04] hover:text-white"
                 >
                   Sıfırla
                 </Link>
@@ -930,12 +957,12 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3 border-b border-white/8 px-1 pb-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/8 px-1 pb-2">
               <div>
                 <p className="text-sm font-semibold text-white">Kayıt listesi</p>
                 <p className="mt-1 text-xs text-neutral-400">
-                  Alt blok tablo yerine kompakt kayıt kartları olarak stabilize edildi.
+                  Teknik belgeler kompakt operasyon kartları olarak listelenir.
                 </p>
               </div>
 
@@ -949,7 +976,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                 Filtreye uyan datasheet kaydı bulunamadı.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredDocs.map((doc) => {
                   const blocked = hasBlockedScheme(doc.s3Key);
                   const openable = isOpenableHttpUrl(doc.s3Key) && !blocked;
@@ -960,9 +987,9 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                   return (
                     <div
                       key={doc.id}
-                      className="rounded-2xl border border-white/8 bg-black/20 p-4"
+                      className="rounded-2xl border border-white/8 bg-black/20 p-3"
                     >
-                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start gap-3">
                             <div className="mt-0.5 rounded-xl bg-sky-500/10 p-2 text-sky-300">
@@ -974,7 +1001,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                 {doc.title}
                               </p>
 
-                              <p className="mt-2 truncate text-xs text-neutral-400">
+                              <p className="mt-1 truncate text-xs text-neutral-400">
                                 {doc.productLabel}
                               </p>
 
@@ -985,7 +1012,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                 {doc.s3Key}
                               </p>
 
-                              <div className="mt-3 flex flex-wrap gap-2">
+                              <div className="mt-2 flex flex-wrap gap-1.5">
                                 <span className="inline-flex whitespace-nowrap rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-neutral-300">
                                   {doc.productId ? "Ürüne bağlı" : "Genel doküman"}
                                 </span>
@@ -1014,8 +1041,8 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                   {blocked
                                     ? "Güvenli değil"
                                     : openable
-                                      ? "Web bağlantısı"
-                                      : "Storage anahtarı"}
+                                    ? "Web bağlantısı"
+                                      : "Depo anahtarı"}
                                 </span>
 
                                 <span className="inline-flex whitespace-nowrap rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-neutral-300">
@@ -1036,7 +1063,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
 
                                 {completedWithoutChunks ? (
                                   <span className="inline-flex whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
-                                    Chunk yok
+                                    Parça yok
                                   </span>
                                 ) : null}
                               </div>
@@ -1077,7 +1104,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                 title={
                                   blocked
                                     ? "Bu bağlantı güvenli değil"
-                                    : "Bu kayıt web URL değil, storage anahtarı olarak tutuluyor"
+                                    : "Bu kayıt web URL değil, depo anahtarı olarak tutuluyor"
                                 }
                               >
                                 {blocked ? (

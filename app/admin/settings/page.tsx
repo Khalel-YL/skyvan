@@ -9,8 +9,6 @@ import {
 
 import { db, getDatabaseHealth } from "@/db/db";
 import { localizedContent } from "@/db/schema";
-import { PageHeader } from "../_components/page-header";
-import { StatCard } from "../_components/stat-card";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
 import { getGovernanceRuntime } from "@/app/lib/admin/governance";
 
@@ -126,6 +124,28 @@ function runtimeToneClass(tone: RuntimeCard["tone"], enabled: boolean) {
   return runtimeCardClass(enabled);
 }
 
+function StatPill({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          {label}
+        </span>
+        <span className="text-lg font-semibold text-white">{value}</span>
+      </div>
+      <p className="mt-1 truncate text-xs text-zinc-500">{hint}</p>
+    </div>
+  );
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -139,17 +159,17 @@ export default async function SettingsPage({
   const seoFilter = normalizeSeoFilter(String(params.seo ?? "all"));
   const runtimeCards: RuntimeCard[] = [
     {
-      title: "Database",
+      title: "Veritabanı",
       value: databaseHealth.status === "online" ? "Hazır" : "Güvenli mod",
       enabled: databaseHealth.status === "online",
       description: databaseHealth.note,
     },
     {
-      title: "Audit actor",
+      title: "Audit aktörü",
       value: auditRuntime.actorRecordStatus === "resolved"
         ? auditRuntime.roleAligned
           ? "Doğrulandı"
-          : "Role dikkat"
+          : "Rol dikkat istiyor"
         : auditRuntime.actorStatus === "invalid"
           ? "Geçersiz"
           : auditRuntime.actorRecordStatus === "not_found"
@@ -168,41 +188,41 @@ export default async function SettingsPage({
       }`,
     },
     {
-      title: "Publish revision",
-      value: auditRuntime.publishWriteActive ? "Yazım aktif" : "Safe-degrade",
+      title: "Yayın izi",
+      value: auditRuntime.publishWriteActive ? "Yazım aktif" : "Güvenli düşüş",
       enabled: auditRuntime.publishWriteActive,
       tone: auditRuntime.publishWriteActive ? "ready" : "blocked",
       envName: "SKYVAN_ADMIN_AUDIT_USER_ID",
       description: auditRuntime.publishWriteActive
-        ? "Pages publish / rollback geçişleri revision izi bırakabilir."
-        : "Pages publish / rollback akışı çalışsa bile `publish_revisions` yeni kayıt üretmeyebilir.",
+        ? "Pages yayın ve geri alma geçişleri iz bırakabilir."
+        : "Pages yayın akışı çalışsa bile yeni iz kaydı üretmeyebilir.",
     },
     {
       title: "SEO publish kilidi",
       value: governanceRuntime.allowDirectPublishWithoutSeo
-        ? "Override açık"
+        ? "Manuel açık"
         : "Koruma açık",
       enabled: !governanceRuntime.allowDirectPublishWithoutSeo,
       envName: "SKYVAN_ALLOW_DIRECT_PUBLISH_WITHOUT_SEO",
-      description: "SEO başlığı ve açıklaması eksik page publish davranışını etkiler.",
+      description: "SEO başlığı ve açıklaması eksik sayfa yayın davranışını etkiler.",
     },
     {
-      title: "Offer governance",
+      title: "Teklif governance",
       value: governanceRuntime.allowCriticalOfferStatusTransitions
-        ? "Override açık"
+        ? "Manuel açık"
         : "Koruma açık",
       enabled: !governanceRuntime.allowCriticalOfferStatusTransitions,
       envName: "SKYVAN_ALLOW_CRITICAL_OFFER_STATUS_CHANGE",
-      description: "accepted / rejected / expired geçişlerinin kilit durumunu belirler.",
+      description: "Kritik teklif durum geçişlerinin kilit durumunu belirler.",
     },
     {
-      title: "AI-ready kilidi",
+      title: "AI hazır kilidi",
       value: governanceRuntime.allowManualAiReadyStatus
-        ? "Override açık"
+        ? "Manuel açık"
         : "Koruma açık",
       enabled: !governanceRuntime.allowManualAiReadyStatus,
       envName: "SKYVAN_ALLOW_MANUAL_AI_READY_STATUS",
-      description: "Completed sınırına dokunan manuel belge geçişlerini etkiler.",
+      description: "Tamamlandı sınırına dokunan manuel belge geçişlerini etkiler.",
     },
   ];
 
@@ -283,119 +303,127 @@ export default async function SettingsPage({
   const localeCount = new Set(seoRecords.map((row) => row.locale)).size;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Admin · SEO & Ayarlar"
-        title="SEO ve Runtime Ayar Görünürlüğü"
-        description="Bu yüzey yeni bir settings tablosu kurmaz. Repo içindeki gerçek runtime governance flag’lerini ve mevcut `localized_content` SEO alanlarını görünür hale getirir."
-      />
+    <div className="space-y-4">
+      <header className="flex flex-col gap-3 border-b border-zinc-800 pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            ADMIN · SEO VE AYARLAR
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            SEO ve Ayar Görünürlüğü
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-400">
+            Mevcut runtime kilitlerini ve içerik SEO durumunu kompakt biçimde izleyin.
+          </p>
+        </div>
+      </header>
 
       {!db ? (
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm text-amber-200">
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
           {databaseHealth.note}
         </div>
       ) : null}
 
       {loadWarning ? (
-        <div className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-5 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
           {loadWarning}
         </div>
       ) : null}
 
       {auditRuntime.closureState !== "ready" ? (
         <div
-          className={`rounded-3xl border p-5 text-sm ${
+          className={`rounded-2xl border px-3 py-2 text-sm ${
             auditRuntime.closureState === "blocked"
               ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
               : "border-amber-500/20 bg-amber-500/10 text-amber-200"
           }`}
         >
           {auditRuntime.blocker ? `${auditRuntime.blocker} ` : ""}
-          {auditRuntime.reason} Bu nedenle içerik işlemleri ilerlese bile audit ve publish
-          izi closure açısından tam doğrulanmış sayılmaz.
+          {auditRuntime.reason} Bu nedenle içerik işlemleri ilerlese bile audit ve
+          yayın izi tam doğrulanmış sayılmaz.
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Page Kayıtları"
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <StatPill
+          label="Sayfa Kayıtları"
           value={String(pageRecords.length)}
-          hint="localized_content içindeki page kayıtları"
+          hint="İçerik tablosundaki sayfa kayıtları"
         />
-        <StatCard
+        <StatPill
           label="Blog Kayıtları"
           value={String(blogRecords.length)}
-          hint="localized_content içindeki blog kayıtları"
+          hint="İçerik tablosundaki blog kayıtları"
         />
-        <StatCard
+        <StatPill
           label="SEO Hazır"
           value={String(seoReadyCount)}
           hint="Slug + SEO başlığı + SEO açıklaması tam kayıtlar"
         />
-        <StatCard
+        <StatPill
           label="Yayında Risk"
           value={String(publishedWithGapCount)}
           hint="Yayında olup SEO alanı eksik kayıtlar"
         />
       </div>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
         <div className="flex items-center gap-3">
           <Settings2 className="h-5 w-5 text-zinc-300" />
-          <h2 className="text-lg font-semibold text-white">Runtime ayarlar</h2>
+          <h2 className="text-sm font-semibold text-white">Çalışma ayarları</h2>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
           {runtimeCards.map((item) => (
             <div
               key={item.title}
-              className={`rounded-2xl border p-4 ${runtimeToneClass(item.tone, item.enabled)}`}
+              className={`rounded-2xl border p-3 ${runtimeToneClass(item.tone, item.enabled)}`}
             >
               <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
                 {item.title}
               </div>
-              <div className="mt-2 text-lg font-semibold">{item.value}</div>
+              <div className="mt-1 text-base font-semibold">{item.value}</div>
               {item.envName ? (
-                <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] opacity-80">
+                <div className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.14em] opacity-80">
                   {item.envName}
                 </div>
               ) : null}
-              <div className="mt-2 text-xs leading-5 opacity-90">{item.description}</div>
+              <div className="mt-1 line-clamp-2 text-xs leading-5 opacity-90">{item.description}</div>
             </div>
           ))}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
-          Koruma açık durumu varsayılan güvenli davranıştır. Override açık durumu ise
-          ilgili governance kilidinin manuel olarak gevşetildiğini gösterir. Audit actor
-          tarafında blocker varsa publish revision da hazır kabul edilmemelidir.
+        <div className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-400">
+          Koruma açık durumu varsayılan güvenli davranıştır. Manuel açık durumu ilgili
+          kilidin gevşetildiğini gösterir. Audit aktörü doğrulanmadıysa yayın izi hazır
+          kabul edilmez.
         </div>
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">SEO kapsaması</h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Gerçek `page` ve `blog` kayıtları üzerinden SEO alanı bütünlüğünü izle.
+            <h2 className="text-sm font-semibold text-white">SEO kapsaması</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Sayfa ve blog kayıtlarında SEO alanı bütünlüğünü izle.
             </p>
           </div>
 
-          <form className="flex flex-col gap-3 md:flex-row">
+          <form className="flex flex-col gap-2 md:flex-row">
             <select
               name="entityType"
               defaultValue={entityTypeFilter}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-700"
             >
               <option value="all">Tüm içerik tipleri</option>
-              <option value="page">Page</option>
+              <option value="page">Sayfa</option>
               <option value="blog">Blog</option>
             </select>
 
             <select
               name="seo"
               defaultValue={seoFilter}
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-700"
             >
               <option value="all">Tüm SEO durumları</option>
               <option value="needs-attention">Dikkat isteyen</option>
@@ -404,28 +432,28 @@ export default async function SettingsPage({
 
             <button
               type="submit"
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
+              className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
             >
               Uygula
             </button>
 
             <Link
               href="/admin/settings"
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
             >
               Sıfırla
             </Link>
           </form>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-              Locale
+              Dil
             </div>
             <div className="mt-2 text-2xl font-semibold text-white">{localeCount}</div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
               Hazır oranı
             </div>
@@ -433,33 +461,33 @@ export default async function SettingsPage({
               {seoRecords.length > 0 ? `%${Math.round((seoReadyCount / seoRecords.length) * 100)}` : "%0"}
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-              Publish riski
+              Yayın riski
             </div>
             <div className="mt-2 text-2xl font-semibold text-white">{publishedWithGapCount}</div>
           </div>
         </div>
 
         {filteredSeoRecords.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+          <div className="mt-4 rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 p-5 text-sm text-zinc-400">
             Filtreye uyan içerik kaydı bulunamadı.
           </div>
         ) : (
-          <div className="mt-5 space-y-3">
+          <div className="mt-4 space-y-2">
             {filteredSeoRecords.map((row) => {
               const seoReady = row.missingFields.length === 0;
 
               return (
                 <article
                   key={row.id}
-                  className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
+                  className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3"
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-[11px] text-zinc-300">
-                          {row.entityType}
+                          {row.entityType === "page" ? "Sayfa" : "Blog"}
                         </span>
                         <span className="rounded-full border border-zinc-800 bg-black px-3 py-1 text-[11px] text-zinc-500">
                           {row.locale}
@@ -518,7 +546,7 @@ export default async function SettingsPage({
         )}
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
         <div className="flex items-start gap-3">
           {publishedWithGapCount > 0 ? (
             <ShieldAlert className="mt-0.5 h-5 w-5 text-zinc-300" />
@@ -526,11 +554,11 @@ export default async function SettingsPage({
             <ShieldCheck className="mt-0.5 h-5 w-5 text-zinc-300" />
           )}
           <div>
-            <h2 className="text-lg font-semibold text-white">Kapanış notu</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
-              Skyvan repo gerçekliğinde bağımsız bir global settings tablosu yok. Bu
-              yüzden bu yüzey mevcut runtime flag’lerini ve gerçek içerik SEO alanlarını
-              yönetilebilir hale getirir; hayali ayar sistemi kurmaz.
+            <h2 className="text-sm font-semibold text-white">Kapanış notu</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-zinc-400">
+              Skyvan repo gerçekliğinde bağımsız bir global ayar tablosu yok. Bu yüzey
+              mevcut çalışma kilitlerini ve gerçek içerik SEO alanlarını görünür kılar;
+              hayali ayar sistemi kurmaz.
             </p>
           </div>
         </div>
