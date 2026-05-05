@@ -14,11 +14,11 @@ type Props = {
 function getGroundedDocTypeLabel(value: string) {
   switch (value) {
     case "datasheet":
-      return "Datasheet";
+      return "Teknik datasheet";
     case "manual":
       return "Kılavuz";
     case "rulebook":
-      return "Kural";
+      return "Kural kitabı";
     default:
       return value;
   }
@@ -29,11 +29,11 @@ function getRuleAlignmentLabel(
 ) {
   switch (value) {
     case "rule-aligned":
-      return "Rule hizalı";
+      return "Kural hizalı";
     case "rule-signal-missing":
-      return "Rule sinyali eksik";
+      return "Kural sinyali eksik";
     case "rule-review-needed":
-      return "Rule review gerekli";
+      return "Kural incelemesi gerekli";
     default:
       return null;
   }
@@ -80,150 +80,151 @@ function getDecisionSignalClassName(value: ProductAiDecisionSignal["status"]) {
   }
 }
 
+function getSafeOperationalStatus(input: {
+  groundedExplanation: ProductGroundedExplanation;
+  decisionSignal: ProductAiDecisionSignal;
+}) {
+  if (!input.groundedExplanation.available) {
+    return "AI açıklaması güvenli özet modunda gösterilir. Ham belge metni bu yüzeyde gösterilmez.";
+  }
+
+  if (input.groundedExplanation.ruleAlignmentStatus === "rule-signal-missing") {
+    return "Kural sinyali eksik olduğu için karar sinyali uyarıda. Ham belge metni bu yüzeyde gösterilmez.";
+  }
+
+  if (input.decisionSignal.status === "ready") {
+    return "Kullanıma hazır bilgi ve kaynak parçası mevcut. Ham belge metni bu yüzeyde gösterilmez.";
+  }
+
+  return "AI açıklaması güvenli özet modunda gösterilir. Ham belge metni bu yüzeyde gösterilmez.";
+}
+
+function statChip(label: string, value: string | number) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-semibold text-zinc-100">{value}</div>
+    </div>
+  );
+}
+
+function statusPill({
+  label,
+  className,
+}: {
+  label: string;
+  className: string;
+}) {
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function neutralPill(label: string) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
+      {label}
+    </span>
+  );
+}
+
 export function ProductDocumentsSummary({
   summary,
   groundedExplanation,
   decisionSignal,
 }: Props) {
+  const ruleAlignmentLabel = groundedExplanation.ruleAlignmentStatus
+    ? getRuleAlignmentLabel(groundedExplanation.ruleAlignmentStatus)
+    : null;
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Toplam Belge
-        </div>
-        <div className="mt-2 text-2xl font-semibold text-zinc-100">
-          {summary.total}
-        </div>
-      </div>
+    <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {statChip("Toplam belge", summary.total)}
+        {statChip("Aktif", summary.active)}
+        {statChip("Arşiv", summary.archived)}
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Aktif
-        </div>
-        <div className="mt-2 text-2xl font-semibold text-zinc-100">
-          {summary.active}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Arşiv
-        </div>
-        <div className="mt-2 text-2xl font-semibold text-zinc-100">
-          {summary.archived}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Belge Sağlığı
-        </div>
-
-        <div className="mt-2">
-          {summary.completeRequiredSet ? (
-            <div className="inline-flex rounded-full border border-green-800 bg-green-950 px-2.5 py-1 text-xs font-medium text-green-300">
-              Çekirdek belge seti tamam
-            </div>
-          ) : (
-            <div className="inline-flex rounded-full border border-amber-800 bg-amber-950 px-2.5 py-1 text-xs font-medium text-amber-300">
-              Eksik çekirdek belge var
-            </div>
-          )}
-        </div>
-
-        {!summary.completeRequiredSet ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {summary.missingRequiredTypes.map((type) => (
-              <span
-                key={type}
-                className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300"
-              >
-                {getProductDocumentTypeLabel(type)}
-              </span>
-            ))}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-3 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            Belge sağlığı
           </div>
-        ) : null}
+          <div className="mt-2">
+            {summary.completeRequiredSet
+              ? statusPill({
+                  label: "Çekirdek set tamam",
+                  className: "border-green-800 bg-green-950 text-green-300",
+                })
+              : statusPill({
+                  label: "Eksik çekirdek belge",
+                  className: "border-amber-800 bg-amber-950 text-amber-300",
+                })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-3 py-2">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            AI karar sinyali
+          </div>
+          <div className="mt-2">
+            {statusPill({
+              label: getDecisionSignalLabel(decisionSignal.status),
+              className: getDecisionSignalClassName(decisionSignal.status),
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Grounded AI Açıklama
-        </div>
-
-        <div className="mt-2">
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getDecisionSignalClassName(
-              decisionSignal.status,
-            )}`}
-          >
-            AI Karar Sinyali · {getDecisionSignalLabel(decisionSignal.status)}
-          </span>
-        </div>
-
-        <div className="mt-3 text-xs text-zinc-500">
-          {decisionSignal.reason}
-        </div>
-
-        <div className="mt-3">
-          {groundedExplanation.available ? (
-            <div className="inline-flex rounded-full border border-emerald-800 bg-emerald-950 px-2.5 py-1 text-xs font-medium text-emerald-300">
-              Kullanıma hazır
+      <div className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              AI Kaynak Açıklaması
             </div>
-          ) : (
-            <div className="inline-flex rounded-full border border-amber-800 bg-amber-950 px-2.5 py-1 text-xs font-medium text-amber-300">
-              Hazır değil
-            </div>
-          )}
-        </div>
-
-        <div className="mt-3 text-xs text-zinc-500">
-          {groundedExplanation.readinessReason}
-        </div>
-
-        {groundedExplanation.ruleAlignmentStatus ? (
-          <div className="mt-3">
-            <span
-              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getRuleAlignmentClassName(
-                groundedExplanation.ruleAlignmentStatus,
-              )}`}
-            >
-              {getRuleAlignmentLabel(groundedExplanation.ruleAlignmentStatus)}
-            </span>
+            <p className="mt-2 text-sm leading-5 text-zinc-300">
+              {getSafeOperationalStatus({ groundedExplanation, decisionSignal })}
+            </p>
           </div>
-        ) : null}
 
-        <div className="mt-3 text-sm leading-6 text-zinc-400">
-          {groundedExplanation.preview ?? groundedExplanation.note}
-        </div>
-
-        {groundedExplanation.ruleAlignmentReason ? (
-          <div className="mt-3 text-xs leading-5 text-zinc-500">
-            {groundedExplanation.ruleAlignmentReason}
+          <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
+            {groundedExplanation.available
+              ? statusPill({
+                  label: "Kaynaklı bilgi hazır",
+                  className: "border-emerald-800 bg-emerald-950 text-emerald-300",
+                })
+              : statusPill({
+                  label: "Kaynaklı bilgi hazır değil",
+                  className: "border-amber-800 bg-amber-950 text-amber-300",
+                })}
+            {ruleAlignmentLabel && groundedExplanation.ruleAlignmentStatus
+              ? statusPill({
+                  label: ruleAlignmentLabel,
+                  className: getRuleAlignmentClassName(
+                    groundedExplanation.ruleAlignmentStatus,
+                  ),
+                })
+              : null}
           </div>
-        ) : null}
+        </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-            Bilgi {groundedExplanation.eligibleKnowledgeCount}
-          </span>
-          <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-            Parça {groundedExplanation.groundedChunkCount}
-          </span>
-          {groundedExplanation.coverageLabel ? (
-            <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-              {groundedExplanation.coverageLabel}
-            </span>
-          ) : null}
-          {groundedExplanation.sourceRuleCount > 0 ? (
-            <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300">
-              Kural {groundedExplanation.sourceRuleCount}
-            </span>
-          ) : null}
-          {groundedExplanation.ruleConflictCount > 0 ? (
-            <span className="inline-flex rounded-full border border-rose-800 bg-rose-950 px-2.5 py-1 text-xs text-rose-300">
-              Çakışma {groundedExplanation.ruleConflictCount}
-            </span>
-          ) : null}
+          {neutralPill(`Bilgi ${groundedExplanation.eligibleKnowledgeCount}`)}
+          {neutralPill(`Parça ${groundedExplanation.groundedChunkCount}`)}
+          {groundedExplanation.coverageLabel
+            ? neutralPill(groundedExplanation.coverageLabel)
+            : null}
+          {groundedExplanation.sourceRuleCount > 0
+            ? neutralPill(`Kural ${groundedExplanation.sourceRuleCount}`)
+            : null}
+          {groundedExplanation.ruleConflictCount > 0
+            ? statusPill({
+                label: `Çakışma ${groundedExplanation.ruleConflictCount}`,
+                className: "border-rose-800 bg-rose-950 text-rose-300",
+              })
+            : null}
           {groundedExplanation.contributingDocTypes.map((docType) => (
             <span
               key={docType}
@@ -232,8 +233,18 @@ export function ProductDocumentsSummary({
               {getGroundedDocTypeLabel(docType)}
             </span>
           ))}
+          {!summary.completeRequiredSet
+            ? summary.missingRequiredTypes.map((type) => (
+                <span
+                  key={type}
+                  className="inline-flex rounded-full border border-amber-800 bg-amber-950 px-2.5 py-1 text-xs text-amber-300"
+                >
+                  Eksik {getProductDocumentTypeLabel(type)}
+                </span>
+              ))
+            : null}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

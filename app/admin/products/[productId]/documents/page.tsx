@@ -7,6 +7,7 @@ import { AddProductDocumentDrawer } from "./AddProductDocumentDrawer";
 import { DEFAULT_PRODUCT_DOCUMENT_FILTERS } from "./constants";
 import { ProductDocumentsSummary } from "./ProductDocumentsSummary";
 import { ProductDocumentsTable } from "./ProductDocumentsTable";
+import { ProductWorkshopAssetsSummary } from "../workshop-assets/ProductWorkshopAssetsSummary";
 import { buildProductDocumentsSummary } from "./lib";
 import { productDocumentFiltersSchema } from "./schema";
 import {
@@ -216,6 +217,8 @@ export default async function ProductDocumentsPage({
         groundedExplanation={groundedExplanation}
         decisionSignal={decisionSignal}
       />
+
+      <ProductWorkshopAssetsSummary productId={product.id} />
 
       <ProductDocumentsTable
         documents={documents}
