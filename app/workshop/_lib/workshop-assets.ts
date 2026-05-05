@@ -35,6 +35,21 @@ export type GroupedWorkshopAssets = {
   layerGroups: WorkshopAssetCameraGroup[];
 };
 
+export type WorkshopAssetReadinessSummary = {
+  totalAssets: number;
+  imageCount: number;
+  model3dCount: number;
+  videoCount: number;
+  linkCount: number;
+  cameraViews: string[];
+  productCount: number;
+  layerCount: number;
+  hasAnyAssets: boolean;
+  hasImageLayers: boolean;
+  selectedProductAssetCount: number;
+  productAssetCounts: Record<string, number>;
+};
+
 type WorkshopAssetRow = {
   id: string;
   productId: string;
@@ -352,6 +367,53 @@ export function buildWorkshopAssetIndex(assets: WorkshopVisualAsset[]) {
         link: 0,
       } satisfies Record<WorkshopAssetReferenceKind, number>,
     ),
+  };
+}
+
+export function buildWorkshopAssetReadinessSummary(
+  assets: WorkshopVisualAsset[],
+  selectedProductIds: string[] = [],
+): WorkshopAssetReadinessSummary {
+  const productAssetCounts: Record<string, number> = {};
+
+  for (const asset of assets) {
+    productAssetCounts[asset.productId] = (productAssetCounts[asset.productId] ?? 0) + 1;
+  }
+
+  const selectedProductIdSet = new Set(selectedProductIds);
+  const selectedProductAssetCount = Object.entries(productAssetCounts).reduce(
+    (count, [productId, assetCount]) =>
+      selectedProductIdSet.has(productId) ? count + assetCount : count,
+    0,
+  );
+  const referenceCounts = assets.reduce(
+    (acc, asset) => {
+      acc[asset.referenceKind] += 1;
+      return acc;
+    },
+    {
+      image: 0,
+      model3d: 0,
+      video: 0,
+      link: 0,
+    } satisfies Record<WorkshopAssetReferenceKind, number>,
+  );
+
+  return {
+    totalAssets: assets.length,
+    imageCount: referenceCounts.image,
+    model3dCount: referenceCounts.model3d,
+    videoCount: referenceCounts.video,
+    linkCount: referenceCounts.link,
+    cameraViews: Array.from(new Set(assets.map((asset) => asset.cameraView))).sort(
+      (left, right) => left.localeCompare(right, "tr"),
+    ),
+    productCount: Object.keys(productAssetCounts).length,
+    layerCount: assets.length,
+    hasAnyAssets: assets.length > 0,
+    hasImageLayers: referenceCounts.image > 0,
+    selectedProductAssetCount,
+    productAssetCounts,
   };
 }
 

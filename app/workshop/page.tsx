@@ -4,6 +4,10 @@ import { getDbOrThrow } from "@/db/db";
 import { categories, models, products } from "@/db/schema";
 import ConfiguratorClient from "@/app/workshop/ConfiguratorClient";
 import { getLayerFromCategory } from "@/app/workshop/focusTargets";
+import {
+  buildWorkshopAssetReadinessSummary,
+  getWorkshopAssetsForModel,
+} from "@/app/workshop/_lib/workshop-assets";
 
 export default async function DesignPage() {
   const db = getDbOrThrow();
@@ -47,9 +51,22 @@ export default async function DesignPage() {
     .from(models)
     .where(eq(models.status, "active"));
 
+  const workshopAssetReadinessEntries = await Promise.all(
+    dbModels.map(async (model) => {
+      const assets = await getWorkshopAssetsForModel(model.id);
+
+      return [model.id, buildWorkshopAssetReadinessSummary(assets)] as const;
+    }),
+  );
+  const workshopAssetReadinessByModel = Object.fromEntries(workshopAssetReadinessEntries);
+
   return (
     <main className="bg-[#050505] min-h-screen">
-      <ConfiguratorClient dbProducts={dbProducts} dbModels={dbModels} />
+      <ConfiguratorClient
+        dbProducts={dbProducts}
+        dbModels={dbModels}
+        workshopAssetReadinessByModel={workshopAssetReadinessByModel}
+      />
     </main>
   );
 }

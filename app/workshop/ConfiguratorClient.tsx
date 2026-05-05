@@ -14,6 +14,7 @@ import {
 
 import { saveEngineeringBuild } from "./actions";
 import ThreeDConfiguratorViewer from "./ThreeDConfiguratorViewer";
+import type { WorkshopAssetReadinessSummary } from "./_lib/workshop-assets";
 
 type WorkshopProduct = {
   id: string;
@@ -889,9 +890,11 @@ function getIsometricSceneLayers(input: {
 export default function ConfiguratorClient({
   dbProducts,
   dbModels,
+  workshopAssetReadinessByModel,
 }: {
   dbProducts: WorkshopProduct[];
   dbModels: WorkshopModel[];
+  workshopAssetReadinessByModel?: Record<string, WorkshopAssetReadinessSummary>;
 }) {
   const [activeVehicle, setActiveVehicle] = useState<WorkshopModel | null>(null);
   const [selectedLayout, setSelectedLayout] = useState<ProjectLayoutTemplate | null>(null);
@@ -1263,6 +1266,41 @@ export default function ConfiguratorClient({
       visualEffectSummary: Array.from(visualEffectPairs.values()).join(", ") || "Yok",
     };
   }, [cart]);
+  const activeWorkshopAssetReadiness = useMemo(() => {
+    if (!activeVehicle) {
+      return null;
+    }
+
+    const readiness = workshopAssetReadinessByModel?.[activeVehicle.id] ?? null;
+
+    if (!readiness) {
+      return null;
+    }
+
+    const selectedProductIds = new Set(cart.map((item) => item.product.id));
+    const selectedProductAssetCount = Object.entries(readiness.productAssetCounts).reduce(
+      (count, [productId, assetCount]) =>
+        selectedProductIds.has(productId) ? count + assetCount : count,
+      0,
+    );
+
+    return {
+      ...readiness,
+      selectedProductAssetCount,
+    };
+  }, [activeVehicle, cart, workshopAssetReadinessByModel]);
+  const workshopAssetCameraSummary = useMemo(() => {
+    const cameraViews = activeWorkshopAssetReadiness?.cameraViews ?? [];
+
+    if (cameraViews.length === 0) {
+      return "Görünüm bekleniyor";
+    }
+
+    const visibleViews = cameraViews.slice(0, 2).join(", ");
+    const remainingCount = cameraViews.length - 2;
+
+    return remainingCount > 0 ? `${visibleViews} +${remainingCount}` : visibleViews;
+  }, [activeWorkshopAssetReadiness]);
   const totalBudget = cart.reduce(
     (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
     0,
@@ -2102,6 +2140,34 @@ export default function ConfiguratorClient({
                               </strong>
                             </span>
                           </div>
+                          {activeWorkshopAssetReadiness ? (
+                            <div className="mt-2 rounded-[0.6rem] border border-blue-400/15 bg-blue-500/[0.05] px-2.5 py-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[8px] font-medium tracking-[0.16em] text-blue-200">
+                                  Görsel varlık durumu
+                                </span>
+                                <span className="rounded-full border border-blue-300/20 bg-blue-400/[0.08] px-1.5 py-0.5 text-[7px] font-medium text-blue-100">
+                                  {activeWorkshopAssetReadiness.totalAssets} varlık
+                                </span>
+                              </div>
+                              <p className="mt-1 truncate text-[8px] leading-snug text-zinc-400">
+                                {activeWorkshopAssetReadiness.hasAnyAssets
+                                  ? `Bu model için ${activeWorkshopAssetReadiness.totalAssets} Workshop varlığı hazır.`
+                                  : "Seçili model için Workshop varlığı bekleniyor."}
+                              </p>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                                  Kamera: {workshopAssetCameraSummary}
+                                </span>
+                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                                  Seçili: {activeWorkshopAssetReadiness.selectedProductAssetCount}
+                                </span>
+                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                                  2.5D render sonraki sprintte
+                                </span>
+                              </div>
+                            </div>
+                          ) : null}
                           {saveSuccessHint ? (
                             <p className="mt-1 text-[8px] leading-snug text-zinc-500">
                               {saveSuccessHint}
