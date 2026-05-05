@@ -4,7 +4,25 @@ import { useWorkshopStore } from "../store/workshopStore";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function WorkshopSelector({ models, packages }: { models: any[], packages: any[] }) {
+type WorkshopSelectorModel = {
+  id: string;
+  baseWeightKg: string | number;
+  maxPayloadKg: string | number;
+};
+
+type WorkshopSelectorPackage = {
+  id: string;
+  slug: string;
+  isDefault: boolean | null;
+};
+
+export default function WorkshopSelector({
+  models,
+  packages,
+}: {
+  models: WorkshopSelectorModel[];
+  packages: WorkshopSelectorPackage[];
+}) {
   const { selectedModel, selectedPackage, setModel, setPackage } = useWorkshopStore();
   const router = useRouter();
 
