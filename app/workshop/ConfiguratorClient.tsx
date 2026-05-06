@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { saveEngineeringBuild } from "./actions";
+import WorkshopImageLayerPreview from "./_components/WorkshopImageLayerPreview";
 import ThreeDConfiguratorViewer from "./ThreeDConfiguratorViewer";
 import {
   buildWorkshopLayerSelection,
@@ -1981,6 +1982,13 @@ export default function ConfiguratorClient({
                       <div className="relative flex flex-1 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),linear-gradient(180deg,#0c0c0e,#030303)]">
                         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:44px_44px]" />
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_40%)]" />
+                        <WorkshopImageLayerPreview
+                          plan={activeWorkshopRenderPlan}
+                          enabled={
+                            activeWorkshopRenderPlan.canRenderPreview &&
+                            activeWorkshopRenderPlan.imageLayerCount > 0
+                          }
+                        />
                         <div className="absolute left-5 top-5 z-10 max-w-md rounded-[1.1rem] border border-white/8 bg-black/30 px-4 py-3 backdrop-blur-sm">
                           <p className="text-[9px] font-medium tracking-[0.18em] text-zinc-500">
                             Proje Krokisi
