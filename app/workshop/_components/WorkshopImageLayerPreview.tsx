@@ -61,10 +61,14 @@ export default function WorkshopImageLayerPreview({
     (item) => !failedLayerKeys[item.layerKey],
   );
   const failedLayerCount = imageLayerItems.length - visibleLayerItems.length;
+  const hasVisibleLayers = visibleLayerItems.length > 0;
+  const hasOnlyFailedLayers = imageLayerItems.length > 0 && !hasVisibleLayers;
 
   return (
     <div
       className={`pointer-events-none absolute left-5 bottom-16 z-[9] w-56 rounded-[0.85rem] border border-white/8 bg-black/30 p-2 backdrop-blur-sm ${className}`}
+      role="status"
+      aria-label="Katman önizleme durumu"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[8px] font-medium tracking-[0.14em] text-blue-200">
@@ -77,38 +81,45 @@ export default function WorkshopImageLayerPreview({
       <p className="mt-1 truncate text-[7px] text-zinc-500">
         Görsel katmanlar deneniyor. Tam 2.5D render sonraki sprintte.
       </p>
-      <div className="relative mt-2 h-24 overflow-hidden rounded-[0.65rem] border border-white/6 bg-white/[0.025]">
-        {visibleLayerItems.map(({ layer, layerKey }, index) => {
-          const isUsingFallback = Boolean(fallbackLayerKeys[layerKey]);
-          const src = isUsingFallback && layer.fallbackUrl ? layer.fallbackUrl : layer.sourceUrl;
+      {hasVisibleLayers ? (
+        <div className="relative mt-2 h-24 overflow-hidden rounded-[0.65rem] border border-white/6 bg-white/[0.025]">
+          {visibleLayerItems.map(({ layer, layerKey }, index) => {
+            const isUsingFallback = Boolean(fallbackLayerKeys[layerKey]);
+            const src =
+              isUsingFallback && layer.fallbackUrl ? layer.fallbackUrl : layer.sourceUrl;
 
-          return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={layerKey}
-              src={src}
-              alt=""
-              className="absolute inset-0 h-full w-full object-contain"
-              style={{ zIndex: index + 1 }}
-              onError={() => {
-                if (!isUsingFallback && layer.fallbackUrl) {
-                  setFallbackLayerKeys((current) => ({
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={layerKey}
+                src={src}
+                alt=""
+                className="absolute inset-0 h-full w-full object-contain"
+                style={{ zIndex: index + 1 }}
+                onError={() => {
+                  if (!isUsingFallback && layer.fallbackUrl) {
+                    setFallbackLayerKeys((current) => ({
+                      ...current,
+                      [layerKey]: true,
+                    }));
+                    return;
+                  }
+
+                  setFailedLayerKeys((current) => ({
                     ...current,
                     [layerKey]: true,
                   }));
-                  return;
-                }
-
-                setFailedLayerKeys((current) => ({
-                  ...current,
-                  [layerKey]: true,
-                }));
-              }}
-            />
-          );
-        })}
-      </div>
-      {failedLayerCount > 0 ? (
+                }}
+              />
+            );
+          })}
+        </div>
+      ) : null}
+      {hasOnlyFailedLayers ? (
+        <p className="mt-2 rounded-[0.6rem] border border-amber-400/15 bg-amber-500/[0.06] px-2 py-1 text-[7px] text-amber-200">
+          Görsel katman yüklenemedi.
+        </p>
+      ) : failedLayerCount > 0 ? (
         <p className="mt-1 text-[7px] text-amber-200">
           Yüklenemeyen katman: {failedLayerCount}
         </p>
