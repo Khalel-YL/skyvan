@@ -4,22 +4,26 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db/db";
 import { models, products, visualAssets2d } from "@/db/schema";
+import {
+  type WorkshopAssetLayerMetadata,
+  type WorkshopAssetReadinessSummary,
+  type WorkshopAssetReferenceKind,
+} from "./workshop-asset-selection";
 
-export type WorkshopAssetReferenceKind = "image" | "model3d" | "video" | "link";
+export {
+  buildWorkshopLayerSelection,
+  getDefaultWorkshopCameraView,
+  type WorkshopAssetLayerMetadata,
+  type WorkshopAssetReadinessSummary,
+  type WorkshopAssetReferenceKind,
+  type WorkshopLayerSelectionSummary,
+} from "./workshop-asset-selection";
 
-export type WorkshopVisualAsset = {
-  id: string;
-  productId: string;
-  modelId: string;
-  cameraView: string;
-  zIndexLayer: number;
-  assetUrl: string;
-  fallbackUrl: string | null;
+export type WorkshopVisualAsset = WorkshopAssetLayerMetadata & {
   productLabel: string | null;
   productSlug: string | null;
   modelLabel: string | null;
   modelSlug: string | null;
-  referenceKind: WorkshopAssetReferenceKind;
 };
 
 export type WorkshopAssetCameraGroup = {
@@ -33,21 +37,6 @@ export type GroupedWorkshopAssets = {
   cameraViews: string[];
   assets: WorkshopVisualAsset[];
   layerGroups: WorkshopAssetCameraGroup[];
-};
-
-export type WorkshopAssetReadinessSummary = {
-  totalAssets: number;
-  imageCount: number;
-  model3dCount: number;
-  videoCount: number;
-  linkCount: number;
-  cameraViews: string[];
-  productCount: number;
-  layerCount: number;
-  hasAnyAssets: boolean;
-  hasImageLayers: boolean;
-  selectedProductAssetCount: number;
-  productAssetCounts: Record<string, number>;
 };
 
 type WorkshopAssetRow = {

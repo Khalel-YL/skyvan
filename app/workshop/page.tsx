@@ -7,7 +7,23 @@ import { getLayerFromCategory } from "@/app/workshop/focusTargets";
 import {
   buildWorkshopAssetReadinessSummary,
   getWorkshopAssetsForModel,
+  type WorkshopAssetLayerMetadata,
 } from "@/app/workshop/_lib/workshop-assets";
+
+function sanitizeWorkshopAssetLayers(
+  assets: Awaited<ReturnType<typeof getWorkshopAssetsForModel>>,
+): WorkshopAssetLayerMetadata[] {
+  return assets.map((asset) => ({
+    id: asset.id,
+    productId: asset.productId,
+    modelId: asset.modelId,
+    cameraView: asset.cameraView,
+    zIndexLayer: asset.zIndexLayer,
+    referenceKind: asset.referenceKind,
+    assetUrl: asset.assetUrl,
+    fallbackUrl: asset.fallbackUrl,
+  }));
+}
 
 export default async function DesignPage() {
   const db = getDbOrThrow();
@@ -51,14 +67,25 @@ export default async function DesignPage() {
     .from(models)
     .where(eq(models.status, "active"));
 
-  const workshopAssetReadinessEntries = await Promise.all(
+  const workshopAssetEntries = await Promise.all(
     dbModels.map(async (model) => {
       const assets = await getWorkshopAssetsForModel(model.id);
 
-      return [model.id, buildWorkshopAssetReadinessSummary(assets)] as const;
+      return [
+        model.id,
+        {
+          readiness: buildWorkshopAssetReadinessSummary(assets),
+          layers: sanitizeWorkshopAssetLayers(assets),
+        },
+      ] as const;
     }),
   );
-  const workshopAssetReadinessByModel = Object.fromEntries(workshopAssetReadinessEntries);
+  const workshopAssetReadinessByModel = Object.fromEntries(
+    workshopAssetEntries.map(([modelId, entry]) => [modelId, entry.readiness] as const),
+  );
+  const workshopAssetsByModel = Object.fromEntries(
+    workshopAssetEntries.map(([modelId, entry]) => [modelId, entry.layers] as const),
+  );
 
   return (
     <main className="bg-[#050505] min-h-screen">
@@ -66,6 +93,7 @@ export default async function DesignPage() {
         dbProducts={dbProducts}
         dbModels={dbModels}
         workshopAssetReadinessByModel={workshopAssetReadinessByModel}
+        workshopAssetsByModel={workshopAssetsByModel}
       />
     </main>
   );

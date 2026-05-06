@@ -14,7 +14,12 @@ import {
 
 import { saveEngineeringBuild } from "./actions";
 import ThreeDConfiguratorViewer from "./ThreeDConfiguratorViewer";
-import type { WorkshopAssetReadinessSummary } from "./_lib/workshop-assets";
+import {
+  buildWorkshopLayerSelection,
+  getDefaultWorkshopCameraView,
+  type WorkshopAssetLayerMetadata,
+  type WorkshopAssetReadinessSummary,
+} from "./_lib/workshop-asset-selection";
 
 type WorkshopProduct = {
   id: string;
@@ -891,10 +896,12 @@ export default function ConfiguratorClient({
   dbProducts,
   dbModels,
   workshopAssetReadinessByModel,
+  workshopAssetsByModel,
 }: {
   dbProducts: WorkshopProduct[];
   dbModels: WorkshopModel[];
   workshopAssetReadinessByModel?: Record<string, WorkshopAssetReadinessSummary>;
+  workshopAssetsByModel?: Record<string, WorkshopAssetLayerMetadata[]>;
 }) {
   const [activeVehicle, setActiveVehicle] = useState<WorkshopModel | null>(null);
   const [selectedLayout, setSelectedLayout] = useState<ProjectLayoutTemplate | null>(null);
@@ -908,6 +915,7 @@ export default function ConfiguratorClient({
   >([]);
   const [hasAiDecisionBundleError, setHasAiDecisionBundleError] = useState(false);
   const [activeVehicleGroupId, setActiveVehicleGroupId] = useState<string | null>(null);
+  const [selectedCameraView] = useState("");
   const [activeVisualLayers, setActiveVisualLayers] = useState<Record<string, boolean>>({});
   const [activeMaterials, setActiveMaterials] = useState<{
     furniture: string | null;
@@ -1289,8 +1297,42 @@ export default function ConfiguratorClient({
       selectedProductAssetCount,
     };
   }, [activeVehicle, cart, workshopAssetReadinessByModel]);
+  const selectedProductIds = useMemo(
+    () => cart.map((item) => item.product.id),
+    [cart],
+  );
+  const activeWorkshopAssets = useMemo(() => {
+    if (!activeVehicle) {
+      return [];
+    }
+
+    return workshopAssetsByModel?.[activeVehicle.id] ?? [];
+  }, [activeVehicle, workshopAssetsByModel]);
+  const defaultWorkshopCameraView = useMemo(
+    () => getDefaultWorkshopCameraView(activeWorkshopAssets),
+    [activeWorkshopAssets],
+  );
+  const effectiveWorkshopCameraView = useMemo(() => {
+    if (!selectedCameraView) {
+      return defaultWorkshopCameraView;
+    }
+
+    return activeWorkshopAssets.some((asset) => asset.cameraView === selectedCameraView)
+      ? selectedCameraView
+      : defaultWorkshopCameraView;
+  }, [activeWorkshopAssets, defaultWorkshopCameraView, selectedCameraView]);
+
+  const activeWorkshopLayerSelection = useMemo(
+    () =>
+      buildWorkshopLayerSelection({
+        assets: activeWorkshopAssets,
+        selectedProductIds,
+        cameraView: effectiveWorkshopCameraView,
+      }),
+    [activeWorkshopAssets, effectiveWorkshopCameraView, selectedProductIds],
+  );
   const workshopAssetCameraSummary = useMemo(() => {
-    const cameraViews = activeWorkshopAssetReadiness?.cameraViews ?? [];
+    const cameraViews = activeWorkshopLayerSelection.availableCameraViews;
 
     if (cameraViews.length === 0) {
       return "Görünüm bekleniyor";
@@ -1300,7 +1342,7 @@ export default function ConfiguratorClient({
     const remainingCount = cameraViews.length - 2;
 
     return remainingCount > 0 ? `${visibleViews} +${remainingCount}` : visibleViews;
-  }, [activeWorkshopAssetReadiness]);
+  }, [activeWorkshopLayerSelection.availableCameraViews]);
   const totalBudget = cart.reduce(
     (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
     0,
@@ -2027,8 +2069,39 @@ export default function ConfiguratorClient({
                   </section>
 
                   <section className="overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
-                    <div className="flex h-full items-center justify-between gap-4 px-4">
-                      <div className="min-w-0 flex-1">
+                    <div className="flex h-full flex-col">
+                      {activeWorkshopAssetReadiness ? (
+                        <div className="flex h-7 shrink-0 items-center gap-2 border-b border-blue-400/10 bg-blue-500/[0.035] px-4">
+                          <span className="shrink-0 text-[8px] font-medium tracking-[0.16em] text-blue-200">
+                            Görsel durum
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[8px] text-zinc-400">
+                            {activeWorkshopLayerSelection.readinessLabel}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1 overflow-hidden">
+                            <span className="rounded-full border border-blue-300/15 bg-black/18 px-1.5 py-0.5 text-[7px] text-blue-100">
+                              {activeWorkshopAssetReadiness.totalAssets} varlık
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Katman: {activeWorkshopLayerSelection.selectedLayerCount}
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Eksik: {activeWorkshopLayerSelection.missingProductIds.length}
+                            </span>
+                            <span className="max-w-[9rem] truncate rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Kamera:{" "}
+                              {activeWorkshopLayerSelection.cameraView ||
+                                workshopAssetCameraSummary}
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-500">
+                              2.5D sonraki sprint
+                            </span>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="flex min-h-0 flex-1 items-center justify-between gap-4 px-4">
+                        <div className="min-w-0 flex-1">
                         <div className="mb-2 flex items-center gap-2">
                           <span className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
                             Özet
@@ -2098,8 +2171,8 @@ export default function ConfiguratorClient({
                         </div>
                       </div>
 
-                      <div className="flex h-full w-[336px] shrink-0 flex-col items-end justify-between gap-2 border-l border-white/6 py-3 pl-4">
-                        <div className="w-full">
+                        <div className="flex h-full w-[336px] shrink-0 flex-col items-end justify-between gap-2 border-l border-white/6 py-2 pl-4">
+                          <div className="w-full">
                           <p className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
                             Bütçe
                           </p>
@@ -2140,34 +2213,6 @@ export default function ConfiguratorClient({
                               </strong>
                             </span>
                           </div>
-                          {activeWorkshopAssetReadiness ? (
-                            <div className="mt-2 rounded-[0.6rem] border border-blue-400/15 bg-blue-500/[0.05] px-2.5 py-1.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[8px] font-medium tracking-[0.16em] text-blue-200">
-                                  Görsel varlık durumu
-                                </span>
-                                <span className="rounded-full border border-blue-300/20 bg-blue-400/[0.08] px-1.5 py-0.5 text-[7px] font-medium text-blue-100">
-                                  {activeWorkshopAssetReadiness.totalAssets} varlık
-                                </span>
-                              </div>
-                              <p className="mt-1 truncate text-[8px] leading-snug text-zinc-400">
-                                {activeWorkshopAssetReadiness.hasAnyAssets
-                                  ? `Bu model için ${activeWorkshopAssetReadiness.totalAssets} Workshop varlığı hazır.`
-                                  : "Seçili model için Workshop varlığı bekleniyor."}
-                              </p>
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                                  Kamera: {workshopAssetCameraSummary}
-                                </span>
-                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                                  Seçili: {activeWorkshopAssetReadiness.selectedProductAssetCount}
-                                </span>
-                                <span className="rounded-full border border-white/6 bg-black/20 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                                  2.5D render sonraki sprintte
-                                </span>
-                              </div>
-                            </div>
-                          ) : null}
                           {saveSuccessHint ? (
                             <p className="mt-1 text-[8px] leading-snug text-zinc-500">
                               {saveSuccessHint}
@@ -2197,6 +2242,7 @@ export default function ConfiguratorClient({
                           </button>
                         </div>
                       </div>
+                    </div>
                     </div>
                   </section>
                 </section>
