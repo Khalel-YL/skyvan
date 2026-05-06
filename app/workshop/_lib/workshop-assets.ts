@@ -69,7 +69,7 @@ function getSafeErrorMessage(error: unknown) {
 }
 
 function logWorkshopAssetReadError(action: string, error: unknown, count?: number) {
-  console.error(`workshop-assets/${action} read error`, {
+  console.warn(`workshop-assets/${action} read error`, {
     action,
     count,
     errorName: getSafeErrorName(error),

@@ -2066,6 +2066,13 @@ export default function ConfiguratorClient({
                                   Eksik ürün:{" "}
                                   {activeWorkshopRenderDiagnostics.missingProductCount}
                                 </span>
+                                <span>
+                                  Eksik kayıt:{" "}
+                                  {activeWorkshopRenderDiagnostics.incompleteLayerCount}
+                                </span>
+                                <span>
+                                  Tekrar: {activeWorkshopRenderDiagnostics.duplicateLayerCount}
+                                </span>
                               </div>
                               <p className="mt-1 truncate text-zinc-500">
                                 {activeWorkshopRenderDiagnostics.note}
