@@ -20,6 +20,7 @@ import {
   type WorkshopAssetLayerMetadata,
   type WorkshopAssetReadinessSummary,
 } from "./_lib/workshop-asset-selection";
+import { buildWorkshopRenderPlan } from "./_lib/workshop-render-contract";
 
 type WorkshopProduct = {
   id: string;
@@ -1331,6 +1332,17 @@ export default function ConfiguratorClient({
       }),
     [activeWorkshopAssets, effectiveWorkshopCameraView, selectedProductIds],
   );
+  const activeWorkshopRenderPlan = useMemo(
+    () =>
+      buildWorkshopRenderPlan({
+        modelId: activeVehicle?.id ?? null,
+        cameraView: activeWorkshopLayerSelection.cameraView,
+        selectedProductIds: activeWorkshopLayerSelection.selectedProductIds,
+        orderedLayers: activeWorkshopLayerSelection.orderedLayers,
+        missingProductIds: activeWorkshopLayerSelection.missingProductIds,
+      }),
+    [activeVehicle?.id, activeWorkshopLayerSelection],
+  );
   const workshopAssetCameraSummary = useMemo(() => {
     const cameraViews = activeWorkshopLayerSelection.availableCameraViews;
 
@@ -1981,6 +1993,30 @@ export default function ConfiguratorClient({
                           }`}
                         >
                           {is3dFallbackActive ? "2.5D Fallback" : "3D Preview"}
+                        </div>
+                        <div className="absolute right-5 top-14 z-10 max-w-[24rem] rounded-[0.75rem] border border-white/8 bg-black/35 px-2.5 py-1.5 backdrop-blur-sm">
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            <span className="shrink-0 text-[8px] font-medium tracking-[0.14em] text-blue-200">
+                              Renderer sözleşmesi
+                            </span>
+                            <span className="min-w-0 truncate text-[8px] text-zinc-400">
+                              {activeWorkshopRenderPlan.statusLabel}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Render katmanı: {activeWorkshopRenderPlan.imageLayerCount}
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Referans: {activeWorkshopRenderPlan.nonRenderableReferenceCount}
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
+                              Eksik ürün: {activeWorkshopRenderPlan.missingProductIds.length}
+                            </span>
+                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-500">
+                              Gerçek 2.5D çizim sonraki sprintte.
+                            </span>
+                          </div>
                         </div>
                         <div className="absolute inset-x-5 bottom-5 z-10 flex flex-wrap gap-2">
                           {selectedLayout.tags.map((tag) => (
