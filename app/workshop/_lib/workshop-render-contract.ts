@@ -38,6 +38,27 @@ export type WorkshopRenderPlan = {
   note: string;
 };
 
+export type WorkshopRenderLayerDiagnostic = {
+  zIndexLayer: number;
+  renderMode: WorkshopRenderMode;
+  renderModeLabel: string;
+  cameraView: string;
+};
+
+export type WorkshopRenderDiagnostics = {
+  statusLabel: string;
+  note: string;
+  cameraView: string;
+  layerCount: number;
+  imageLayerCount: number;
+  nonRenderableReferenceCount: number;
+  missingProductCount: number;
+  canRenderPreviewLabel: "Uygun" | "Bekliyor";
+  modeCounts: Record<WorkshopRenderMode, number>;
+  layerSummaries: WorkshopRenderLayerDiagnostic[];
+  extraLayerCount: number;
+};
+
 function getRenderMode(referenceKind: WorkshopAssetReferenceKind): WorkshopRenderMode {
   if (referenceKind === "image") {
     return "image-layer";
@@ -60,7 +81,10 @@ function getRenderPlanStatus(input: {
   nonRenderableReferenceCount: number;
   missingProductCount: number;
 }): WorkshopRenderPlanStatus {
-  if (input.selectedProductCount === 0 || input.imageLayerCount + input.nonRenderableReferenceCount === 0) {
+  if (
+    input.selectedProductCount === 0 ||
+    input.imageLayerCount + input.nonRenderableReferenceCount === 0
+  ) {
     return "empty";
   }
 
@@ -73,6 +97,22 @@ function getRenderPlanStatus(input: {
   }
 
   return "ready";
+}
+
+function getRenderModeLabel(renderMode: WorkshopRenderMode) {
+  if (renderMode === "image-layer") {
+    return "Image katman";
+  }
+
+  if (renderMode === "model3d-reference") {
+    return "GLB referans";
+  }
+
+  if (renderMode === "video-reference") {
+    return "Video referans";
+  }
+
+  return "Link referans";
 }
 
 function getRenderPlanCopy(status: WorkshopRenderPlanStatus) {
@@ -159,5 +199,42 @@ export function buildWorkshopRenderPlan(input: {
     status,
     statusLabel: copy.statusLabel,
     note: copy.note,
+  };
+}
+
+export function buildWorkshopRenderDiagnostics(
+  plan: WorkshopRenderPlan,
+): WorkshopRenderDiagnostics {
+  const modeCounts = plan.orderedLayers.reduce(
+    (counts, layer) => ({
+      ...counts,
+      [layer.renderMode]: counts[layer.renderMode] + 1,
+    }),
+    {
+      "image-layer": 0,
+      "model3d-reference": 0,
+      "video-reference": 0,
+      "link-reference": 0,
+    } satisfies Record<WorkshopRenderMode, number>,
+  );
+  const layerSummaries = plan.orderedLayers.slice(0, 3).map((layer) => ({
+    zIndexLayer: layer.zIndexLayer,
+    renderMode: layer.renderMode,
+    renderModeLabel: getRenderModeLabel(layer.renderMode),
+    cameraView: layer.cameraView,
+  }));
+
+  return {
+    statusLabel: plan.statusLabel,
+    note: plan.note,
+    cameraView: plan.cameraView || "Bekliyor",
+    layerCount: plan.layerCount,
+    imageLayerCount: plan.imageLayerCount,
+    nonRenderableReferenceCount: plan.nonRenderableReferenceCount,
+    missingProductCount: plan.missingProductIds.length,
+    canRenderPreviewLabel: plan.canRenderPreview ? "Uygun" : "Bekliyor",
+    modeCounts,
+    layerSummaries,
+    extraLayerCount: Math.max(plan.orderedLayers.length - layerSummaries.length, 0),
   };
 }

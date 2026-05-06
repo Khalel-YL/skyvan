@@ -20,7 +20,10 @@ import {
   type WorkshopAssetLayerMetadata,
   type WorkshopAssetReadinessSummary,
 } from "./_lib/workshop-asset-selection";
-import { buildWorkshopRenderPlan } from "./_lib/workshop-render-contract";
+import {
+  buildWorkshopRenderDiagnostics,
+  buildWorkshopRenderPlan,
+} from "./_lib/workshop-render-contract";
 
 type WorkshopProduct = {
   id: string;
@@ -1343,6 +1346,10 @@ export default function ConfiguratorClient({
       }),
     [activeVehicle?.id, activeWorkshopLayerSelection],
   );
+  const activeWorkshopRenderDiagnostics = useMemo(
+    () => buildWorkshopRenderDiagnostics(activeWorkshopRenderPlan),
+    [activeWorkshopRenderPlan],
+  );
   const workshopAssetCameraSummary = useMemo(() => {
     const cameraViews = activeWorkshopLayerSelection.availableCameraViews;
 
@@ -2017,6 +2024,76 @@ export default function ConfiguratorClient({
                               Gerçek 2.5D çizim sonraki sprintte.
                             </span>
                           </div>
+                          <details className="group mt-1">
+                            <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-300 transition hover:text-white [&::-webkit-details-marker]:hidden">
+                              Plan detayı
+                            </summary>
+                            <div className="mt-1.5 max-w-[24rem] rounded-[0.65rem] border border-white/8 bg-black/45 p-2 text-[7px] text-zinc-400 shadow-[0_14px_38px_rgba(0,0,0,0.28)]">
+                              <div className="grid grid-cols-2 gap-1">
+                                <span>Durum: {activeWorkshopRenderDiagnostics.statusLabel}</span>
+                                <span>Model: {activeWorkshopRenderPlan.modelId ? "Seçili" : "Bekliyor"}</span>
+                                <span>Kamera: {activeWorkshopRenderDiagnostics.cameraView}</span>
+                                <span>
+                                  Önizleme:{" "}
+                                  {activeWorkshopRenderDiagnostics.canRenderPreviewLabel}
+                                </span>
+                                <span>
+                                  Image katman:{" "}
+                                  {activeWorkshopRenderDiagnostics.modeCounts["image-layer"]}
+                                </span>
+                                <span>
+                                  GLB referans:{" "}
+                                  {
+                                    activeWorkshopRenderDiagnostics.modeCounts[
+                                      "model3d-reference"
+                                    ]
+                                  }
+                                </span>
+                                <span>
+                                  Video referans:{" "}
+                                  {
+                                    activeWorkshopRenderDiagnostics.modeCounts[
+                                      "video-reference"
+                                    ]
+                                  }
+                                </span>
+                                <span>
+                                  Link referans:{" "}
+                                  {activeWorkshopRenderDiagnostics.modeCounts["link-reference"]}
+                                </span>
+                                <span>Katman: {activeWorkshopRenderDiagnostics.layerCount}</span>
+                                <span>
+                                  Eksik ürün:{" "}
+                                  {activeWorkshopRenderDiagnostics.missingProductCount}
+                                </span>
+                              </div>
+                              <p className="mt-1 truncate text-zinc-500">
+                                {activeWorkshopRenderDiagnostics.note}
+                              </p>
+                              {activeWorkshopRenderDiagnostics.layerSummaries.length > 0 ? (
+                                <div className="mt-1 space-y-0.5 border-t border-white/6 pt-1">
+                                  {activeWorkshopRenderDiagnostics.layerSummaries.map(
+                                    (layer) => (
+                                      <div
+                                        key={`${layer.zIndexLayer}:${layer.renderMode}:${layer.cameraView}`}
+                                        className="flex items-center justify-between gap-2"
+                                      >
+                                        <span>Katman {layer.zIndexLayer}</span>
+                                        <span className="truncate">{layer.renderModeLabel}</span>
+                                        <span className="truncate">{layer.cameraView}</span>
+                                      </div>
+                                    ),
+                                  )}
+                                  {activeWorkshopRenderDiagnostics.extraLayerCount > 0 ? (
+                                    <p className="text-zinc-500">
+                                      +{activeWorkshopRenderDiagnostics.extraLayerCount} katman
+                                      daha
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          </details>
                         </div>
                         <div className="absolute inset-x-5 bottom-5 z-10 flex flex-wrap gap-2">
                           {selectedLayout.tags.map((tag) => (
