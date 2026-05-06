@@ -88,6 +88,28 @@ function isSafeStoragePath(value: string) {
   return /^[a-zA-Z0-9._~!$&'()*+,;=:@/-]+$/.test(normalized);
 }
 
+function isSafeWorkshopPublicPath(value: string) {
+  const normalized = value.trim();
+
+  if (!normalized.startsWith("/workshop-assets/")) {
+    return false;
+  }
+
+  if (
+    normalized.startsWith("//") ||
+    normalized.includes("../") ||
+    normalized.toLowerCase().includes("%2e%2e")
+  ) {
+    return false;
+  }
+
+  if (normalized.includes("\\") || normalized.includes("\0")) {
+    return false;
+  }
+
+  return /^\/workshop-assets\/[a-zA-Z0-9._~!$&'()*+,;=:@/-]+$/.test(normalized);
+}
+
 export function isSafeAssetReference(value: string) {
   const normalized = value.trim();
 
@@ -95,7 +117,11 @@ export function isSafeAssetReference(value: string) {
     return false;
   }
 
-  return isSafeHttpUrl(normalized) || isSafeStoragePath(normalized);
+  return (
+    isSafeHttpUrl(normalized) ||
+    isSafeWorkshopPublicPath(normalized) ||
+    isSafeStoragePath(normalized)
+  );
 }
 
 export function isImageLikeAsset(value: string) {
