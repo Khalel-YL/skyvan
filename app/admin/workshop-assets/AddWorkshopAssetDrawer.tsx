@@ -117,7 +117,7 @@ function WorkshopAssetForm({
       <div className="grid gap-3 md:grid-cols-[1fr_160px]">
         <Field
           label="Kamera görünümü"
-          hint="Görselin hangi açı veya önizleme bağlamında kullanılacağını belirtir."
+          hint="Örn: isometric, side, front, rear, texture-preview"
           error={state.fieldErrors.cameraView}
         >
           <div className="space-y-2">
@@ -164,14 +164,14 @@ function WorkshopAssetForm({
 
       <Field
         label="Varlık URL"
-        hint="CDN veya güvenli depo yolu. Dosya yükleme bu sprintte yok."
+        hint="Örn: /workshop-assets/models/ducato-class-l2h2/products/mas-001/isometric/layer-010-table.webp. Dosya yükleme bu sprintte yok."
         error={state.fieldErrors.assetUrl}
       >
         <input
           name="assetUrl"
           defaultValue={initialData?.assetUrl ?? ""}
           className={inputClassName}
-          placeholder="workshop-assets/model/product/layer.webp"
+          placeholder="/workshop-assets/models/.../layer-010-table.webp"
           aria-invalid={Boolean(state.fieldErrors.assetUrl)}
           required
         />
@@ -179,14 +179,14 @@ function WorkshopAssetForm({
 
       <Field
         label="Yedek URL"
-        hint="Ana varlık yüklenemezse kullanılacak güvenli önizleme."
+        hint="Opsiyonel. Ana varlık yüklenemezse kullanılacak güvenli yedek yol. Örn: /workshop-assets/models/ducato-class-l2h2/fallback/missing-layer.webp"
         error={state.fieldErrors.fallbackUrl}
       >
         <input
           name="fallbackUrl"
           defaultValue={initialData?.fallbackUrl ?? ""}
           className={inputClassName}
-          placeholder="assets/workshop/yedek-preview.png"
+          placeholder="/workshop-assets/models/.../fallback/missing-layer.webp"
           aria-invalid={Boolean(state.fieldErrors.fallbackUrl)}
         />
       </Field>
