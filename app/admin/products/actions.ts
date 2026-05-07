@@ -312,7 +312,7 @@ async function getProductActivationError(params: {
   }
 
   if (!params.productId) {
-    return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI-ready knowledge kaydı oluşturun.";
+    return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI hazır bilgi kaydı oluşturun.";
   }
 
   const hasReadyKnowledge = await hasAiReadyKnowledgeForProduct(params.productId);
@@ -321,7 +321,7 @@ async function getProductActivationError(params: {
     return null;
   }
 
-  return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI-ready knowledge kaydı oluşturun.";
+  return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI hazır bilgi kaydı oluşturun.";
 }
 
 async function getProductAuditStateById(

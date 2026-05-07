@@ -516,7 +516,7 @@ function ProductFormFields({
           <option value="archived">Arşiv</option>
         </select>
         <p className="mt-1 text-xs text-zinc-500">
-          Yeni ürünler önce taslak akışta açılır. Aktif statü, AI-ready knowledge
+          Yeni ürünler önce taslak akışta açılır. Aktif statü, AI hazır bilgi
           kaydı oluştuğunda kullanılmalıdır.
         </p>
         <FieldError errors={errors} name="status" />

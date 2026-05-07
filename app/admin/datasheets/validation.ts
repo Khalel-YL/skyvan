@@ -101,7 +101,7 @@ export function simulateDatasheetInput(
       keyKind,
       titleOk: true,
       label: getDatasheetKeyLabel(keyKind),
-      reason: "Belge bağlantısı / storage anahtarı zorunlu.",
+      reason: "Belge bağlantısı / depo anahtarı zorunlu.",
     };
   }
 
@@ -111,7 +111,7 @@ export function simulateDatasheetInput(
       keyKind,
       titleOk: true,
       label: getDatasheetKeyLabel(keyKind),
-      reason: "Belge bağlantısı / storage anahtarı çok kısa.",
+      reason: "Belge bağlantısı / depo anahtarı çok kısa.",
     };
   }
 
@@ -140,7 +140,7 @@ export function simulateDatasheetInput(
     keyKind,
     titleOk: true,
     label: getDatasheetKeyLabel(keyKind),
-    reason: "Kayıt storage anahtarı olarak tutulabilir.",
+    reason: "Kayıt depo anahtarı olarak tutulabilir.",
   };
 }
 
@@ -157,7 +157,7 @@ export const datasheetSimulationCases: DatasheetSimulationCase[] = [
     title: "Renogy 200W Kullanım Kılavuzu",
     s3Key: "storage/manuals/renogy-200w-user-guide.pdf",
     expected: "accept",
-    note: "Web URL değilse storage anahtarı gibi tutulmalı.",
+    note: "Web URL değilse depo anahtarı gibi tutulmalı.",
   },
   {
     id: "blocked-scheme",

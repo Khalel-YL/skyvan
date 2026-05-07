@@ -197,20 +197,21 @@ function mapGovernanceBlocker(blocker: string): ExplainableGovernanceBlocker {
   if (
     lowered.includes("parsing not completed") ||
     lowered.includes("parsing completed değil") ||
-    lowered.includes("henüz completed")
+    lowered.includes("henüz completed") ||
+    lowered.includes("henüz tamamlandı")
   ) {
     return {
       code: "not_completed",
-      message: "parsing completed değil",
+      message: "Ayrıştırma tamamlandı değil",
       severity: "error",
       group: "AI readiness problemi",
     };
   }
 
-  if (lowered.includes("storage anahtarı")) {
+  if (lowered.includes("storage anahtarı") || lowered.includes("depo anahtarı")) {
     return {
       code: "missing_storage",
-      message: "storage anahtarı eksik",
+      message: "Depo anahtarı eksik",
       severity: "error",
       group: "Veri eksikliği",
     };
@@ -232,7 +233,7 @@ function mapGovernanceBlocker(blocker: string): ExplainableGovernanceBlocker {
   ) {
     return {
       code: "completed_boundary_protected",
-      message: "completed sınırı governance korumasında",
+      message: "Tamamlandı sınırı yönetişim korumasında",
       severity: "error",
       group: "Güvenlik / integrity",
     };
@@ -285,10 +286,10 @@ function buildExplainableGovernanceMessage(rawBlockers: string[]) {
 
 function buildCompletedDowngradeMessage() {
   return [
-    "Bu kayıt AI-ready (completed) durumunda olduğu için geri alınamaz.",
+    "Bu kayıt AI-ready (tamamlandı) durumunda olduğu için geri alınamaz.",
     "",
     "Neden:",
-    "- AI pipeline bu kaydı aktif kullanıyor",
+    "- AI hattı bu kaydı aktif kullanıyor",
     "- veri bütünlüğü korunmalı",
   ].join("\n");
 }
@@ -497,16 +498,16 @@ export async function saveDatasheet(
   }
 
   if (!s3Key) {
-    fieldErrors.s3Key = "Belge bağlantısı / storage anahtarı zorunlu.";
+    fieldErrors.s3Key = "Belge bağlantısı / depo anahtarı zorunlu.";
   } else if (s3Key.length < 3) {
-    fieldErrors.s3Key = "Belge bağlantısı / storage anahtarı çok kısa.";
+    fieldErrors.s3Key = "Belge bağlantısı / depo anahtarı çok kısa.";
   } else if (hasBlockedScheme(s3Key)) {
     fieldErrors.s3Key = "Bu bağlantı şeması güvenlik nedeniyle kabul edilmiyor.";
   } else if (hasUrlScheme(s3Key) && !isOpenableHttpUrl(s3Key)) {
     fieldErrors.s3Key = "Belge bağlantısı http veya https URL formatında olmalı.";
   } else if (await hasDuplicateStorageKey(id, s3Key)) {
     fieldErrors.s3Key =
-      "Aynı belge bağlantısı / storage anahtarı ile kayıt zaten mevcut.";
+      "Aynı belge bağlantısı / depo anahtarı ile kayıt zaten mevcut.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

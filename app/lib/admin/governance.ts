@@ -402,23 +402,23 @@ export function getDatasheetGuardrailBlockers(input: {
 
   if (touchesCompletedBoundary && !runtime.allowManualAiReadyStatus) {
     blockers.push(
-      "Completed state sınırına dokunan belge geçişleri governance kilidi altındadır. " +
+      "Tamamlandı sınırına dokunan belge geçişleri yönetişim kilidi altındadır. " +
         "Bu geçiş için SKYVAN_ALLOW_MANUAL_AI_READY_STATUS=true gerekir.",
     );
   }
 
   if (input.parsingStatus === COMPLETED_DATASET_STATUS) {
     if (!input.title.trim()) {
-      blockers.push("Completed olacak belge için başlık zorunludur.");
+      blockers.push("Tamamlandı olacak belge için başlık zorunludur.");
     }
 
     if (!input.s3Key.trim()) {
-      blockers.push("Completed olacak belge için storage anahtarı zorunludur.");
+      blockers.push("Tamamlandı olacak belge için depolama anahtarı zorunludur.");
     }
 
     if (input.docType !== "rulebook" && !input.productId.trim()) {
       blockers.push(
-        "Rulebook dışındaki completed belgeler bir ürüne bağlanmalıdır.",
+        "Kural kitabı dışındaki tamamlanmış belgeler bir ürüne bağlanmalıdır.",
       );
     }
   }
@@ -437,7 +437,7 @@ export function getAiKnowledgeReadiness(input: {
   const blockers: string[] = [];
 
   if (input.parsingStatus !== COMPLETED_DATASET_STATUS) {
-    blockers.push("Belge henüz completed seviyesinde değil.");
+    blockers.push("Belge henüz tamamlandı seviyesinde değil.");
   }
 
   if (!input.title.trim()) {
@@ -445,11 +445,11 @@ export function getAiKnowledgeReadiness(input: {
   }
 
   if (!input.s3Key.trim()) {
-    blockers.push("Belge storage anahtarı eksik.");
+    blockers.push("Belge depo anahtarı eksik.");
   }
 
   if (input.docType && input.docType !== "rulebook" && !String(input.productId ?? "").trim()) {
-    blockers.push("Rulebook dışındaki bilgi kayıtları bir ürüne bağlanmalıdır.");
+    blockers.push("Kural kitabı dışındaki bilgi kayıtları bir ürüne bağlanmalıdır.");
   }
 
   if (input.chunkCount <= 0) {

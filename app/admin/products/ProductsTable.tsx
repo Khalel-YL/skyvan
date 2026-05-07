@@ -348,7 +348,7 @@ function getReadinessMeta(
     return {
       label: "AI Hazır",
       tone: "border-emerald-900/60 bg-emerald-950/30 text-emerald-300",
-      detail: "Aktif belge ve AI-ready knowledge kaydı hizalı.",
+      detail: "Aktif belge ve AI hazır bilgi kaydı hizalı.",
     };
   }
 
@@ -356,7 +356,7 @@ function getReadinessMeta(
     return {
       label: "Belge Pasif",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "AI-ready knowledge var ancak aktif ürün belgesi görünmüyor.",
+      detail: "AI hazır bilgi var ancak aktif ürün belgesi görünmüyor.",
     };
   }
 
@@ -538,14 +538,14 @@ function ReadinessPanel({
       />
 
       <InlineCountsSection
-        label="AI Knowledge"
+        label="AI Bilgi"
         items={[
           { text: `T ${knowledgeCounts.total}` },
           ...(knowledgeCounts.ready > 0
             ? [{ text: `Hazır ${knowledgeCounts.ready}`, tone: "text-emerald-300" }]
             : []),
           ...(knowledgeCounts.completed > 0
-            ? [{ text: `Completed ${knowledgeCounts.completed}` }]
+            ? [{ text: `Tamamlandı ${knowledgeCounts.completed}` }]
             : []),
           ...(knowledgeCounts.blocked > 0
             ? [{ text: `Bloklu ${knowledgeCounts.blocked}`, tone: "text-amber-300" }]

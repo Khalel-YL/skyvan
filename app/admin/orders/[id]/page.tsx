@@ -185,7 +185,7 @@ function emptyTimelineDescription(status: ProductionStatus) {
     case "testing":
       return "Mevcut durumu açıklayan ilk timeline kaydını girerek kayıt bütünlüğünü tamamla.";
     case "completed":
-      return "Completed öncesi geçmiş üretim adımlarını kısaca girmen önerilir.";
+      return "Tamamlandı öncesi geçmiş üretim adımlarını kısaca girmen önerilir.";
     default:
       return "İlk kayıt bu ekrandan girilecek.";
   }

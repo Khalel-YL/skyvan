@@ -197,7 +197,7 @@ export async function saveOrder(
     (productionStatus === "testing" || productionStatus === "completed") &&
     !vinNumberInput
   ) {
-    errors.vinNumber = "Testing ve Completed aşamalarında VIN zorunludur.";
+    errors.vinNumber = "Test ve tamamlandı aşamalarında VIN zorunludur.";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -298,10 +298,10 @@ export async function saveOrder(
         if (relatedUpdateRows.length === 0) {
           return {
             ok: false,
-            message: "Order tamamlanamadı.",
+            message: "Sipariş tamamlanamadı.",
             values,
             errors: {
-              form: "Completed durumuna geçmeden önce en az bir üretim güncellemesi eklenmeli.",
+              form: "Tamamlandı durumuna geçmeden önce en az bir üretim güncellemesi eklenmeli.",
             },
           };
         }
@@ -438,7 +438,7 @@ export async function saveProductionUpdate(
       message: "VIN eksik.",
       values,
       errors: {
-        form: "Testing veya Completed güncellemesi eklenmeden önce order kaydına VIN girilmelidir.",
+        form: "Test veya tamamlandı güncellemesi eklenmeden önce sipariş kaydına VIN girilmelidir.",
       },
     };
   }
