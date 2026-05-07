@@ -192,11 +192,11 @@ export function ProductDocumentsSummary({
           <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
             {groundedExplanation.available
               ? statusPill({
-                  label: "Kaynaklı bilgi hazır",
+                  label: "Onaylı kaynak hazır",
                   className: "border-emerald-800 bg-emerald-950 text-emerald-300",
                 })
               : statusPill({
-                  label: "Kaynaklı bilgi hazır değil",
+                  label: "Onaylı kaynak bekleniyor",
                   className: "border-amber-800 bg-amber-950 text-amber-300",
                 })}
             {ruleAlignmentLabel && groundedExplanation.ruleAlignmentStatus

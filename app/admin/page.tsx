@@ -262,7 +262,7 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       knowledgeRevoked,
     };
   } catch (error) {
-    console.error("Admin dashboard metrics error:", error);
+    console.warn("Admin dashboard metrics warning:", error);
     return null;
   }
 }
@@ -472,7 +472,7 @@ export default async function AdminDashboardPage() {
           hint: `${metrics.productsDraft} taslak / ${metrics.productsArchived} arşiv`,
         },
         {
-          label: "Hazır datasheet",
+          label: "Teknik hazır datasheet",
           value: metrics.datasheetsReady,
           hint: `${datasheetQueue} kuyruk / ${metrics.datasheetsFailed} hatalı`,
         },
@@ -482,7 +482,7 @@ export default async function AdminDashboardPage() {
   const aiReadinessItems = metrics
     ? [
         {
-          label: "Belge hazır",
+          label: "Teknik hazır",
           value: metrics.datasheetsReady,
           hint: "Parça üreten tamamlanmış kayıtlar",
         },
@@ -512,6 +512,7 @@ export default async function AdminDashboardPage() {
   const aiReady =
     metrics &&
     metrics.datasheetsReady > 0 &&
+    metrics.knowledgeApproved > 0 &&
     metrics.datasheetsCompletedNoChunks === 0 &&
     metrics.datasheetsFailed === 0;
 
@@ -775,8 +776,8 @@ export default async function AdminDashboardPage() {
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
-                  AI ve kural motoru tarafına veri taşıyacak temel hazırlık
-                  kalitesini tek panelde özetler.
+                  AI ve kural motoru tarafına veri taşıyacak teknik hazırlık ve
+                  insan onayı kalitesini tek panelde özetler.
                 </p>
               </div>
             </div>
@@ -802,11 +803,11 @@ export default async function AdminDashboardPage() {
                     <div>
                       <p className="text-sm font-semibold">
                         {aiReady
-                          ? "AI hazırlık seviyesi dengeli görünüyor"
+                          ? "AI kullanım sinyali dengeli görünüyor"
                           : "AI hazırlık tarafında dikkat isteyen sinyaller var"}
                       </p>
                       <p className="mt-1 text-xs leading-5 opacity-90">
-                        Hazır belge, kuyruk, hatalı kayıt ve parça üretimi
+                        Teknik hazır belge, insan onayı, kuyruk ve parça üretimi
                         birlikte izleniyor.
                       </p>
                     </div>
@@ -840,10 +841,10 @@ export default async function AdminDashboardPage() {
                     className="rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:border-white/15 hover:bg-white/[0.04]"
                   >
                     <p className="text-sm font-medium text-white">
-                      Hazır belgeleri aç
+                      Teknik hazır belgeleri aç
                     </p>
                     <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Tamamlandı ve üretime yakın kayıtları incele.
+                      Tamamlandı ve onay sürecine yakın kayıtları incele.
                     </p>
                   </Link>
 
@@ -936,7 +937,7 @@ export default async function AdminDashboardPage() {
                   <FileDigit className="mt-0.5 h-4 w-4 text-neutral-300" />
                   <div>
                     <p className="text-sm font-medium text-white">
-                      Hazır belge oranı
+                      Teknik hazır belge oranı
                     </p>
                     <p className="mt-1 text-xs leading-5 text-neutral-400">
                       Tamamlandı belgeler içinde parça üreten kayıt sayısı:{" "}

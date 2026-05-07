@@ -135,6 +135,7 @@ async function getKnowledgeCountsByProductIds(productIds: string[]) {
       productId: aiKnowledgeDocuments.productId,
       docType: aiKnowledgeDocuments.docType,
       parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      approvalStatus: aiKnowledgeDocuments.approvalStatus,
       title: aiKnowledgeDocuments.title,
       s3Key: aiKnowledgeDocuments.s3Key,
     })
@@ -187,6 +188,7 @@ async function getKnowledgeCountsByProductIds(productIds: string[]) {
       docType: document.docType,
       productId: document.productId,
       parsingStatus: document.parsingStatus,
+      approvalStatus: document.approvalStatus,
       title: document.title,
       s3Key: document.s3Key,
       chunkCount: chunkMap.get(document.id) ?? 0,
@@ -346,9 +348,9 @@ function getReadinessMeta(
 
   if (score === 100) {
     return {
-      label: "AI Hazır",
+      label: "AI Açık",
       tone: "border-emerald-900/60 bg-emerald-950/30 text-emerald-300",
-      detail: "Aktif belge ve AI hazır bilgi kaydı hizalı.",
+      detail: "Aktif belge ve insan onaylı bilgi kaydı hizalı.",
     };
   }
 
@@ -356,7 +358,7 @@ function getReadinessMeta(
     return {
       label: "Belge Pasif",
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
-      detail: "AI hazır bilgi var ancak aktif ürün belgesi görünmüyor.",
+      detail: "AI kullanımına açık bilgi var ancak aktif ürün belgesi görünmüyor.",
     };
   }
 
@@ -366,8 +368,8 @@ function getReadinessMeta(
       tone: "border-amber-900/60 bg-amber-950/30 text-amber-300",
       detail:
         documentCounts.active > 0
-          ? "Bilgi kaydı var ama AI hazır şartlarını henüz sağlamıyor."
-          : "Bilgi kaydı var ancak AI hazır seviyesine ulaşmamış.",
+          ? "Bilgi kaydı var ama onaylı AI kullanım şartlarını henüz sağlamıyor."
+          : "Bilgi kaydı var ancak AI kullanımına açılmamış.",
     };
   }
 
@@ -542,7 +544,7 @@ function ReadinessPanel({
         items={[
           { text: `T ${knowledgeCounts.total}` },
           ...(knowledgeCounts.ready > 0
-            ? [{ text: `Hazır ${knowledgeCounts.ready}`, tone: "text-emerald-300" }]
+            ? [{ text: `Açık ${knowledgeCounts.ready}`, tone: "text-emerald-300" }]
             : []),
           ...(knowledgeCounts.completed > 0
             ? [{ text: `Tamamlandı ${knowledgeCounts.completed}` }]

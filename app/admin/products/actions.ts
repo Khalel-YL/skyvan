@@ -176,6 +176,7 @@ async function getAiReadyKnowledgeProductIds(productIds: string[]) {
       docType: aiKnowledgeDocuments.docType,
       productId: aiKnowledgeDocuments.productId,
       parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      approvalStatus: aiKnowledgeDocuments.approvalStatus,
       title: aiKnowledgeDocuments.title,
       s3Key: aiKnowledgeDocuments.s3Key,
     })
@@ -215,6 +216,7 @@ async function getAiReadyKnowledgeProductIds(productIds: string[]) {
       docType: row.docType,
       productId: row.productId,
       parsingStatus: row.parsingStatus as DatasheetParsingStatus,
+      approvalStatus: row.approvalStatus,
       title: row.title,
       s3Key: row.s3Key,
       chunkCount: chunkMap.get(row.id) ?? 0,
@@ -312,7 +314,7 @@ async function getProductActivationError(params: {
   }
 
   if (!params.productId) {
-    return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI hazır bilgi kaydı oluşturun.";
+    return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip insan onaylı AI bilgi kaydı oluşturun.";
   }
 
   const hasReadyKnowledge = await hasAiReadyKnowledgeForProduct(params.productId);
@@ -321,7 +323,7 @@ async function getProductActivationError(params: {
     return null;
   }
 
-  return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip AI hazır bilgi kaydı oluşturun.";
+  return "Ürün aktif statüye alınamaz. Önce ürüne bağlı belgeyi işleyip insan onaylı AI bilgi kaydı oluşturun.";
 }
 
 async function getProductAuditStateById(

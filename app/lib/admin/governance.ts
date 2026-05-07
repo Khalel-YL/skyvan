@@ -462,35 +462,50 @@ export function getAiKnowledgeReadiness(input: {
   docType?: string;
   productId?: string | null;
   parsingStatus: DatasheetParsingStatus;
+  approvalStatus: AiKnowledgeApprovalStatus;
   title: string;
   s3Key: string;
   chunkCount: number;
 }) {
-  const blockers: string[] = [];
+  const technicalBlockers: string[] = [];
+  const approvalBlockers: string[] = [];
 
   if (input.parsingStatus !== COMPLETED_DATASET_STATUS) {
-    blockers.push("Belge henüz tamamlandı seviyesinde değil.");
+    technicalBlockers.push("Belge henüz tamamlandı seviyesinde değil.");
   }
 
   if (!input.title.trim()) {
-    blockers.push("Belge başlığı eksik.");
+    technicalBlockers.push("Belge başlığı eksik.");
   }
 
   if (!input.s3Key.trim()) {
-    blockers.push("Belge depo anahtarı eksik.");
+    technicalBlockers.push("Belge depo anahtarı eksik.");
   }
 
   if (input.docType && input.docType !== "rulebook" && !String(input.productId ?? "").trim()) {
-    blockers.push("Kural kitabı dışındaki bilgi kayıtları bir ürüne bağlanmalıdır.");
+    technicalBlockers.push(
+      "Kural kitabı dışındaki bilgi kayıtları bir ürüne bağlanmalıdır.",
+    );
   }
 
   if (input.chunkCount <= 0) {
-    blockers.push("Belge chunk üretmemiş.");
+    technicalBlockers.push("Belge chunk üretmemiş.");
   }
 
+  if (input.approvalStatus !== "approved") {
+    approvalBlockers.push("İnsan onayı bekleniyor.");
+  }
+
+  const technicallyReady = technicalBlockers.length === 0;
+  const approvedForAi = technicallyReady && approvalBlockers.length === 0;
+
   return {
-    approvedForAi: blockers.length === 0,
-    blockers,
+    technicallyReady,
+    technicalBlockers,
+    approvalStatus: input.approvalStatus,
+    approvalBlockers,
+    approvedForAi,
+    blockers: [...technicalBlockers, ...approvalBlockers],
   };
 }
 
@@ -575,6 +590,7 @@ export async function getAiUsageKnowledgeRecords(input?: {
       docType: document.docType,
       productId: hasResolvedProductReference ? document.productId : null,
       parsingStatus: document.parsingStatus,
+      approvalStatus: document.approvalStatus as AiKnowledgeApprovalStatus,
       title: document.title,
       s3Key: document.s3Key,
       chunkCount,
@@ -682,7 +698,7 @@ export async function getProductGroundedExplanation(input: {
         ? "Bilgi eşlemesi var, ancak kaynaklı AI açıklaması için manuel işleme henüz tamamlanmadı."
         : hasFailure
           ? "Bilgi kayıtları hatalı olduğu için kaynaklı AI açıklaması üretilemiyor."
-          : "Bilgi kayıtları var, ancak mevcut yönetim şartları kaynaklı kullanım için yeterli değil.",
+          : "Bilgi kayıtları var, ancak insan onayı veya teknik hazırlık kaynaklı kullanım için yeterli değil.",
       preview: null,
       eligibleKnowledgeCount: 0,
       groundedChunkCount: 0,
@@ -692,7 +708,7 @@ export async function getProductGroundedExplanation(input: {
         ? "Manuel işleme bekliyor"
         : hasFailure
           ? "Hatalı bilgi"
-          : "Yönetim yeterli değil",
+          : "İnsan onayı bekleniyor",
       approvalStatusCounts: getApprovalStatusCounts(usageRecords),
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
@@ -709,7 +725,7 @@ export async function getProductGroundedExplanation(input: {
   if (!groundedChunks.length) {
     return {
       available: false,
-      note: "Uygun bilgi bulundu, ancak okunabilir kaynak parçası henüz görünmüyor.",
+      note: "Onaylı bilgi bulundu, ancak okunabilir kaynak parçası henüz görünmüyor.",
       preview: null,
       eligibleKnowledgeCount: eligibleRecords.length,
       groundedChunkCount: 0,
@@ -739,13 +755,13 @@ export async function getProductGroundedExplanation(input: {
 
   return {
     available: true,
-    note: "Grounded AI açıklaması eligible knowledge kayıtlarından hazırlanabilir.",
+    note: "Onaylı bilgi ve kaynak parçası hazır.",
     preview: buildGroundedPreviewFromChunks(groundedChunks),
     eligibleKnowledgeCount: eligibleRecords.length,
     groundedChunkCount: groundedChunks.length,
     contributingDocTypes,
     coverageLabel,
-    readinessReason: "Uygun bilgi ve kaynak parçası hazır",
+    readinessReason: "Onaylı bilgi ve kaynak parçası hazır",
     approvalStatusCounts: getApprovalStatusCounts(usageRecords),
     ruleAlignmentStatus: ruleAlignment.ruleAlignmentStatus,
     ruleAlignmentReason: ruleAlignment.ruleAlignmentReason,
@@ -791,7 +807,7 @@ export function getProductAiDecisionSignalFromGroundedExplanation(
       reason:
         explanation.ruleAlignmentStatus === "rule-signal-missing"
           ? explanation.ruleAlignmentReason ?? "Rule sinyali eksik"
-          : "Grounded kapsam şu anda dar görünüyor.",
+          : "Kaynak kapsamı şu anda dar görünüyor.",
       groundedAvailable: true,
       coverageLabel: explanation.coverageLabel,
       ruleAlignmentStatus: explanation.ruleAlignmentStatus,
@@ -801,7 +817,7 @@ export function getProductAiDecisionSignalFromGroundedExplanation(
 
   return {
     status: "ready",
-    reason: "Grounded bilgi ve rule sinyali birlikte hazır.",
+    reason: "Onaylı bilgi ve rule sinyali birlikte hazır.",
     groundedAvailable: true,
     coverageLabel: explanation.coverageLabel,
     ruleAlignmentStatus: explanation.ruleAlignmentStatus,

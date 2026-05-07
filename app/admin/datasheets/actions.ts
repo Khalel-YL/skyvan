@@ -40,6 +40,7 @@ type DatasheetRecord = {
   title: string;
   docType: DatasheetDocType;
   parsingStatus: DatasheetParsingStatus;
+  approvalStatus: "pending_review" | "approved" | "rejected" | "revoked";
   s3Key: string;
   updatedAt: Date | string;
 };
@@ -376,6 +377,7 @@ async function getDatasheetReadinessSnapshot(
     docType: record.docType,
     productId: resolvedProductId,
     parsingStatus: record.parsingStatus,
+    approvalStatus: record.approvalStatus,
     title: record.title,
     s3Key: record.s3Key,
     chunkCount,
@@ -397,6 +399,7 @@ async function getDatasheetById(id: string): Promise<DatasheetRecord | null> {
       title: aiKnowledgeDocuments.title,
       docType: aiKnowledgeDocuments.docType,
       parsingStatus: aiKnowledgeDocuments.parsingStatus,
+      approvalStatus: aiKnowledgeDocuments.approvalStatus,
       s3Key: aiKnowledgeDocuments.s3Key,
       updatedAt: aiKnowledgeDocuments.updatedAt,
     })

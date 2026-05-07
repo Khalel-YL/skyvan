@@ -28,6 +28,7 @@ type RuntimeItem = {
 type KnowledgeState = {
   documents: AiKnowledgeUsageRecord[];
   totalCount: number;
+  technicalReadyCount: number;
   readyCount: number;
   blockedCount: number;
   failedCount: number;
@@ -149,6 +150,7 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
     return {
       documents: [],
       totalCount: 0,
+      technicalReadyCount: 0,
       readyCount: 0,
       blockedCount: 0,
       failedCount: 0,
@@ -172,6 +174,9 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
   try {
     const evaluatedDocuments = await getAiUsageKnowledgeRecords();
 
+    const technicalReadyCount = evaluatedDocuments.filter(
+      (item) => item.readiness.technicallyReady,
+    ).length;
     const readyCount = evaluatedDocuments.filter(
       (item) => item.readiness.approvedForAi,
     ).length;
@@ -196,6 +201,7 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
     return {
       documents: evaluatedDocuments,
       totalCount: evaluatedDocuments.length,
+      technicalReadyCount,
       readyCount,
       blockedCount: evaluatedDocuments.length - readyCount,
       failedCount: evaluatedDocuments.filter(
@@ -225,6 +231,7 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
     return {
       documents: [],
       totalCount: 0,
+      technicalReadyCount: 0,
       readyCount: 0,
       blockedCount: 0,
       failedCount: 0,
@@ -327,20 +334,30 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200">
             <div className="text-xs text-emerald-300/80">Teknik hazırlık</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.readyCount}
+              {knowledgeState.technicalReadyCount}
             </div>
             <div className="mt-2 text-xs text-emerald-300/80">
               Tamamlandı ve parça üretmiş belge sayısı
             </div>
           </div>
 
+          <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sky-200">
+            <div className="text-xs text-sky-300/80">AI kullanımına açık</div>
+            <div className="mt-1 text-2xl font-semibold">
+              {knowledgeState.readyCount}
+            </div>
+            <div className="mt-2 text-xs text-sky-300/80">
+              Teknik hazırlığı ve insan onayı tamamlanan kayıtlar
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-rose-200">
-            <div className="text-xs text-rose-300/80">Engelli</div>
+            <div className="text-xs text-rose-300/80">AI kullanımına kapalı</div>
             <div className="mt-1 text-2xl font-semibold">
               {knowledgeState.blockedCount}
             </div>
             <div className="mt-2 text-xs text-rose-300/80">
-              Teknik hazırlık şartlarını geçmeyen kayıtlar
+              Teknik hazırlığı veya insan onayı eksik kayıtlar
             </div>
           </div>
 
@@ -360,7 +377,7 @@ export default async function AICoreAdminPage() {
               {knowledgeState.groundedChunkCount}
             </div>
             <div className="mt-2 text-xs text-sky-300/80">
-              Teknik olarak hazır belgelerden okunabilir parça toplamı
+              AI kullanımına açık belgelerden okunabilir parça toplamı
             </div>
           </div>
 
@@ -446,13 +463,15 @@ export default async function AICoreAdminPage() {
               <div className="mt-2 text-lg font-semibold text-white">
                 {knowledgeState.totalCount > 0
                   ? `%${Math.round(
-                      (knowledgeState.readyCount / knowledgeState.totalCount) * 100,
+                      (knowledgeState.technicalReadyCount / knowledgeState.totalCount) *
+                        100,
                     )}`
                   : "%0"}
               </div>
               <div className="mt-2 text-sm text-zinc-400">
-                {knowledgeState.readyCount} / {knowledgeState.totalCount} kayıt teknik
-                işleme şartlarını geçiyor.
+                {knowledgeState.technicalReadyCount} / {knowledgeState.totalCount} kayıt
+                teknik işleme şartlarını geçiyor; {knowledgeState.readyCount} kayıt AI
+                kullanımına açık.
               </div>
             </div>
 
