@@ -213,6 +213,21 @@ export function ProductDocumentsSummary({
         <div className="mt-3 flex flex-wrap gap-2">
           {neutralPill(`Bilgi ${groundedExplanation.eligibleKnowledgeCount}`)}
           {neutralPill(`Parça ${groundedExplanation.groundedChunkCount}`)}
+          {neutralPill(
+            `Onay bekliyor ${groundedExplanation.approvalStatusCounts.pending_review}`,
+          )}
+          {neutralPill(`Onaylandı ${groundedExplanation.approvalStatusCounts.approved}`)}
+          {groundedExplanation.approvalStatusCounts.rejected +
+            groundedExplanation.approvalStatusCounts.revoked >
+          0
+            ? statusPill({
+                label: `Kapalı ${
+                  groundedExplanation.approvalStatusCounts.rejected +
+                  groundedExplanation.approvalStatusCounts.revoked
+                }`,
+                className: "border-rose-800 bg-rose-950 text-rose-300",
+              })
+            : null}
           {groundedExplanation.coverageLabel
             ? neutralPill(groundedExplanation.coverageLabel)
             : null}

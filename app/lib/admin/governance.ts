@@ -13,6 +13,11 @@ import {
 
 export type OfferStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
 export type DatasheetParsingStatus = "pending" | "processing" | "completed" | "failed";
+export type AiKnowledgeApprovalStatus =
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "revoked";
 export type PagePublishTransition = "publish" | "rollback";
 export type AiKnowledgeUsageRecord = {
   id: string;
@@ -20,6 +25,7 @@ export type AiKnowledgeUsageRecord = {
   title: string;
   docType: string;
   parsingStatus: DatasheetParsingStatus;
+  approvalStatus: AiKnowledgeApprovalStatus;
   s3Key: string;
   createdAt: Date;
   updatedAt: Date;
@@ -47,6 +53,7 @@ export type ProductGroundedExplanation = {
   contributingDocTypes: string[];
   coverageLabel: string | null;
   readinessReason: string;
+  approvalStatusCounts: Record<AiKnowledgeApprovalStatus, number>;
   ruleAlignmentStatus: "rule-aligned" | "rule-signal-missing" | "rule-review-needed" | null;
   ruleAlignmentReason: string | null;
   sourceRuleCount: number;
@@ -86,6 +93,12 @@ type TruthyValue = "1" | "true" | "yes" | "on";
 
 const TRUTHY_VALUES = new Set<TruthyValue>(["1", "true", "yes", "on"]);
 const COMPLETED_DATASET_STATUS: DatasheetParsingStatus = "completed";
+const APPROVAL_STATUSES: AiKnowledgeApprovalStatus[] = [
+  "pending_review",
+  "approved",
+  "rejected",
+  "revoked",
+];
 const CRITICAL_OFFER_STATUSES = new Set<OfferStatus>([
   "accepted",
   "rejected",
@@ -168,6 +181,25 @@ function getGroundedCoverageLabel(input: {
   }
 
   return "Dar kapsam";
+}
+
+function getApprovalStatusCounts(records: AiKnowledgeUsageRecord[]) {
+  const counts: Record<AiKnowledgeApprovalStatus, number> = {
+    pending_review: 0,
+    approved: 0,
+    rejected: 0,
+    revoked: 0,
+  };
+
+  for (const record of records) {
+    if (APPROVAL_STATUSES.includes(record.approvalStatus)) {
+      counts[record.approvalStatus] += 1;
+    } else {
+      counts.pending_review += 1;
+    }
+  }
+
+  return counts;
 }
 
 async function getProductRuleAlignment(input: { productId: string }) {
@@ -476,6 +508,7 @@ export async function getAiUsageKnowledgeRecords(input?: {
           title: aiKnowledgeDocuments.title,
           docType: aiKnowledgeDocuments.docType,
           parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          approvalStatus: aiKnowledgeDocuments.approvalStatus,
           s3Key: aiKnowledgeDocuments.s3Key,
           createdAt: aiKnowledgeDocuments.createdAt,
           updatedAt: aiKnowledgeDocuments.updatedAt,
@@ -493,6 +526,7 @@ export async function getAiUsageKnowledgeRecords(input?: {
           title: aiKnowledgeDocuments.title,
           docType: aiKnowledgeDocuments.docType,
           parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          approvalStatus: aiKnowledgeDocuments.approvalStatus,
           s3Key: aiKnowledgeDocuments.s3Key,
           createdAt: aiKnowledgeDocuments.createdAt,
           updatedAt: aiKnowledgeDocuments.updatedAt,
@@ -549,6 +583,7 @@ export async function getAiUsageKnowledgeRecords(input?: {
     return {
       ...document,
       parsingStatus: document.parsingStatus as DatasheetParsingStatus,
+      approvalStatus: document.approvalStatus as AiKnowledgeApprovalStatus,
       chunkCount,
       hasMissingProductReference,
       readiness,
@@ -624,6 +659,7 @@ export async function getProductGroundedExplanation(input: {
       contributingDocTypes: [],
       coverageLabel: null,
       readinessReason: "Bilgi yok",
+      approvalStatusCounts: getApprovalStatusCounts(usageRecords),
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -657,6 +693,7 @@ export async function getProductGroundedExplanation(input: {
         : hasFailure
           ? "Hatalı bilgi"
           : "Yönetim yeterli değil",
+      approvalStatusCounts: getApprovalStatusCounts(usageRecords),
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -681,6 +718,7 @@ export async function getProductGroundedExplanation(input: {
       ),
       coverageLabel: null,
       readinessReason: "Kaynak parçası yok",
+      approvalStatusCounts: getApprovalStatusCounts(usageRecords),
       ruleAlignmentStatus: null,
       ruleAlignmentReason: null,
       sourceRuleCount: 0,
@@ -708,6 +746,7 @@ export async function getProductGroundedExplanation(input: {
     contributingDocTypes,
     coverageLabel,
     readinessReason: "Uygun bilgi ve kaynak parçası hazır",
+    approvalStatusCounts: getApprovalStatusCounts(usageRecords),
     ruleAlignmentStatus: ruleAlignment.ruleAlignmentStatus,
     ruleAlignmentReason: ruleAlignment.ruleAlignmentReason,
     sourceRuleCount: ruleAlignment.sourceRuleCount,

@@ -49,6 +49,7 @@ type DatasheetRow = {
   title: string;
   docType: "datasheet" | "manual" | "rulebook";
   parsingStatus: "pending" | "processing" | "completed" | "failed";
+  approvalStatus: "pending_review" | "approved" | "rejected" | "revoked";
   s3Key: string;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -77,6 +78,20 @@ const parsingStatusLabelMap: Record<DatasheetRow["parsingStatus"], string> = {
   processing: "İşleniyor",
   completed: "Tamamlandı",
   failed: "Hatalı",
+};
+
+const approvalStatusLabelMap: Record<DatasheetRow["approvalStatus"], string> = {
+  pending_review: "Onay bekliyor",
+  approved: "Onaylandı",
+  rejected: "Reddedildi",
+  revoked: "Geri çekildi",
+};
+
+const approvalAvailabilityLabelMap: Record<DatasheetRow["approvalStatus"], string> = {
+  pending_review: "AI kullanımına kapalı",
+  approved: "AI kullanımına açık",
+  rejected: "AI kullanımına kapalı",
+  revoked: "AI kullanımına kapalı",
 };
 
 function normalizeDocType(value?: string) {
@@ -286,6 +301,7 @@ async function getDatasheetsSafely(
           title: aiKnowledgeDocuments.title,
           docType: aiKnowledgeDocuments.docType,
           parsingStatus: aiKnowledgeDocuments.parsingStatus,
+          approvalStatus: aiKnowledgeDocuments.approvalStatus,
           s3Key: aiKnowledgeDocuments.s3Key,
           createdAt: aiKnowledgeDocuments.createdAt,
           updatedAt: aiKnowledgeDocuments.updatedAt,
@@ -325,6 +341,11 @@ async function getDatasheetsSafely(
           | "processing"
           | "completed"
           | "failed",
+        approvalStatus: document.approvalStatus as
+          | "pending_review"
+          | "approved"
+          | "rejected"
+          | "revoked",
         productLabel:
           document.docType !== "rulebook" && !document.productId
             ? "Eksik ürün referansı"
@@ -354,6 +375,19 @@ function getStatusTone(status: DatasheetRow["parsingStatus"]) {
     case "failed":
       return "border-rose-500/20 bg-rose-500/10 text-rose-200";
     case "pending":
+    default:
+      return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+  }
+}
+
+function getApprovalTone(status: DatasheetRow["approvalStatus"]) {
+  switch (status) {
+    case "approved":
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+    case "rejected":
+    case "revoked":
+      return "border-rose-500/20 bg-rose-500/10 text-rose-200";
+    case "pending_review":
     default:
       return "border-amber-500/20 bg-amber-500/10 text-amber-200";
   }
@@ -465,6 +499,8 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
         acc.failed += 1;
       }
 
+      acc.approval[item.approvalStatus] += 1;
+
       if (isQueue) {
         acc.queue += 1;
       }
@@ -498,6 +534,12 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
       orphanProduct: 0,
       completedNoChunks: 0,
       totalChunks: 0,
+      approval: {
+        pending_review: 0,
+        approved: 0,
+        rejected: 0,
+        revoked: 0,
+      },
     },
   );
 
@@ -592,7 +634,7 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
         <StatPill
           label="Toplam Kayıt"
           value={String(summary.total)}
@@ -617,6 +659,11 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
           label="Hatalı"
           value={String(summary.failed)}
           hint="İnceleme gerektiren kayıtlar"
+        />
+        <StatPill
+          label="İnsan Onayı"
+          value={String(summary.approval.approved)}
+          hint={`${summary.approval.pending_review} onay bekliyor`}
         />
       </div>
 
@@ -1026,7 +1073,19 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                     doc.parsingStatus,
                                   )}`}
                                 >
-                                  {parsingStatusLabelMap[doc.parsingStatus]}
+                                  Ayrıştırma: {parsingStatusLabelMap[doc.parsingStatus]}
+                                </span>
+
+                                <span
+                                  className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium ${getApprovalTone(
+                                    doc.approvalStatus,
+                                  )}`}
+                                >
+                                  {approvalStatusLabelMap[doc.approvalStatus]}
+                                </span>
+
+                                <span className="inline-flex whitespace-nowrap rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-neutral-300">
+                                  {approvalAvailabilityLabelMap[doc.approvalStatus]}
                                 </span>
 
                                 <span

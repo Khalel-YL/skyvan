@@ -11,6 +11,7 @@ import { db } from "@/db/db";
 import {
   getAiUsageKnowledgeRecords,
   getGovernanceRuntime,
+  type AiKnowledgeApprovalStatus,
   type AiKnowledgeUsageRecord,
 } from "@/app/lib/admin/governance";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
@@ -33,6 +34,7 @@ type KnowledgeState = {
   queueCount: number;
   completedWithoutChunksCount: number;
   missingProductReferenceCount: number;
+  approvalStatusCounts: Record<AiKnowledgeApprovalStatus, number>;
   groundedChunkCount: number;
   sourceRows: AiKnowledgeUsageRecord[];
   dbAvailable: boolean;
@@ -46,8 +48,19 @@ const parsingStatusLabels: Record<string, string> = {
   failed: "Hatalı",
 };
 
+const approvalStatusLabels: Record<AiKnowledgeApprovalStatus, string> = {
+  pending_review: "Onay bekliyor",
+  approved: "Onaylandı",
+  rejected: "Reddedildi",
+  revoked: "Geri çekildi",
+};
+
 function getParsingStatusLabel(value: string) {
   return parsingStatusLabels[value] ?? value;
+}
+
+function getApprovalStatusLabel(value: AiKnowledgeApprovalStatus) {
+  return approvalStatusLabels[value] ?? "Onay bekliyor";
 }
 
 function toneClasses(tone: RuntimeTone) {
@@ -142,6 +155,12 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       queueCount: 0,
       completedWithoutChunksCount: 0,
       missingProductReferenceCount: 0,
+      approvalStatusCounts: {
+        pending_review: 0,
+        approved: 0,
+        rejected: 0,
+        revoked: 0,
+      },
       groundedChunkCount: 0,
       sourceRows: [],
       dbAvailable: false,
@@ -156,6 +175,20 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
     const readyCount = evaluatedDocuments.filter(
       (item) => item.readiness.approvedForAi,
     ).length;
+    const approvalStatusCounts = evaluatedDocuments.reduce<
+      Record<AiKnowledgeApprovalStatus, number>
+    >(
+      (acc, item) => {
+        acc[item.approvalStatus] += 1;
+        return acc;
+      },
+      {
+        pending_review: 0,
+        approved: 0,
+        rejected: 0,
+        revoked: 0,
+      },
+    );
     const groundedChunkCount = evaluatedDocuments
       .filter((item) => item.readiness.approvedForAi)
       .reduce((sum, item) => sum + item.chunkCount, 0);
@@ -178,6 +211,7 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       missingProductReferenceCount: evaluatedDocuments.filter(
         (item) => item.hasMissingProductReference,
       ).length,
+      approvalStatusCounts,
       groundedChunkCount,
       sourceRows: evaluatedDocuments
         .filter((item) => item.readiness.approvedForAi)
@@ -197,6 +231,12 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       queueCount: 0,
       completedWithoutChunksCount: 0,
       missingProductReferenceCount: 0,
+      approvalStatusCounts: {
+        pending_review: 0,
+        approved: 0,
+        rejected: 0,
+        revoked: 0,
+      },
       groundedChunkCount: 0,
       sourceRows: [],
       dbAvailable: false,
@@ -285,12 +325,12 @@ export default async function AICoreAdminPage() {
           </div>
 
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200">
-            <div className="text-xs text-emerald-300/80">Kaynaklı kullanım</div>
+            <div className="text-xs text-emerald-300/80">Teknik hazırlık</div>
             <div className="mt-1 text-2xl font-semibold">
               {knowledgeState.readyCount}
             </div>
             <div className="mt-2 text-xs text-emerald-300/80">
-              AI için gerçekten kullanılabilir belge sayısı
+              Tamamlandı ve parça üretmiş belge sayısı
             </div>
           </div>
 
@@ -300,7 +340,7 @@ export default async function AICoreAdminPage() {
               {knowledgeState.blockedCount}
             </div>
             <div className="mt-2 text-xs text-rose-300/80">
-              AI için uygun olmayan kayıtlar
+              Teknik hazırlık şartlarını geçmeyen kayıtlar
             </div>
           </div>
 
@@ -320,7 +360,7 @@ export default async function AICoreAdminPage() {
               {knowledgeState.groundedChunkCount}
             </div>
             <div className="mt-2 text-xs text-sky-300/80">
-              Uygun belgelerden okunabilir parça toplamı
+              Teknik olarak hazır belgelerden okunabilir parça toplamı
             </div>
           </div>
 
@@ -331,6 +371,45 @@ export default async function AICoreAdminPage() {
             </div>
             <div className="mt-2 text-xs text-zinc-500">
               İşleme hatası alan belgeler
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-white">
+                İnsan onayı görünürlüğü
+              </div>
+              <div className="mt-1 text-xs leading-5 text-zinc-500">
+                Teknik hazırlık ayrı kalır; bu sayaçlar yalnızca governance
+                onay durumunu gösterir.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  "pending_review",
+                  "approved",
+                  "rejected",
+                  "revoked",
+                ] as AiKnowledgeApprovalStatus[]
+              ).map((status) => (
+                <span
+                  key={status}
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs ${
+                    status === "approved"
+                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                      : status === "rejected" || status === "revoked"
+                        ? "border-rose-500/20 bg-rose-500/10 text-rose-200"
+                        : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+                  }`}
+                >
+                  {getApprovalStatusLabel(status)}:{" "}
+                  {knowledgeState.approvalStatusCounts[status]}
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -362,7 +441,7 @@ export default async function AICoreAdminPage() {
 
             <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
-                AI hazır oranı
+                Teknik hazır oranı
               </div>
               <div className="mt-2 text-lg font-semibold text-white">
                 {knowledgeState.totalCount > 0
@@ -372,8 +451,8 @@ export default async function AICoreAdminPage() {
                   : "%0"}
               </div>
               <div className="mt-2 text-sm text-zinc-400">
-                {knowledgeState.readyCount} / {knowledgeState.totalCount} kayıt gerçekten
-                bilgi kullanımı için hazır görünüyor.
+                {knowledgeState.readyCount} / {knowledgeState.totalCount} kayıt teknik
+                işleme şartlarını geçiyor.
               </div>
             </div>
 
@@ -405,8 +484,8 @@ export default async function AICoreAdminPage() {
           <div className={`mt-3 rounded-2xl border p-3 ${toneClasses("neutral")}`}>
             <div className="text-sm font-medium">Yorum sınırı</div>
             <div className="mt-2 text-sm leading-6">
-              AI yalnızca onaylı, tamamlandı görünen, depo alanı dolu ve içerik
-              parçası üretmiş kayıtlarla konuşmalıdır.
+              Teknik hazırlık ile insan onayı ayrı izlenir. İnsan onayı olmayan
+              kayıtlar sonraki governance adımına kadar yalnızca metadata olarak görünür.
             </div>
           </div>
 

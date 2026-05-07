@@ -51,6 +51,10 @@ type DashboardMetrics = {
   datasheetsFailed: number;
   datasheetsReady: number;
   datasheetsCompletedNoChunks: number;
+  knowledgePendingReview: number;
+  knowledgeApproved: number;
+  knowledgeRejected: number;
+  knowledgeRevoked: number;
 };
 
 type QuickLink = {
@@ -153,6 +157,10 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       datasheetsProcessing,
       datasheetsCompleted,
       datasheetsFailed,
+      knowledgePendingReview,
+      knowledgeApproved,
+      knowledgeRejected,
+      knowledgeRevoked,
       documents,
       chunkRows,
     ] = await Promise.all([
@@ -184,6 +192,14 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
         "completed",
       ),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.parsingStatus, "failed"),
+      countWhere(
+        aiKnowledgeDocuments,
+        aiKnowledgeDocuments.approvalStatus,
+        "pending_review",
+      ),
+      countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "approved"),
+      countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "rejected"),
+      countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "revoked"),
 
       db
         .select({
@@ -240,6 +256,10 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       datasheetsFailed,
       datasheetsReady,
       datasheetsCompletedNoChunks,
+      knowledgePendingReview,
+      knowledgeApproved,
+      knowledgeRejected,
+      knowledgeRevoked,
     };
   } catch (error) {
     console.error("Admin dashboard metrics error:", error);
@@ -475,6 +495,11 @@ export default async function AdminDashboardPage() {
           label: "Kuyruk",
           value: datasheetQueue,
           hint: "Bekleyen + işlenen",
+        },
+        {
+          label: "Onay bekliyor",
+          value: metrics.knowledgePendingReview,
+          hint: `${metrics.knowledgeApproved} onaylı / ${metrics.knowledgeRejected + metrics.knowledgeRevoked} kapalı`,
         },
         {
           label: "Kural kaydı",
