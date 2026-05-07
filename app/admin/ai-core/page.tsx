@@ -15,6 +15,7 @@ import {
   type AiKnowledgeUsageRecord,
 } from "@/app/lib/admin/governance";
 import { getAuditRuntimeValidation } from "@/app/lib/admin/audit";
+import AiExplanationProbe from "./AiExplanationProbe";
 
 type RuntimeTone = "success" | "warning" | "danger" | "neutral";
 
@@ -430,6 +431,8 @@ export default async function AICoreAdminPage() {
             </div>
           </div>
         </div>
+
+        <AiExplanationProbe />
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
