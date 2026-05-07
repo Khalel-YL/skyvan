@@ -15,6 +15,7 @@ import { asc, count, desc } from "drizzle-orm";
 
 import AddDatasheetDrawer from "./AddDatasheetDrawer";
 import DeleteDatasheetButton from "./DeleteDatasheetButton";
+import KnowledgeApprovalActions from "./KnowledgeApprovalActions";
 
 import { db } from "@/db/db";
 import { aiDocumentChunks, aiKnowledgeDocuments, products } from "@/db/schema";
@@ -1139,6 +1140,14 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                               {formatDate(doc.updatedAt)}
                             </p>
                           </div>
+
+                          <KnowledgeApprovalActions
+                            id={doc.id}
+                            approvalStatus={doc.approvalStatus}
+                            parsingStatus={doc.parsingStatus}
+                            chunkCount={doc.chunkCount}
+                            hasMissingProductReference={doc.hasMissingProductReference}
+                          />
 
                           <div className="flex items-center gap-2 xl:w-full xl:justify-end">
                             <Link
