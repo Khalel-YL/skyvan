@@ -1531,7 +1531,7 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
       <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-            Admin · Rules
+            Admin · Kurallar
           </div>
 
           <div>
@@ -1539,13 +1539,13 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
               Kural Motoru
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-              Ürünler arası requires, excludes ve recommends kurallarını kompakt
+              Ürünler arası gerektirir, hariç tutar ve önerir kurallarını kompakt
               ve operasyonel biçimde yönet.
             </p>
             <p className="mt-2 text-xs text-zinc-500">
-              Suggestion lab yalnızca yeterli sinyal ve/veya kanıt üreten
+              Öneri laboratuvarı yalnızca yeterli sinyal ve/veya kanıt üreten
               önerileri gösterir. Öneriler doğrudan kaydolmaz; drawer içinde
-              admin onayıyla finalize edilir.
+              admin onayıyla son haline getirilir.
             </p>
           </div>
         </div>

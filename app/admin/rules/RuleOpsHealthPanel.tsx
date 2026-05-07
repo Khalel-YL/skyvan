@@ -54,15 +54,15 @@ function buildOpsMessage({
   conflictCount: number;
 }) {
   if (totalProducts === 0) {
-    return "Aktif ürün görünmüyor. Rules modülünün gerçek gücü için önce ürünleri, ardından belge/spec ilişkilerini doldurmak gerekir.";
+    return "Aktif ürün görünmüyor. Kurallar modülünün gerçek gücü için önce ürünleri, ardından belge/spec ilişkilerini doldurmak gerekir.";
   }
 
   if (sourceReadyProductCount === 0) {
-    return "Aktif ürünler var ama rule üretimini besleyecek belge/spec/senaryo/güç sinyali henüz yok. Sonraki doğru iş, ürün veri kalitesini artırmak.";
+    return "Aktif ürünler var ama kural üretimini besleyecek belge/spec/senaryo/güç sinyali henüz yok. Sonraki doğru iş, ürün veri kalitesini artırmak.";
   }
 
   if (sourceReadyUnruledCount > 0) {
-    return "Veri hazır ama kuralsız ürünler var. Öncelik bu ürünler için hızlı rule başlangıçları açmak olmalı.";
+    return "Veri hazır ama kuralsız ürünler var. Öncelik bu ürünler için hızlı kural başlangıçları açmak olmalı.";
   }
 
   if (conflictCount > 0) {
@@ -70,10 +70,10 @@ function buildOpsMessage({
   }
 
   if (pendingSuggestionCount > 0) {
-    return "Suggestion kuyruğunda değerlendirilebilir adaylar var. Rules modülü artık veri temelli genişlemeye hazır.";
+    return "Öneri kuyruğunda değerlendirilebilir adaylar var. Kurallar modülü artık veri temelli genişlemeye hazır.";
   }
 
-  return "Rules omurgası stabil görünüyor. Bu modül Admin içinde kapanış seviyesine yaklaştı.";
+  return "Kurallar omurgası stabil görünüyor. Bu modül Admin içinde kapanış seviyesine yaklaştı.";
 }
 
 function ruleTypeLabel(value: string) {
@@ -125,13 +125,13 @@ export default function RuleOpsHealthPanel({
     <section className="space-y-4 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-          Rules Ops
+          Kural operasyonu
         </p>
         <h2 className="mt-2 text-lg font-semibold text-zinc-100">
           Kapsam ve operasyon sağlığı
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Rules ekranının gerçekten bitebilmesi için yalnızca kural kaydı değil,
+          Kurallar ekranının gerçekten bitebilmesi için yalnızca kural kaydı değil,
           kapsama, veri hazırlığı, öneri kuyruğu ve çakışma görünürlüğü de
           operasyonel olarak izlenmeli.
         </p>
@@ -144,19 +144,19 @@ export default function RuleOpsHealthPanel({
           hint={`Toplam aktif ürün: ${totalProducts}`}
         />
         <MetricCard
-          label="Rule-Ready Ürün"
+          label="Kurala Hazır Ürün"
           value={sourceReadyProductCount}
           hint="Belge / spec / senaryo / güç sinyali taşıyan ürünler"
         />
         <MetricCard
           label="Bekleyen Öneri"
           value={pendingSuggestionCount}
-          hint="Seçili kaynak bazlı üretilebilen suggestion adayı"
+          hint="Seçili kaynak bazlı üretilebilen öneri adayı"
         />
         <MetricCard
           label="Güçlü Öneri"
           value={highConfidenceSuggestionCount}
-          hint="Yüksek güvenli suggestion adedi"
+          hint="Yüksek güvenli öneri adedi"
         />
       </div>
 
@@ -173,8 +173,8 @@ export default function RuleOpsHealthPanel({
                 Kapsam boşluğu operasyon listesi
               </h3>
               <p className="mt-1 text-xs leading-5 text-zinc-400">
-                Rule kapsamı olmayan ürünler burada görünür. Bu alan boşaldıkça
-                Rules modülü daha tamamlanmış hale gelir.
+                Kural kapsamı olmayan ürünler burada görünür. Bu alan boşaldıkça
+                Kurallar modülü daha tamamlanmış hale gelir.
               </p>
             </div>
 
@@ -247,11 +247,11 @@ export default function RuleOpsHealthPanel({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-zinc-100">
-              Conflict preview
+              Çakışma ön izlemesi
             </h3>
             <p className="mt-1 text-xs leading-5 text-zinc-400">
-              Aynı source → target çifti için birden fazla kayıt varsa burada
-              görünür. Özellikle global + koşullu birlikteyse operasyonel dikkat gerekir.
+              Aynı kaynak → hedef çifti için birden fazla kayıt varsa burada
+              görünür. Özellikle genel + koşullu birlikteyse operasyonel dikkat gerekir.
             </p>
           </div>
 
@@ -262,7 +262,7 @@ export default function RuleOpsHealthPanel({
 
         {conflictPreview.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            Şu an görünür bir source → target çakışması bulunmuyor.
+            Şu an görünür bir kaynak → hedef çakışması bulunmuyor.
           </div>
         ) : (
           <div className="mt-4 space-y-3">

@@ -53,20 +53,20 @@ export function RulesSummary({
       <SummaryCard
         label="Zorunlu"
         value={requiresCount}
-        hint="Requires ilişkileri"
+        hint="Gerektirir ilişkileri"
       />
       <SummaryCard
         label="Engeller"
         value={excludesCount}
-        hint="Excludes ilişkileri"
+        hint="Hariç tutar ilişkileri"
       />
       <SummaryCard
         label="Önerir"
         value={recommendsCount}
-        hint="Recommends ilişkileri"
+        hint="Önerir ilişkileri"
       />
       <SummaryCard
-        label="Global Scope"
+        label="Genel kapsam"
         value={globalCount}
         hint="Koşulsuz çalışan kayıtlar"
       />

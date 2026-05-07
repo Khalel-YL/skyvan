@@ -296,7 +296,7 @@ function RuleDrawerForm({
                 ruleType === "requires",
               )}`}
             >
-              Requires
+              Gerektirir
             </button>
             <button
               type="button"
@@ -305,7 +305,7 @@ function RuleDrawerForm({
                 ruleType === "excludes",
               )}`}
             >
-              Excludes
+              Hariç tutar
             </button>
             <button
               type="button"
@@ -314,14 +314,14 @@ function RuleDrawerForm({
                 ruleType === "recommends",
               )}`}
             >
-              Recommends
+              Önerir
             </button>
           </div>
         </Field>
 
         <Field
           label="Şiddet"
-          hint="Hard block veya soft warning."
+          hint="Sert blokaj veya yumuşak uyarı."
           error={state.fieldErrors.severity}
         >
           <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
@@ -332,7 +332,7 @@ function RuleDrawerForm({
                 severity === "hard_block",
               )}`}
             >
-              Hard Block
+              Sert blokaj
             </button>
             <button
               type="button"
@@ -341,7 +341,7 @@ function RuleDrawerForm({
                 severity === "soft_warning",
               )}`}
             >
-              Soft Warning
+              Yumuşak uyarı
             </button>
           </div>
         </Field>
@@ -465,7 +465,7 @@ function RuleDrawerForm({
       </Field>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-        Drawer manuel kullanım için de, öneri taslağını düzenlemek için de aynı
+        Panel manuel kullanım için de, öneri taslağını düzenlemek için de aynı
         akışı kullanır. Böylece AI/doküman önerisi nihai kararı otomatik vermez;
         admin onay katmanı korunur.
       </div>
@@ -559,13 +559,13 @@ export default function AddRuleDrawer({
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Rules
+                  Kurallar
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
                   {isEdit ? "Kural Düzenle" : "Yeni Kural"}
                 </h2>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Ürünler arası requires / excludes / recommends ilişkilerini yönet.
+                  Ürünler arası gerektirir / hariç tutar / önerir ilişkilerini yönet.
                 </p>
               </div>
 

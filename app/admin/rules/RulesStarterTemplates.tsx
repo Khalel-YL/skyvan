@@ -130,7 +130,7 @@ const STARTER_TEMPLATES: StarterTemplate[] = [
     severity: "hard_block",
     priority: "12",
     message:
-      "Klima gibi yüksek çekişli yükler için uygun inverter olmadan seçim finalize edilmemelidir.",
+      "Klima gibi yüksek çekişli yükler için uygun inverter olmadan seçim sonlandırılmamalıdır.",
     sourceHint: "Klima / yüksek çekişli AC yük",
     targetHint: "İnverter",
   },
@@ -416,10 +416,10 @@ export default function RulesStarterTemplates({
 
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            Rules Templates Lite
+            Hafif kural şablonları
           </p>
           <h2 className="mt-2 text-lg font-semibold text-zinc-100">
-            Hazır şablonlar ve hızlı rule açılışı
+            Hazır şablonlar ve hızlı kural açılışı
           </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
             Bu panel ürün adı, kategori, açıklama, belge, spec, senaryo ve güç

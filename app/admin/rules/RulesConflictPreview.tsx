@@ -33,13 +33,13 @@ export default function RulesConflictPreview({
     <section className="space-y-4 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-          Rules Conflicts
+          Kural çakışmaları
         </p>
         <h2 className="mt-2 text-lg font-semibold text-zinc-100">
           Çakışma ön izlemesi
         </h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Aynı source → target çiftinde birden fazla kayıt veya global/koşullu
+          Aynı kaynak → hedef çiftinde birden fazla kayıt veya genel/koşullu
           birlikte kullanım olduğunda burada görünür.
         </p>
       </div>
