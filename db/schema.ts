@@ -11,23 +11,7 @@ import {
   uniqueIndex,
   index,
   date,
-  customType,
 } from "drizzle-orm/pg-core";
-
-// ─────────────────────────────────────────────────────────────
-// VECTOR TYPE (AI RAG Embeddings için pgvector eklentisi)
-// ─────────────────────────────────────────────────────────────
-const vector = customType<{ data: number[]; driverData: string }>({
-  dataType() {
-    return "vector(1536)";
-  },
-  toDriver(value: number[]): string {
-    return `[${value.join(",")}]`;
-  },
-  fromDriver(value: string): number[] {
-    return JSON.parse(value);
-  },
-});
 
 // ─────────────────────────────────────────────────────────────
 // ENUMS (PostgreSQL Enum Tipleri)
@@ -39,6 +23,12 @@ export const severityEnum = pgEnum("severity", ["hard_block", "soft_warning"]);
 export const conditionTypeEnum = pgEnum("condition_type", ["model", "package", "scenario"]);
 export const docTypeEnum = pgEnum("doc_type", ["manual", "datasheet", "rulebook"]);
 export const parsingStatusEnum = pgEnum("parsing_status", ["pending", "processing", "completed", "failed"]);
+export const aiKnowledgeApprovalStatusEnum = pgEnum("ai_knowledge_approval_status", [
+  "pending_review",
+  "approved",
+  "rejected",
+  "revoked",
+]);
 export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "converted", "lost"]);
 export const offerStatusEnum = pgEnum("offer_status", ["draft", "sent", "accepted", "rejected", "expired"]);
 export const productionStatusEnum = pgEnum("production_status", ["pending", "chassis", "insulation", "furniture", "systems", "testing", "completed"]);
@@ -381,17 +371,43 @@ export const buildSelectedProducts = pgTable(
 // ─────────────────────────────────────────────────────────────
 // 5. AI LAYER (RAG Knowledge & Vector Embeddings)
 // ─────────────────────────────────────────────────────────────
-export const aiKnowledgeDocuments = pgTable("ai_knowledge_documents", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  docType: docTypeEnum("doc_type").notNull(),
-  s3Key: text("s3_key").notNull(),
-  parsingStatus: parsingStatusEnum("parsing_status").default("pending").notNull(),
-  lastError: text("last_error"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const aiKnowledgeDocuments = pgTable(
+  "ai_knowledge_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    docType: docTypeEnum("doc_type").notNull(),
+    s3Key: text("s3_key").notNull(),
+    parsingStatus: parsingStatusEnum("parsing_status").default("pending").notNull(),
+    approvalStatus: aiKnowledgeApprovalStatusEnum("approval_status")
+      .default("pending_review")
+      .notNull(),
+    approvedAt: timestamp("approved_at"),
+    approvedBy: uuid("approved_by").references(() => users.id),
+    approvalNote: text("approval_note"),
+    rejectedAt: timestamp("rejected_at"),
+    rejectedBy: uuid("rejected_by").references(() => users.id),
+    rejectionReason: text("rejection_reason"),
+    revokedAt: timestamp("revoked_at"),
+    revokedBy: uuid("revoked_by").references(() => users.id),
+    revokedReason: text("revoked_reason"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_ai_knowledge_documents_approval_status").on(table.approvalStatus),
+    index("idx_ai_knowledge_documents_product_approval").on(
+      table.productId,
+      table.approvalStatus
+    ),
+    index("idx_ai_knowledge_documents_parsing_approval").on(
+      table.parsingStatus,
+      table.approvalStatus
+    ),
+  ]
+);
 
 export const aiDocumentChunks = pgTable("ai_document_chunks", {
   id: uuid("id").defaultRandom().primaryKey(),
