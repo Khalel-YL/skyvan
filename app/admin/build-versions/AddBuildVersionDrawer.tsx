@@ -277,7 +277,7 @@ export function AddBuildVersionDrawer({
             <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-4">
               <div className="mb-4 flex items-center gap-2 text-sm font-medium text-white">
                 <Boxes className="h-4 w-4 text-zinc-400" />
-                Version bilgisi
+                Versiyon bilgisi
               </div>
 
               <div className="space-y-4">

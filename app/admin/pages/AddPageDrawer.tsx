@@ -185,13 +185,13 @@ export default function AddPageDrawer({
         <div className="flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
           <div>
             <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
-              Admin / Pages
+              Admin / Sayfalar
             </div>
             <h2 className="mt-2 text-xl font-semibold text-white">
-              {isEdit ? "Sayfayı düzenle" : "Yeni page oluştur"}
+              {isEdit ? "Sayfayı düzenle" : "Yeni sayfa oluştur"}
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Structured blocks, SEO, preview ve publish kontrolü tek yüzeyde.
+              Yapılandırılmış bloklar, SEO, önizleme ve yayın kontrolü tek yüzeyde.
             </p>
           </div>
 
@@ -237,11 +237,11 @@ export default function AddPageDrawer({
                   <div>
                     <h3 className="text-sm font-semibold text-white">Temel bilgiler</h3>
                     <p className="mt-1 text-xs text-zinc-500">
-                      Başlık, slug ve locale public kimliği oluşturur.
+                      Başlık, slug ve dil yayın kimliği oluşturur.
                     </p>
                   </div>
                   <span className="rounded-full border border-zinc-800 px-3 py-1 text-[11px] text-zinc-400">
-                    {isEdit ? "Edit" : "Create"}
+                    {isEdit ? "Düzenleme" : "Oluşturma"}
                   </span>
                 </div>
 
@@ -342,7 +342,7 @@ export default function AddPageDrawer({
                   </span>
                 </span>
                 <span className={`rounded-full border px-3 py-1 text-xs ${isPublished ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-amber-500/25 bg-amber-500/10 text-amber-200"}`}>
-                  {isPublished ? "Published" : "Draft"}
+                  {isPublished ? "Yayında" : "Taslak"}
                 </span>
               </div>
 

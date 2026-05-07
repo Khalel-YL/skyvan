@@ -79,7 +79,7 @@ export default function AddMediaDrawer({
     {
       type: "model3d",
       icon: Box,
-      helper: "Viewer entegrasyonuna hazır 3D varlık",
+      helper: "Görüntüleyici entegrasyonuna hazır 3D varlık",
     },
   ];
 

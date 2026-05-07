@@ -96,13 +96,13 @@ const quickLinks: QuickLink[] = [
   },
   {
     title: "Kural Motoru",
-    description: "Requires / excludes / recommends mantığını denetle",
+    description: "Gerektirir / hariç tutar / önerir mantığını denetle",
     href: "/admin/rules",
     icon: Settings2,
   },
   {
     title: "Datasheet Merkezi",
-    description: "AI ve rule engine için belge kayıt katmanını besle",
+    description: "AI ve kural motoru için belge kayıt katmanını besle",
     href: "/admin/datasheets",
     icon: FileDigit,
   },
@@ -411,7 +411,7 @@ export default async function AdminDashboardPage() {
           ? [
               {
                 title: "Chunk üretmeyen tamamlanmış belge var",
-                description: `${metrics.datasheetsCompletedNoChunks} belge completed görünüyor ama içerik parçası üretmemiş.`,
+                description: `${metrics.datasheetsCompletedNoChunks} belge tamamlandı görünüyor ama içerik parçası üretmemiş.`,
                 href: "/admin/datasheets?audit=completed-no-chunks",
                 cta: "Belgeleri incele",
                 tone: "danger" as const,
@@ -464,22 +464,22 @@ export default async function AdminDashboardPage() {
         {
           label: "Belge hazır",
           value: metrics.datasheetsReady,
-          hint: "Chunk üreten completed kayıtlar",
+          hint: "Parça üreten tamamlanmış kayıtlar",
         },
         {
-          label: "Chunk'sız completed",
+          label: "Parçasız tamamlanan",
           value: metrics.datasheetsCompletedNoChunks,
           hint: "Kalite kontrol gerektirir",
         },
         {
           label: "Kuyruk",
           value: datasheetQueue,
-          hint: "Pending + processing",
+          hint: "Bekleyen + işlenen",
         },
         {
           label: "Kural kaydı",
           value: metrics.rulesTotal,
-          hint: "Rule engine veri omurgası",
+          hint: "Kural motoru veri omurgası",
         },
       ]
     : [];
@@ -750,7 +750,7 @@ export default async function AdminDashboardPage() {
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
-                  AI ve rule engine tarafına veri taşıyacak temel hazırlık
+                  AI ve kural motoru tarafına veri taşıyacak temel hazırlık
                   kalitesini tek panelde özetler.
                 </p>
               </div>

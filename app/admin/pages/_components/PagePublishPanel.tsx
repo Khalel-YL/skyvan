@@ -34,7 +34,7 @@ export function PagePublishPanel({
         <div>
           <h3 className="text-sm font-semibold text-white">Yayın kontrolü</h3>
           <p className="mt-1 text-xs text-zinc-500">
-            Taslak kaydetme ve yayınlama ayrı aksiyonlardır. Publish blocker varsa yayın kapalı kalır.
+            Taslak kaydetme ve yayınlama ayrı aksiyonlardır. Yayın engeli varsa yayın kapalı kalır.
           </p>
         </div>
         <span
@@ -44,14 +44,14 @@ export function PagePublishPanel({
               : "border-amber-500/25 bg-amber-500/10 text-amber-200"
           }`}
         >
-          {isPublished ? "Current state: Published" : "Current state: Draft"}
+          {isPublished ? "Mevcut durum: Yayında" : "Mevcut durum: Taslak"}
         </span>
       </div>
 
       <div className="mt-4 grid gap-2 text-sm">
         {blockers.length > 0 ? (
           <div className="rounded-2xl border border-rose-900/60 bg-rose-950/30 p-3 text-rose-200">
-            <div className="font-medium">Publish blocker</div>
+            <div className="font-medium">Yayın engeli</div>
             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
               {blockers.map((item) => (
                 <li key={item}>{item}</li>
@@ -60,7 +60,7 @@ export function PagePublishPanel({
           </div>
         ) : (
           <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/30 p-3 text-sm text-emerald-200">
-            Publish için temel kontroller temiz.
+            Yayın için temel kontroller temiz.
           </div>
         )}
 
@@ -110,7 +110,7 @@ export function PagePublishPanel({
               disabled={pending}
               className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? "Kaydediliyor..." : "Save Draft"}
+              {pending ? "Kaydediliyor..." : "Taslak kaydet"}
             </button>
             <button
               type="submit"
@@ -120,7 +120,7 @@ export function PagePublishPanel({
               disabled={pending || blockers.length > 0}
               className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {pending ? "Yayınlanıyor..." : isEdit ? "Publish changes" : "Publish page"}
+              {pending ? "Yayınlanıyor..." : isEdit ? "Değişiklikleri yayınla" : "Sayfayı yayınla"}
             </button>
           </>
         )}

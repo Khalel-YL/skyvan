@@ -358,9 +358,9 @@ export async function setBuildCurrentVersion(
   if (versionRow.length === 0) {
     return {
       ok: false,
-      message: "Version kaydı bulunamadı.",
+      message: "Versiyon kaydı bulunamadı.",
       errors: {
-        versionId: "Geçerli bir version seçilmelidir.",
+        versionId: "Geçerli bir versiyon seçilmelidir.",
       },
     };
   }

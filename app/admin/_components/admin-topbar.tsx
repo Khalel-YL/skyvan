@@ -123,7 +123,7 @@ export function AdminTopbar({
           <div className="mt-3 flex flex-col gap-2 border-t border-[var(--admin-border)] pt-3 text-xs text-[var(--admin-muted)] md:flex-row md:items-center md:justify-between">
             <p className="min-w-0 leading-5">{databaseNote}</p>
             <p className="shrink-0 font-medium text-zinc-400">
-              Admin shell · premium temel
+              Admin kabuğu · kompakt temel
             </p>
           </div>
         </div>

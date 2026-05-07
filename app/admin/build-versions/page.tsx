@@ -300,12 +300,12 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
             {currentLinkedCount}
           </div>
           <div className="mt-2 text-xs text-zinc-500">
-            currentVersionId dolu build kayıtları
+            Güncel versiyon bağı dolu build kayıtları
           </div>
         </div>
 
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5">
-          <div className="text-sm text-zinc-400">Eksik current bağ</div>
+          <div className="text-sm text-zinc-400">Eksik güncel bağ</div>
           <div className="mt-3 text-3xl font-semibold text-white">
             {missingCurrentCount}
           </div>
@@ -323,7 +323,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
               type="text"
               name="q"
               defaultValue={q}
-              placeholder="Build kodu, model, paket veya version ara"
+              placeholder="Build kodu, model, paket veya versiyon ara"
               className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-11 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"
             />
           </div>
@@ -347,8 +347,8 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
             className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
           >
             <option value="">Tüm sağlık durumları</option>
-            <option value="healthy">Current bağlı</option>
-            <option value="missing_current">Current bağı eksik</option>
+            <option value="healthy">Güncel bağlı</option>
+            <option value="missing_current">Güncel bağı eksik</option>
           </select>
 
           <div className="flex gap-2">
@@ -449,7 +449,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                               : "border-amber-500/20 bg-amber-500/10 text-amber-200"
                           }`}
                         >
-                          {hasCurrent ? "Sağlıklı" : "Current bağı eksik"}
+                          {hasCurrent ? "Sağlıklı" : "Güncel bağı eksik"}
                         </span>
                       </td>
 
@@ -459,7 +459,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                             href={`/admin/build-versions?new=true&buildId=${item.id}`}
                             className="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
                           >
-                            Yeni version
+                            Yeni versiyon
                           </Link>
                         </div>
                       </td>
@@ -475,9 +475,9 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
       {filteredVersions.length === 0 ? null : (
         <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/60">
           <div className="border-b border-zinc-800 px-5 py-4">
-            <div className="text-sm font-medium text-white">Recent versions</div>
+            <div className="text-sm font-medium text-white">Son versiyonlar</div>
             <div className="mt-1 text-xs text-zinc-500">
-              Mevcut version kayıtları ve current bağ operasyonu
+              Mevcut versiyon kayıtları ve güncel bağ operasyonu
             </div>
           </div>
 
@@ -486,7 +486,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
               <thead className="border-b border-zinc-800 bg-zinc-950/80 text-zinc-400">
                 <tr>
                   <th className="px-5 py-4 font-medium">Build</th>
-                  <th className="px-5 py-4 font-medium">Version</th>
+                  <th className="px-5 py-4 font-medium">Versiyon</th>
                   <th className="px-5 py-4 font-medium">Paket</th>
                   <th className="px-5 py-4 font-medium">Current bağ</th>
                   <th className="px-5 py-4 font-medium">Tarih</th>
@@ -512,7 +512,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                       <td className="px-5 py-4 align-top">
                         <div className="font-medium text-white">v{item.versionNumber}</div>
                         <div className="mt-1 text-xs text-zinc-500">
-                          Version ID: {item.id.slice(0, 8)}
+                          Versiyon ID: {item.id.slice(0, 8)}
                         </div>
                       </td>
 

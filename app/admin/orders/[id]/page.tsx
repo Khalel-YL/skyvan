@@ -349,7 +349,7 @@ export default async function OrderDetailPage({ params }: Props) {
             <div>
               <h1 className="text-2xl font-semibold text-white">{order.leadName}</h1>
               <p className="mt-1 text-sm text-zinc-400">
-                Build Version: V{order.buildVersionNumber} · Tutar:{" "}
+                Build versiyonu: V{order.buildVersionNumber} · Tutar:{" "}
                 {formatCurrency(order.totalAmount)}
               </p>
             </div>

@@ -48,7 +48,7 @@ export const mediaTypeLabels: Record<MediaType, string> = {
 };
 
 export const usageScopeLabels: Record<MediaUsageScope, string> = {
-  public: "Public",
+  public: "Yayın",
   admin: "Admin",
   workshop: "Workshop",
   product: "Ürün",

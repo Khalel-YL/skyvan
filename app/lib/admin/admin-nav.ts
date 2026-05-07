@@ -59,7 +59,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     title: "Sayfalar",
     href: "/admin/pages",
-    description: "Public sayfalar ve locale içerik yönetimi",
+    description: "Yayın sayfaları ve dil içerik yönetimi",
     icon: FileText,
     enabled: true,
     section: "stable",
@@ -86,7 +86,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     title: "SEO & Ayarlar",
     href: "/admin/settings",
-    description: "SEO kapsaması ve runtime governance görünürlüğü",
+    description: "SEO kapsaması ve çalışma zamanı yönetişim görünürlüğü",
     icon: Settings2,
     enabled: true,
     section: "stable",
@@ -225,7 +225,7 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "system",
-    badge: "Core",
+    badge: "Çekirdek",
   },
 ];
 

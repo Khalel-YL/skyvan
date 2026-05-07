@@ -759,7 +759,7 @@ export async function savePage(
     if (blockers.length > 0) {
       return {
         ok: false,
-        message: "Publish blocker nedeniyle sayfa kaydedilemedi.",
+        message: "Yayın engeli nedeniyle sayfa kaydedilemedi.",
         values,
         errors: {
           ...errors,

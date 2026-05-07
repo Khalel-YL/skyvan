@@ -9,7 +9,7 @@ export default function Error({ error, reset }: AdminErrorProps) {
   return (
     <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
-        Admin Error Boundary
+        Admin hata sınırı
       </p>
 
       <h2 className="mt-2 text-xl font-semibold text-white">

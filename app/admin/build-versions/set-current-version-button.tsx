@@ -47,7 +47,7 @@ export function BuildCurrentVersionButton({
         disabled={isPending}
         className="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? "Güncelleniyor..." : "Current yap"}
+        {isPending ? "Güncelleniyor..." : "Güncel yap"}
       </button>
     </form>
   );

@@ -84,7 +84,7 @@ function ProductDocumentForm({
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-zinc-800 bg-zinc-950/95 px-6 py-5 backdrop-blur">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Product Documents
+                  Ürün belgeleri
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-zinc-100">
                   Yeni belge ekle

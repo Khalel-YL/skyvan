@@ -64,7 +64,7 @@ export function ArchiveProductDocumentDialog({
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">
           <div className="w-full max-w-lg rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
             <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-              Product Documents
+              Ürün belgeleri
             </p>
 
             <h3 className="mt-3 text-xl font-semibold text-zinc-100">
