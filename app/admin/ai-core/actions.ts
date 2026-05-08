@@ -49,6 +49,18 @@ export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCore
     const evidenceRows = await getAiGroundedChunkRecords({
       limit: MAX_EVIDENCE_CHUNKS,
     });
+
+    if (!evidenceRows.length) {
+      return {
+        ok: false,
+        message: "Onaylı kaynak metni okunabilir değil.",
+        output: null,
+        provider: "disabled",
+        modelId: null,
+        evidenceCount: 0,
+      };
+    }
+
     let usedExcerptCharacters = 0;
 
     const evidence: AiEvidenceItem[] = evidenceRows.map((row) => ({
@@ -72,17 +84,6 @@ export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCore
         return excerpt;
       })(),
     }));
-
-    if (!evidence.length) {
-      return {
-        ok: false,
-        message: "Onaylı kaynak yetersiz.",
-        output: null,
-        provider: "disabled",
-        modelId: null,
-        evidenceCount: 0,
-      };
-    }
 
     const result = await generateAiExplanation({
       purpose: "admin-ai-core-governance-probe",

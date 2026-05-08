@@ -44,6 +44,18 @@ export type AiGroundedChunkRecord = {
   pageNumber: number | null;
   tokenCount: number;
 };
+export type AiEvidenceTextQuality = {
+  readable: boolean;
+  reason: string | null;
+  metrics: {
+    length: number;
+    replacementRatio: number;
+    controlRatio: number;
+    alphaRatio: number;
+    wordCount: number;
+    hasPdfHeader: boolean;
+  };
+};
 export type ProductGroundedExplanation = {
   available: boolean;
   note: string;
@@ -99,6 +111,64 @@ const APPROVAL_STATUSES: AiKnowledgeApprovalStatus[] = [
   "rejected",
   "revoked",
 ];
+const AI_TEXT_QUALITY_CANDIDATE_CAP = 50;
+const TURKISH_LATIN_ALPHA_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]/g;
+const TURKISH_LATIN_WORD_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]{2,}/g;
+
+export function getAiEvidenceTextQuality(text: string): AiEvidenceTextQuality {
+  const normalizedText = String(text ?? "");
+  const length = normalizedText.length;
+  const hasPdfHeader = normalizedText.slice(0, 120).includes("%PDF-");
+  const replacementCount = (normalizedText.match(/\uFFFD/g) ?? []).length;
+  let controlCount = 0;
+
+  for (const character of normalizedText) {
+    const code = character.charCodeAt(0);
+    const isNormalWhitespace = character === "\n" || character === "\r" || character === "\t";
+
+    if (!isNormalWhitespace && ((code >= 0 && code <= 31) || code === 127)) {
+      controlCount += 1;
+    }
+  }
+
+  const alphaCount = (normalizedText.match(TURKISH_LATIN_ALPHA_PATTERN) ?? [])
+    .length;
+  const wordCount = (normalizedText.match(TURKISH_LATIN_WORD_PATTERN) ?? [])
+    .length;
+  const replacementRatio = length > 0 ? replacementCount / length : 0;
+  const controlRatio = length > 0 ? controlCount / length : 0;
+  const alphaRatio = length > 0 ? alphaCount / length : 0;
+  let reason: string | null = null;
+
+  if (hasPdfHeader) {
+    reason = "PDF ikili verisi metin olarak görünüyor.";
+  } else if (replacementRatio > 0.02) {
+    reason = "Metin çok fazla bozuk karakter içeriyor.";
+  } else if (controlRatio > 0.05) {
+    reason = "Metin çok fazla kontrol karakteri içeriyor.";
+  } else if (length > 0 && alphaRatio < 0.2) {
+    reason = "Metin okunabilir harf oranı düşük.";
+  } else if (wordCount < 20 && alphaRatio < 0.35) {
+    reason = "Metin okunabilir kelime üretmiyor.";
+  }
+
+  return {
+    readable: reason === null,
+    reason,
+    metrics: {
+      length,
+      replacementRatio,
+      controlRatio,
+      alphaRatio,
+      wordCount,
+      hasPdfHeader,
+    },
+  };
+}
+
+export function isReadableAiEvidenceText(text: string) {
+  return getAiEvidenceTextQuality(text).readable;
+}
 const CRITICAL_OFFER_STATUSES = new Set<OfferStatus>([
   "accepted",
   "rejected",
@@ -650,8 +720,14 @@ export async function getAiGroundedChunkRecords(input?: {
 
   const normalizedLimit =
     typeof input?.limit === "number" && input.limit > 0 ? input.limit : null;
+  const candidateLimit = normalizedLimit
+    ? Math.min(Math.max(normalizedLimit * 4, 20), AI_TEXT_QUALITY_CANDIDATE_CAP)
+    : AI_TEXT_QUALITY_CANDIDATE_CAP;
+  const readableRows = rows
+    .slice(0, candidateLimit)
+    .filter((row) => isReadableAiEvidenceText(row.contentText));
 
-  return normalizedLimit ? rows.slice(0, normalizedLimit) : rows;
+  return normalizedLimit ? readableRows.slice(0, normalizedLimit) : readableRows;
 }
 
 export async function getProductGroundedExplanation(input: {

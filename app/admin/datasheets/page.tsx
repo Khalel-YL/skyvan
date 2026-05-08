@@ -11,12 +11,13 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { asc, count, desc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 
 import AddDatasheetDrawer from "./AddDatasheetDrawer";
 import DeleteDatasheetButton from "./DeleteDatasheetButton";
 import KnowledgeApprovalActions from "./KnowledgeApprovalActions";
 
+import { getAiEvidenceTextQuality } from "@/app/lib/admin/governance";
 import { db } from "@/db/db";
 import { aiDocumentChunks, aiKnowledgeDocuments, products } from "@/db/schema";
 
@@ -56,6 +57,7 @@ type DatasheetRow = {
   updatedAt: Date | string;
   productLabel: string;
   chunkCount: number;
+  readableChunkCount: number;
   hasMissingProductReference: boolean;
 };
 
@@ -315,15 +317,24 @@ async function getDatasheetsSafely(
       db
         .select({
           documentId: aiDocumentChunks.documentId,
-          chunkCount: count(),
+          contentText: aiDocumentChunks.contentText,
         })
-        .from(aiDocumentChunks)
-        .groupBy(aiDocumentChunks.documentId),
+        .from(aiDocumentChunks),
     ]);
 
-    const chunkMap = new Map(
-      chunkRows.map((row) => [row.documentId, Number(row.chunkCount ?? 0)]),
-    );
+    const chunkMap = new Map<string, { total: number; readable: number }>();
+
+    for (const row of chunkRows) {
+      const current = chunkMap.get(row.documentId) ?? { total: 0, readable: 0 };
+
+      current.total += 1;
+
+      if (getAiEvidenceTextQuality(row.contentText).readable) {
+        current.readable += 1;
+      }
+
+      chunkMap.set(row.documentId, current);
+    }
 
     return documents.map((document) => {
       const hasMissingProductReference = Boolean(
@@ -355,7 +366,8 @@ async function getDatasheetsSafely(
                 ? `${product.sku} · ${product.name}`
                 : "Eksik ürün referansı"
               : "Genel doküman",
-        chunkCount: chunkMap.get(document.id) ?? 0,
+        chunkCount: chunkMap.get(document.id)?.total ?? 0,
+        readableChunkCount: chunkMap.get(document.id)?.readable ?? 0,
         hasMissingProductReference:
           document.docType !== "rulebook" &&
           (!document.productId || hasMissingProductReference),
@@ -1108,6 +1120,14 @@ export default async function DatasheetsPage({ searchParams }: PageProps) {
                                 <span className="inline-flex whitespace-nowrap rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-neutral-300">
                                   Parça: {doc.chunkCount}
                                 </span>
+
+                                {doc.approvalStatus === "approved" &&
+                                doc.chunkCount > 0 &&
+                                doc.readableChunkCount === 0 ? (
+                                  <span className="inline-flex whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
+                                    Metin çıkarımı yetersiz
+                                  </span>
+                                ) : null}
 
                                 {duplicate ? (
                                   <span className="inline-flex whitespace-nowrap rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-[11px] text-rose-200">

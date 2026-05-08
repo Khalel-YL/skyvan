@@ -29,8 +29,8 @@ export default function AiExplanationProbe() {
             AI açıklama altyapısı
           </div>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-zinc-500">
-            Bu kontrol yalnızca onaylı kaynaklardan sınırlı alıntı kullanır; Gemini
-            sağlayıcısı yalnızca yerel yapılandırma açıksa çağrılır.
+            Bu kontrol yalnızca onaylı ve okunabilir kaynaklardan sınırlı alıntı
+            kullanır; Gemini sağlayıcısı yalnızca yerel yapılandırma açıksa çağrılır.
           </p>
         </div>
 
