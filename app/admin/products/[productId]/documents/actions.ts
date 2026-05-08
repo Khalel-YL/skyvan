@@ -163,6 +163,14 @@ function getCanonicalKnowledgeKey(value: string) {
   return normalizeDocumentUrl(value);
 }
 
+function getSafeDocumentHostname(value: string) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return "geçersiz-url";
+  }
+}
+
 function estimateTokenCount(value: string) {
   const tokens = value
     .trim()
@@ -213,10 +221,26 @@ function isPdfDocument(contentType: string, bytes: Uint8Array) {
   );
 }
 
-async function extractReadablePdfText(buffer: ArrayBuffer | Uint8Array) {
+async function extractReadablePdfText(
+  buffer: ArrayBuffer | Uint8Array,
+  input: {
+    productDocumentId: string;
+    hostname: string;
+    contentType: string;
+  },
+) {
   const result = await extractPdfText(buffer);
 
   if (!result.ok || !result.text) {
+    console.warn("AI ingestion PDF parse warning", {
+      productDocumentId: input.productDocumentId,
+      hostname: input.hostname,
+      contentType: input.contentType || "unknown",
+      diagnosticCode: result.diagnosticCode ?? "PDFJS_UNKNOWN_ERROR",
+      diagnosticMessage: result.diagnosticMessage ?? result.reason ?? null,
+      pageCount: result.pageCount,
+    });
+
     throw new Error(result.reason ?? PDF_BINARY_FAILURE_MESSAGE);
   }
 
@@ -424,13 +448,9 @@ function splitIntoChunks(value: string) {
 }
 
 async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
-  console.log("AI ingestion fetch start", {
-    productDocumentId: document.id,
-    url: document.url,
-  });
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DOCUMENT_FETCH_TIMEOUT_MS);
+  const hostname = getSafeDocumentHostname(document.url);
 
   try {
     const response = await fetch(document.url, {
@@ -447,24 +467,15 @@ async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
       response.headers.get("content-type") ?? "",
     ).toLowerCase();
 
-    console.log("AI ingestion fetch success", {
-      productDocumentId: document.id,
-      url: document.url,
-      contentType: contentType || "unknown",
-      status: response.status,
-    });
-
-    console.log("AI ingestion parse start", {
-      productDocumentId: document.id,
-      url: document.url,
-      contentType: contentType || "unknown",
-    });
-
     const responseBuffer = await response.arrayBuffer();
     const responseBytes = new Uint8Array(responseBuffer);
 
     if (isPdfDocument(contentType, responseBytes)) {
-      return extractReadablePdfText(responseBytes);
+      return extractReadablePdfText(responseBytes, {
+        productDocumentId: document.id,
+        hostname,
+        contentType: contentType || "unknown",
+      });
     }
 
     if (
@@ -1503,12 +1514,6 @@ export async function ingestProductDocumentToAi(
     const extractedText = await fetchDocumentText(sourceDocument);
     const generatedChunks = buildGeneratedChunks(extractedText);
 
-    console.log("AI ingestion chunk count", {
-      productDocumentId: sourceDocument.id,
-      canonicalKey,
-      chunkCount: generatedChunks.length,
-    });
-
     let completedKnowledgeDocument: KnowledgeDocumentRecord | null = null;
     let createdKnowledgeDocument = false;
 
@@ -1697,12 +1702,6 @@ export async function ingestProductDocumentToAi(
         }),
       });
 
-      console.log("AI ingestion db insert done", {
-        productDocumentId: sourceDocument.id,
-        knowledgeDocumentId: nextCompletedKnowledgeDocument.id,
-        chunkCount: insertedChunks.length,
-      });
-
       completedKnowledgeDocument = nextCompletedKnowledgeDocument;
 
     if (!completedKnowledgeDocument) {
@@ -1720,7 +1719,11 @@ export async function ingestProductDocumentToAi(
   } catch (error) {
     const failureMessage = buildReadableErrorMessage(error);
 
-    console.error("ingestProductDocumentToAi error:", error);
+    console.error("ingestProductDocumentToAi error:", {
+      productDocumentId: sourceDocument.id,
+      hostname: getSafeDocumentHostname(sourceDocument.url),
+      message: failureMessage,
+    });
 
     try {
       const rows = await database

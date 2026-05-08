@@ -7,11 +7,17 @@ export type PdfTextExtractionResult = {
   text: string | null;
   pageCount: number | null;
   reason: string | null;
+  diagnosticCode?: string;
+  diagnosticMessage?: string;
 };
 
 const SCANNED_PDF_MESSAGE =
   "PDF taranmış görünüyor; okunabilir metin bulunamadı.";
 const PDF_EXTRACTION_FAILURE_MESSAGE = "PDF metni çıkarılamadı.";
+const PDFJS_LOAD_FAILED = "PDFJS_LOAD_FAILED";
+const PDFJS_TEXT_CONTENT_FAILED = "PDFJS_TEXT_CONTENT_FAILED";
+const PDFJS_EMPTY_TEXT = "PDFJS_EMPTY_TEXT";
+const PDFJS_UNKNOWN_ERROR = "PDFJS_UNKNOWN_ERROR";
 
 function normalizePdfText(value: string) {
   return value
@@ -35,6 +41,14 @@ function getTextItemValue(item: unknown) {
   return "";
 }
 
+function getDiagnosticMessage(error: unknown) {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`.slice(0, 240);
+  }
+
+  return String(error).slice(0, 240);
+}
+
 export async function extractPdfText(
   buffer: ArrayBuffer | Uint8Array,
 ): Promise<PdfTextExtractionResult> {
@@ -47,24 +61,49 @@ export async function extractPdfText(
       useWorkerFetch: false,
     });
 
-    const document = await loadingTask.promise;
+    let document: Awaited<typeof loadingTask.promise>;
+
+    try {
+      document = await loadingTask.promise;
+    } catch (error) {
+      return {
+        ok: false,
+        text: null,
+        pageCount: null,
+        reason: PDF_EXTRACTION_FAILURE_MESSAGE,
+        diagnosticCode: PDFJS_LOAD_FAILED,
+        diagnosticMessage: getDiagnosticMessage(error),
+      };
+    }
+
     pageCount = document.numPages;
 
     try {
       const pages: string[] = [];
 
       for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-        const page = await document.getPage(pageNumber);
-        const textContent = await page.getTextContent();
-        const pageText = normalizePdfText(
-          textContent.items.map((item) => getTextItemValue(item)).join(" "),
-        );
+        try {
+          const page = await document.getPage(pageNumber);
+          const textContent = await page.getTextContent();
+          const pageText = normalizePdfText(
+            textContent.items.map((item) => getTextItemValue(item)).join(" "),
+          );
 
-        if (pageText) {
-          pages.push(pageText);
+          if (pageText) {
+            pages.push(pageText);
+          }
+
+          page.cleanup();
+        } catch (error) {
+          return {
+            ok: false,
+            text: null,
+            pageCount,
+            reason: PDF_EXTRACTION_FAILURE_MESSAGE,
+            diagnosticCode: PDFJS_TEXT_CONTENT_FAILED,
+            diagnosticMessage: getDiagnosticMessage(error),
+          };
         }
-
-        page.cleanup();
       }
 
       const text = normalizePdfText(pages.join("\n\n"));
@@ -75,6 +114,8 @@ export async function extractPdfText(
           text: null,
           pageCount,
           reason: SCANNED_PDF_MESSAGE,
+          diagnosticCode: PDFJS_EMPTY_TEXT,
+          diagnosticMessage: "PDF.js returned no text content.",
         };
       }
 
@@ -83,16 +124,20 @@ export async function extractPdfText(
         text,
         pageCount,
         reason: null,
+        diagnosticCode: undefined,
+        diagnosticMessage: undefined,
       };
     } finally {
       await document.destroy();
     }
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       text: null,
       pageCount,
       reason: PDF_EXTRACTION_FAILURE_MESSAGE,
+      diagnosticCode: PDFJS_UNKNOWN_ERROR,
+      diagnosticMessage: getDiagnosticMessage(error),
     };
   }
 }
