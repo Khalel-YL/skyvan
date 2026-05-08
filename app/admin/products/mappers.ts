@@ -44,12 +44,12 @@ export const categoryTypeOptionsBySlug: Record<
     { value: "lavabo", label: "lavabo" },
   ],
   electrical: [
-    { value: "solar", label: "solar" },
-    { value: "akü", label: "akü" },
-    { value: "inverter", label: "inverter" },
-    { value: "mppt", label: "mppt" },
-    { value: "sigorta", label: "sigorta" },
-    { value: "kablo", label: "kablo" },
+    { value: "solar", label: "Güneş paneli" },
+    { value: "akü", label: "Akü" },
+    { value: "inverter", label: "İnverter" },
+    { value: "mppt", label: "MPPT şarj kontrol cihazı" },
+    { value: "sigorta", label: "Sigorta" },
+    { value: "kablo", label: "Kablo" },
   ],
   plumbing: [
     { value: "temiz_su_tankı", label: "temiz_su_tankı" },
@@ -91,12 +91,12 @@ export const targetLayerOptions: Array<{
   value: Exclude<ProductTargetLayer, null>;
   label: string;
 }> = [
-  { value: "kitchen", label: "Kitchen" },
-  { value: "bed", label: "Bed" },
-  { value: "storage", label: "Storage" },
-  { value: "seat", label: "Seat" },
-  { value: "table", label: "Table" },
-  { value: "bathroom", label: "Bathroom" },
+  { value: "kitchen", label: "Mutfak" },
+  { value: "bed", label: "Yatak" },
+  { value: "storage", label: "Depolama" },
+  { value: "seat", label: "Oturma" },
+  { value: "table", label: "Masa" },
+  { value: "bathroom", label: "Banyo" },
 ];
 
 const categoryPresentationBySlug: Record<

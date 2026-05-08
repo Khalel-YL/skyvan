@@ -194,333 +194,397 @@ function ProductFormFields({
     setWorkshopEffect("none");
     setTargetLayer("");
   };
+  const primaryFieldNames = new Set([
+    "name",
+    "sku",
+    "categoryId",
+    "productType",
+    "productSubType",
+    "shortDescription",
+    "description",
+    "status",
+  ]);
+  const hasAdvancedErrors = Boolean(
+    errors && Object.keys(errors).some((key) => !primaryFieldNames.has(key)),
+  );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Ürün Adı
-        </label>
-        <input
-          name="name"
-          value={name}
-          onChange={(event) => handleNameChange(event.target.value)}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="name" />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Slug
-        </label>
-        <input
-          name="slug"
-          value={slug}
-          onChange={(event) => {
-            setSlugEdited(true);
-            setSlug(event.target.value);
-          }}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="slug" />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          SKU
-        </label>
-        <input
-          name="sku"
-          value={sku}
-          onChange={(event) => {
-            setSkuEdited(true);
-            setSku(event.target.value);
-          }}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="sku" />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Kategori
-        </label>
-        <select
-          name="categoryId"
-          value={selectedCategoryId}
-          onChange={(event) => handleCategoryChange(event.target.value)}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          <option value="">Kategori seç</option>
-          {categories
-            .filter((item) => item.status === "active" || item.status == null)
-            .map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.categoryLabel}
-              </option>
-            ))}
-        </select>
-        <CategoryDerivedInfo category={selectedCategory} />
-        <FieldError errors={errors} name="categoryId" />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Ürün Tipi
-        </label>
-        <select
-          name="productType"
-          value={productType}
-          onChange={(event) => setProductType(event.target.value)}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          <option value="">
-            {selectedCategory ? "Tip seç" : "Önce kategori seç"}
-          </option>
-          {productTypeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Alt Tip
-        </label>
-        <input
-          name="productSubType"
-          defaultValue={values?.productSubType ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Workshop Etkisi
-        </label>
-        <select
-          name="workshopEffect"
-          value={workshopEffect}
-          onChange={(event) =>
-            setWorkshopEffect(
-              event.target.value as "none" | "layer" | "mesh" | "material",
-            )
-          }
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          {workshopEffectOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Workshop Görünürlüğü
-        </label>
-        <select
-          name="workshopVisibility"
-          value={workshopVisibility}
-          onChange={(event) =>
-            setWorkshopVisibility(
-              event.target.value as
-                | "selectable_visual"
-                | "selectable_hidden"
-                | "ai_package_only",
-            )
-          }
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          {workshopVisibilityOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Hedef Katman
-        </label>
-        <select
-          name="targetLayer"
-          value={targetLayer}
-          onChange={(event) => setTargetLayer(event.target.value)}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          <option value="">Katman yok</option>
-          {targetLayerOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          3D Mesh Anahtarı
-        </label>
-        <input
-          name="meshKey"
-          defaultValue={values?.meshKey ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Materyal Anahtarı
-        </label>
-        <input
-          name="materialKey"
-          defaultValue={values?.materialKey ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <input type="hidden" name="technicalSpecs" defaultValue={values?.technicalSpecs ?? ""} />
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
-          Teknik özellikler bu ekranda serbest metin olarak düzenlenmez. Ürün
-          kaydı önce operasyonel alanlarla oluşturulur.
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-zinc-100">
+            Temel ürün bilgisi
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            Önce sade bir taslak ürün kaydı oluştur. Belgeler ve teknik değerler
+            ürün oluşturulduktan sonra tamamlanabilir.
+          </p>
         </div>
-      </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Baz Fiyat
-        </label>
-        <input
-          name="basePrice"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={values?.basePrice ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="basePrice" />
-      </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Ürün Adı
+            </label>
+            <input
+              name="name"
+              value={name}
+              onChange={(event) => handleNameChange(event.target.value)}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="name" />
+          </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Ağırlık (kg)
-        </label>
-        <input
-          name="weightKg"
-          type="number"
-          step="0.001"
-          min="0"
-          defaultValue={values?.weightKg ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="weightKg" />
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              SKU / Model Kodu
+            </label>
+            <input
+              name="sku"
+              value={sku}
+              onChange={(event) => {
+                setSkuEdited(true);
+                setSku(event.target.value);
+              }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="sku" />
+          </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Güç Tüketimi (W)
-        </label>
-        <input
-          name="powerDrawWatts"
-          type="number"
-          step="1"
-          min="0"
-          defaultValue={values?.powerDrawWatts ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="powerDrawWatts" />
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Kategori
+            </label>
+            <select
+              name="categoryId"
+              value={selectedCategoryId}
+              onChange={(event) => handleCategoryChange(event.target.value)}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              <option value="">Kategori seç</option>
+              {categories
+                .filter((item) => item.status === "active" || item.status == null)
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.categoryLabel}
+                  </option>
+                ))}
+            </select>
+            <CategoryDerivedInfo category={selectedCategory} />
+            <FieldError errors={errors} name="categoryId" />
+          </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Besleme Gücü (W)
-        </label>
-        <input
-          name="powerSupplyWatts"
-          type="number"
-          step="1"
-          min="0"
-          defaultValue={values?.powerSupplyWatts ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="powerSupplyWatts" />
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Ürün Tipi
+            </label>
+            <select
+              name="productType"
+              value={productType}
+              onChange={(event) => setProductType(event.target.value)}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              <option value="">
+                {selectedCategory ? "Tip seç" : "Önce kategori seç"}
+              </option>
+              {productTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Kısa Açıklama
-        </label>
-        <textarea
-          name="shortDescription"
-          rows={2}
-          defaultValue={values?.shortDescription ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="shortDescription" />
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Alt Tip
+            </label>
+            <input
+              name="productSubType"
+              defaultValue={values?.productSubType ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+          </div>
 
-      <div className="md:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Açıklama
-        </label>
-        <textarea
-          name="description"
-          rows={4}
-          defaultValue={values?.description ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="description" />
-      </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Durum
+            </label>
+            <select
+              name="status"
+              defaultValue={values?.status ?? "draft"}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              <option value="draft">Taslak</option>
+              <option value="archived">Arşiv</option>
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">
+              Yeni ürünler önce taslak akışta açılır. Aktif statü, insan onaylı
+              AI bilgi kaydı oluştuğunda kullanılmalıdır.
+            </p>
+            <FieldError errors={errors} name="status" />
+          </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Görsel URL
-        </label>
-        <input
-          name="imageUrl"
-          defaultValue={values?.imageUrl ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="imageUrl" />
-      </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Kısa Açıklama
+            </label>
+            <textarea
+              name="shortDescription"
+              rows={2}
+              defaultValue={values?.shortDescription ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="shortDescription" />
+          </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Datasheet URL
-        </label>
-        <input
-          name="datasheetUrl"
-          defaultValue={values?.datasheetUrl ?? ""}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
-        />
-        <FieldError errors={errors} name="datasheetUrl" />
-      </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Açıklama
+            </label>
+            <textarea
+              name="description"
+              rows={4}
+              defaultValue={values?.description ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="description" />
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-zinc-300">
-          Durum
-        </label>
-        <select
-          name="status"
-          defaultValue={values?.status ?? "draft"}
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
-        >
-          <option value="draft">Taslak</option>
-          <option value="archived">Arşiv</option>
-        </select>
-        <p className="mt-1 text-xs text-zinc-500">
-          Yeni ürünler önce taslak akışta açılır. Aktif statü, insan onaylı AI
-          bilgi kaydı oluştuğunda kullanılmalıdır.
+      <details
+        className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4"
+        open={hasAdvancedErrors || undefined}
+      >
+        <summary className="cursor-pointer text-sm font-semibold text-zinc-100">
+          Gelişmiş alanları göster
+        </summary>
+        <p className="mt-2 text-xs text-zinc-500">
+          Bu alanlar ilk kayıt için zorunlu değildir. Teknik değerler belge
+          işleme ve onay akışından sonra tamamlanabilir.
         </p>
-        <FieldError errors={errors} name="status" />
-      </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Slug
+            </label>
+            <input
+              name="slug"
+              value={slug}
+              onChange={(event) => {
+                setSlugEdited(true);
+                setSlug(event.target.value);
+              }}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="slug" />
+          </div>
+
+          <div className="md:col-span-2">
+            <p className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400">
+              Workshop ve 2.5D alanları ürün oluşturulduktan sonra ayrı varlık
+              akışında tamamlanabilir.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Workshop Etkisi
+            </label>
+            <select
+              name="workshopEffect"
+              value={workshopEffect}
+              onChange={(event) =>
+                setWorkshopEffect(
+                  event.target.value as "none" | "layer" | "mesh" | "material",
+                )
+              }
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              {workshopEffectOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Workshop Görünürlüğü
+            </label>
+            <select
+              name="workshopVisibility"
+              value={workshopVisibility}
+              onChange={(event) =>
+                setWorkshopVisibility(
+                  event.target.value as
+                    | "selectable_visual"
+                    | "selectable_hidden"
+                    | "ai_package_only",
+                )
+              }
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              {workshopVisibilityOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Hedef Katman
+            </label>
+            <select
+              name="targetLayer"
+              value={targetLayer}
+              onChange={(event) => setTargetLayer(event.target.value)}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-700"
+            >
+              <option value="">Katman yok</option>
+              {targetLayerOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              3D Mesh Anahtarı
+            </label>
+            <input
+              name="meshKey"
+              defaultValue={values?.meshKey ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Materyal Anahtarı
+            </label>
+            <input
+              name="materialKey"
+              defaultValue={values?.materialKey ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Görsel URL
+            </label>
+            <input
+              name="imageUrl"
+              defaultValue={values?.imageUrl ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="imageUrl" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Datasheet URL
+            </label>
+            <input
+              name="datasheetUrl"
+              defaultValue={values?.datasheetUrl ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Ana belge akışı Ürün Belgeleri ekranından yönetilir. Bu alan
+              yalnızca hızlı referans içindir.
+            </p>
+            <FieldError errors={errors} name="datasheetUrl" />
+          </div>
+
+          <div className="md:col-span-2">
+            <input
+              type="hidden"
+              name="technicalSpecs"
+              defaultValue={values?.technicalSpecs ?? ""}
+            />
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-400">
+              Teknik özellikler bu ekranda serbest metin olarak düzenlenmez.
+              Ürün kaydı önce operasyonel alanlarla oluşturulur.
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <p className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400">
+              Teknik değerler belge işleme sonrası doğrulanmalıdır. Emin
+              değilsen boş bırak.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Baz Fiyat
+            </label>
+            <input
+              name="basePrice"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={values?.basePrice ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="basePrice" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Ağırlık (kg)
+            </label>
+            <input
+              name="weightKg"
+              type="number"
+              step="0.001"
+              min="0"
+              defaultValue={values?.weightKg ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="weightKg" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Güç Tüketimi (W)
+            </label>
+            <input
+              name="powerDrawWatts"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={values?.powerDrawWatts ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="powerDrawWatts" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">
+              Besleme Gücü (W)
+            </label>
+            <input
+              name="powerSupplyWatts"
+              type="number"
+              step="1"
+              min="0"
+              defaultValue={values?.powerSupplyWatts ?? ""}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
+            />
+            <FieldError errors={errors} name="powerSupplyWatts" />
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
