@@ -27,13 +27,6 @@ type Props = {
   hasMissingProductReference?: boolean;
 };
 
-const parsingStatusLabels: Record<NonNullable<Props["parsingStatus"]>, string> = {
-  pending: "Bekliyor",
-  processing: "İşleniyor",
-  completed: "Tamamlandı",
-  failed: "Hatalı",
-};
-
 const initialResult: ActionResult = {
   ok: false,
   message: "",
@@ -115,9 +108,6 @@ function getLocalValidationMessage(action: ActionKind, value: string) {
 export default function KnowledgeApprovalActions({
   id,
   approvalStatus,
-  parsingStatus,
-  chunkCount,
-  hasMissingProductReference,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -179,17 +169,12 @@ export default function KnowledgeApprovalActions({
   const selectedAction = activeAction ?? actions[0];
 
   return (
-    <details className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2">
-      <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
-        Onay işlemleri
+    <details className="group rounded-xl border border-white/8 bg-white/[0.02] px-2 py-1.5">
+      <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-semibold text-neutral-300 transition hover:bg-white/[0.05] hover:text-white">
+        <span>Onay işlemleri</span>
       </summary>
 
-      <div className="mt-2 space-y-2">
-        <p className="text-[11px] leading-5 text-neutral-500">
-          Bu işlem yalnızca insan onayı durumunu değiştirir; teknik hazırlık ayrı
-          izlenir.
-        </p>
-
+      <div className="mt-2 space-y-1.5">
         <div className="flex flex-wrap gap-1.5">
           {actions.map((action) => (
             <button
@@ -201,7 +186,7 @@ export default function KnowledgeApprovalActions({
                 setResult(initialResult);
                 setNote("");
               }}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 selectedAction === action
                   ? getButtonClassName(action)
                   : "border-white/10 bg-black/20 text-neutral-400 hover:bg-white/[0.06] hover:text-white"
@@ -212,18 +197,18 @@ export default function KnowledgeApprovalActions({
           ))}
         </div>
 
-        <label className="block space-y-1">
-          <span className="text-[11px] font-medium text-neutral-400">
+        <label className="block space-y-1 rounded-xl border border-white/8 bg-black/15 p-1.5">
+          <span className="px-1 text-[11px] font-medium text-neutral-400">
             {getInputLabel(selectedAction)}
           </span>
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             maxLength={500}
-            rows={2}
+            rows={1}
             disabled={isPending}
             placeholder={getPlaceholder(selectedAction)}
-            className="min-h-[58px] w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white outline-none placeholder:text-neutral-600 focus:border-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[38px] w-full resize-none rounded-lg border border-white/10 bg-black/25 px-2.5 py-1.5 text-xs text-white outline-none placeholder:text-neutral-600 focus:border-white/20 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </label>
 
@@ -231,28 +216,16 @@ export default function KnowledgeApprovalActions({
           type="button"
           disabled={isPending}
           onClick={() => runAction(selectedAction)}
-          className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${getButtonClassName(
+          className={`inline-flex w-full justify-center rounded-full border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${getButtonClassName(
             selectedAction,
           )}`}
         >
           {isPending ? "İşlem sürüyor..." : getActionLabel(selectedAction)}
         </button>
 
-        {typeof chunkCount === "number" ||
-        parsingStatus ||
-        hasMissingProductReference ? (
-          <div className="flex flex-wrap gap-1.5 text-[11px] text-neutral-500">
-            {parsingStatus ? (
-              <span>Ayrıştırma: {parsingStatusLabels[parsingStatus]}</span>
-            ) : null}
-            {typeof chunkCount === "number" ? <span>Parça: {chunkCount}</span> : null}
-            {hasMissingProductReference ? <span>Ürün bağı eksik</span> : null}
-          </div>
-        ) : null}
-
         {result.message ? (
           <div
-            className={`rounded-xl border px-3 py-2 text-[11px] leading-5 ${
+            className={`rounded-xl border px-2.5 py-1.5 text-[11px] leading-5 ${
               result.ok
                 ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
                 : "border-rose-500/20 bg-rose-500/10 text-rose-200"
