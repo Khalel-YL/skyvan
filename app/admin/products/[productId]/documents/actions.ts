@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { writeAdminAudit } from "@/app/lib/admin/audit";
+import { extractPdfText } from "@/app/lib/ai/pdf-text-extraction";
 import { getDbOrThrow } from "@/db/db";
 import {
   aiDocumentChunks,
@@ -94,7 +95,7 @@ const MAX_CHUNK_LENGTH = 680;
 const MAX_DOCUMENT_TEXT_LENGTH = 120_000;
 const MAX_GENERATED_CHUNKS = 80;
 const PDF_BINARY_FAILURE_MESSAGE =
-  "PDF metni çıkarılamadı. Metin çıkarımı parser bekliyor.";
+  "PDF metni çıkarılamadı.";
 const UNREADABLE_DOCUMENT_MESSAGE = "Belge metni okunabilir değil.";
 const TURKISH_LATIN_ALPHA_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]/g;
 const TURKISH_LATIN_WORD_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]{2,}/g;
@@ -204,14 +205,22 @@ function decodeBufferHeader(bytes: Uint8Array) {
   return new TextDecoder().decode(bytes.slice(0, 32)).trim();
 }
 
-function assertNotPdfDocument(contentType: string, bytes: Uint8Array) {
-  if (contentType.includes("application/pdf")) {
-    throw new Error(PDF_BINARY_FAILURE_MESSAGE);
+function isPdfDocument(contentType: string, bytes: Uint8Array) {
+  return (
+    contentType.includes("application/pdf") ||
+    hasPdfSignature(bytes) ||
+    decodeBufferHeader(bytes).startsWith("%PDF-")
+  );
+}
+
+async function extractReadablePdfText(buffer: ArrayBuffer | Uint8Array) {
+  const result = await extractPdfText(buffer);
+
+  if (!result.ok || !result.text) {
+    throw new Error(result.reason ?? PDF_BINARY_FAILURE_MESSAGE);
   }
 
-  if (hasPdfSignature(bytes) || decodeBufferHeader(bytes).startsWith("%PDF-")) {
-    throw new Error(PDF_BINARY_FAILURE_MESSAGE);
-  }
+  return requireReadableFallbackText(result.text);
 }
 
 function isReadableFallbackText(value: string) {
@@ -451,25 +460,26 @@ async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
       contentType: contentType || "unknown",
     });
 
+    const responseBuffer = await response.arrayBuffer();
+    const responseBytes = new Uint8Array(responseBuffer);
+
+    if (isPdfDocument(contentType, responseBytes)) {
+      return extractReadablePdfText(responseBytes);
+    }
+
     if (
       contentType.includes("text/") ||
       contentType.includes("json") ||
       contentType.includes("xml") ||
       contentType.includes("html")
     ) {
-      const responseText = await response.text();
-
-      if (responseText.trimStart().startsWith("%PDF-")) {
-        throw new Error(PDF_BINARY_FAILURE_MESSAGE);
-      }
+      const responseText = new TextDecoder().decode(responseBytes);
 
       return isHtmlLikeContent(contentType, responseText)
         ? stripHtmlTags(responseText)
         : getBoundedExtractedText(responseText);
     }
 
-    const responseBuffer = await response.arrayBuffer();
-    assertNotPdfDocument(contentType, new Uint8Array(responseBuffer));
     return decodeBinaryDocument(responseBuffer);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
