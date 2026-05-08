@@ -1,6 +1,12 @@
 import "server-only";
 
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import {
+  getDocument,
+  GlobalWorkerOptions,
+} from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export type PdfTextExtractionResult = {
   ok: boolean;
@@ -18,6 +24,12 @@ const PDFJS_LOAD_FAILED = "PDFJS_LOAD_FAILED";
 const PDFJS_TEXT_CONTENT_FAILED = "PDFJS_TEXT_CONTENT_FAILED";
 const PDFJS_EMPTY_TEXT = "PDFJS_EMPTY_TEXT";
 const PDFJS_UNKNOWN_ERROR = "PDFJS_UNKNOWN_ERROR";
+const pdfWorkerPath = path.join(
+  process.cwd(),
+  "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+);
+
+GlobalWorkerOptions.workerSrc = pathToFileURL(pdfWorkerPath).href;
 
 function normalizePdfText(value: string) {
   return value
