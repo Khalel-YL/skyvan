@@ -91,6 +91,13 @@ type GeneratedChunk = {
 const uuidSchema = z.string().uuid();
 const DOCUMENT_FETCH_TIMEOUT_MS = 10_000;
 const MAX_CHUNK_LENGTH = 680;
+const MAX_DOCUMENT_TEXT_LENGTH = 120_000;
+const MAX_GENERATED_CHUNKS = 80;
+const PDF_BINARY_FAILURE_MESSAGE =
+  "PDF metni çıkarılamadı. Metin çıkarımı parser bekliyor.";
+const UNREADABLE_DOCUMENT_MESSAGE = "Belge metni okunabilir değil.";
+const TURKISH_LATIN_ALPHA_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]/g;
+const TURKISH_LATIN_WORD_PATTERN = /[a-zA-ZçğıöşüÇĞİÖŞÜ]{2,}/g;
 
 function db() {
   return getDbOrThrow();
@@ -174,8 +181,88 @@ function normalizeExtractedText(value: string) {
     .trim();
 }
 
+function getBoundedExtractedText(value: string) {
+  const normalizedText = normalizeExtractedText(value);
+
+  return normalizedText.length > MAX_DOCUMENT_TEXT_LENGTH
+    ? normalizedText.slice(0, MAX_DOCUMENT_TEXT_LENGTH).trim()
+    : normalizedText;
+}
+
+function hasPdfSignature(bytes: Uint8Array) {
+  return (
+    bytes.length >= 5 &&
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46 &&
+    bytes[4] === 0x2d
+  );
+}
+
+function decodeBufferHeader(bytes: Uint8Array) {
+  return new TextDecoder().decode(bytes.slice(0, 32)).trim();
+}
+
+function assertNotPdfDocument(contentType: string, bytes: Uint8Array) {
+  if (contentType.includes("application/pdf")) {
+    throw new Error(PDF_BINARY_FAILURE_MESSAGE);
+  }
+
+  if (hasPdfSignature(bytes) || decodeBufferHeader(bytes).startsWith("%PDF-")) {
+    throw new Error(PDF_BINARY_FAILURE_MESSAGE);
+  }
+}
+
+function isReadableFallbackText(value: string) {
+  const normalizedText = String(value ?? "");
+  const length = normalizedText.length;
+
+  if (!length || normalizedText.slice(0, 120).includes("%PDF-")) {
+    return false;
+  }
+
+  const replacementCount = (normalizedText.match(/\uFFFD/g) ?? []).length;
+  let controlCount = 0;
+
+  for (const character of normalizedText) {
+    const code = character.charCodeAt(0);
+    const isNormalWhitespace =
+      character === "\n" || character === "\r" || character === "\t";
+
+    if (!isNormalWhitespace && ((code >= 0 && code <= 31) || code === 127)) {
+      controlCount += 1;
+    }
+  }
+
+  const alphaCount = (normalizedText.match(TURKISH_LATIN_ALPHA_PATTERN) ?? [])
+    .length;
+  const wordCount = (normalizedText.match(TURKISH_LATIN_WORD_PATTERN) ?? [])
+    .length;
+  const replacementRatio = replacementCount / length;
+  const controlRatio = controlCount / length;
+  const alphaRatio = alphaCount / length;
+
+  return (
+    replacementRatio <= 0.02 &&
+    controlRatio <= 0.05 &&
+    alphaRatio >= 0.2 &&
+    (wordCount >= 20 || alphaRatio >= 0.35)
+  );
+}
+
+function requireReadableFallbackText(value: string) {
+  const boundedText = getBoundedExtractedText(value);
+
+  if (!isReadableFallbackText(boundedText)) {
+    throw new Error(UNREADABLE_DOCUMENT_MESSAGE);
+  }
+
+  return boundedText;
+}
+
 function stripHtmlTags(value: string) {
-  return normalizeExtractedText(
+  return getBoundedExtractedText(
     value
       .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
       .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
@@ -217,17 +304,18 @@ function extractAsciiTextFromBytes(bytes: Uint8Array) {
     segments.push(current);
   }
 
-  return normalizeExtractedText(segments.join("\n"));
+  return getBoundedExtractedText(segments.join("\n"));
 }
 
 function decodeBinaryDocument(buffer: ArrayBuffer) {
-  const utf8Text = normalizeExtractedText(new TextDecoder().decode(buffer));
+  const bytes = new Uint8Array(buffer);
+  const utf8Text = getBoundedExtractedText(new TextDecoder().decode(buffer));
 
-  if (utf8Text.length >= 80) {
+  if (utf8Text.length >= 80 && isReadableFallbackText(utf8Text)) {
     return utf8Text;
   }
 
-  return extractAsciiTextFromBytes(new Uint8Array(buffer));
+  return requireReadableFallbackText(extractAsciiTextFromBytes(bytes));
 }
 
 function isHtmlLikeContent(contentType: string, value: string) {
@@ -237,8 +325,41 @@ function isHtmlLikeContent(contentType: string, value: string) {
   );
 }
 
+function splitLongParagraph(value: string) {
+  const paragraph = value.trim();
+
+  if (paragraph.length <= MAX_CHUNK_LENGTH) {
+    return paragraph ? [paragraph] : [];
+  }
+
+  const parts: string[] = [];
+  let remaining = paragraph;
+
+  while (remaining.length > MAX_CHUNK_LENGTH) {
+    let cutIndex = remaining.lastIndexOf(" ", MAX_CHUNK_LENGTH);
+
+    if (cutIndex < Math.floor(MAX_CHUNK_LENGTH * 0.6)) {
+      cutIndex = MAX_CHUNK_LENGTH;
+    }
+
+    const nextPart = remaining.slice(0, cutIndex).trim();
+
+    if (nextPart) {
+      parts.push(nextPart);
+    }
+
+    remaining = remaining.slice(cutIndex).trim();
+  }
+
+  if (remaining) {
+    parts.push(remaining);
+  }
+
+  return parts;
+}
+
 function splitIntoChunks(value: string) {
-  const normalizedValue = normalizeExtractedText(value);
+  const normalizedValue = getBoundedExtractedText(value);
 
   if (!normalizedValue) {
     return [] as GeneratedChunk[];
@@ -247,7 +368,8 @@ function splitIntoChunks(value: string) {
   const paragraphs = normalizedValue
     .split(/\n{2,}/)
     .map((part) => part.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .flatMap((paragraph) => splitLongParagraph(paragraph));
 
   if (paragraphs.length === 0) {
     return [] as GeneratedChunk[];
@@ -337,12 +459,17 @@ async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
     ) {
       const responseText = await response.text();
 
+      if (responseText.trimStart().startsWith("%PDF-")) {
+        throw new Error(PDF_BINARY_FAILURE_MESSAGE);
+      }
+
       return isHtmlLikeContent(contentType, responseText)
         ? stripHtmlTags(responseText)
-        : normalizeExtractedText(responseText);
+        : getBoundedExtractedText(responseText);
     }
 
     const responseBuffer = await response.arrayBuffer();
+    assertNotPdfDocument(contentType, new Uint8Array(responseBuffer));
     return decodeBinaryDocument(responseBuffer);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
@@ -364,6 +491,12 @@ function buildGeneratedChunks(extractedText: string) {
 
   if (chunks.length === 0) {
     throw new Error("Belgeden işlenebilir metin çıkarılamadı.");
+  }
+
+  if (chunks.length > MAX_GENERATED_CHUNKS) {
+    throw new Error(
+      "Belge metni çok büyük. Daha küçük kaynak veya parser düzenlemesi gerekli.",
+    );
   }
 
   return chunks;
