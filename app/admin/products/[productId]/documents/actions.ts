@@ -858,20 +858,6 @@ export async function createProductDocument(
   _prevState: ProductDocumentActionState,
   formData: FormData,
 ): Promise<ProductDocumentActionState> {
-  const input = {
-    productId: String(formData.get("productId") ?? ""),
-    title: String(formData.get("title") ?? ""),
-    url: String(formData.get("url") ?? ""),
-    type: String(formData.get("type") ?? ""),
-  };
-
-  console.log("DEBUG DOCUMENT INPUT", {
-    productId: input.productId,
-    title: input.title,
-    url: input.url,
-    type: input.type,
-  });
-
   const values = getProductDocumentFormValues(formData);
   const parsed = createProductDocumentSchema.safeParse({
     productId: formData.get("productId"),
@@ -918,8 +904,6 @@ export async function createProductDocument(
     )
     .limit(1);
 
-  console.log("DUPLICATE CHECK RESULT", existingDocument);
-
   if (existingDocument) {
     return buildErrorState("Aynı tipte ve aynı linkte belge zaten mevcut.", {
       url: ["Bu ürün için aynı tipte aynı belge zaten kayıtlı."],
@@ -929,8 +913,6 @@ export async function createProductDocument(
   let createdDocument: ProductDocumentRecord | null = null;
 
   try {
-    console.log("INSERTING DOCUMENT INTO DB");
-
     const insertedRows = await db()
       .insert(productDocuments)
       .values({
@@ -957,7 +939,6 @@ export async function createProductDocument(
       });
 
     createdDocument = (insertedRows[0] as ProductDocumentRecord | undefined) ?? null;
-    console.log("DOCUMENT INSERT SUCCESS");
   } catch (error) {
     console.error("DOCUMENT INSERT FAILED", error);
     console.error("saveProductDocument error", error);

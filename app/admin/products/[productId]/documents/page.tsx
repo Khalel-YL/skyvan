@@ -2,6 +2,8 @@ import Link from "next/link";
 import {
   getProductAiDecisionSignal,
   getProductGroundedExplanation,
+  type ProductAiDecisionSignal,
+  type ProductGroundedExplanation,
 } from "@/app/lib/admin/governance";
 import { AddProductDocumentDrawer } from "./AddProductDocumentDrawer";
 import { DEFAULT_PRODUCT_DOCUMENT_FILTERS } from "./constants";
@@ -43,6 +45,64 @@ function getProductStatusClasses(status: "draft" | "active" | "archived") {
       return "border-amber-800 bg-amber-950 text-amber-300";
     default:
       return "border-zinc-700 bg-zinc-900 text-zinc-300";
+  }
+}
+
+const fallbackApprovalStatusCounts: ProductGroundedExplanation["approvalStatusCounts"] = {
+  pending_review: 0,
+  approved: 0,
+  rejected: 0,
+  revoked: 0,
+};
+
+function getFallbackGroundedExplanation(): ProductGroundedExplanation {
+  return {
+    available: false,
+    note: "AI kaynak özeti şu anda güvenli modda gösteriliyor.",
+    preview: null,
+    eligibleKnowledgeCount: 0,
+    groundedChunkCount: 0,
+    contributingDocTypes: [],
+    coverageLabel: null,
+    readinessReason: "AI kaynak özeti geçici olarak okunamadı",
+    approvalStatusCounts: fallbackApprovalStatusCounts,
+    ruleAlignmentStatus: null,
+    ruleAlignmentReason: null,
+    sourceRuleCount: 0,
+    ruleConflictCount: 0,
+  };
+}
+
+function getFallbackDecisionSignal(): ProductAiDecisionSignal {
+  return {
+    status: "blocker",
+    reason: "AI kaynak özeti geçici olarak okunamadı.",
+    groundedAvailable: false,
+    coverageLabel: null,
+    ruleAlignmentStatus: null,
+    ruleConflictCount: 0,
+  };
+}
+
+async function getProductGroundedExplanationSafely(
+  productId: string,
+): Promise<ProductGroundedExplanation> {
+  try {
+    return await getProductGroundedExplanation({ productId });
+  } catch (error) {
+    console.warn("Product document AI explanation warning:", error);
+    return getFallbackGroundedExplanation();
+  }
+}
+
+async function getProductAiDecisionSignalSafely(
+  productId: string,
+): Promise<ProductAiDecisionSignal> {
+  try {
+    return await getProductAiDecisionSignal({ productId });
+  } catch (error) {
+    console.warn("Product document AI decision warning:", error);
+    return getFallbackDecisionSignal();
   }
 }
 
@@ -100,8 +160,8 @@ export default async function ProductDocumentsPage({
   ] = await Promise.all([
     filteredDocumentsPromise,
     summaryDocumentsPromise,
-    getProductGroundedExplanation({ productId }),
-    getProductAiDecisionSignal({ productId }),
+    getProductGroundedExplanationSafely(productId),
+    getProductAiDecisionSignalSafely(productId),
   ]);
   const summary = buildProductDocumentsSummary(summaryDocuments);
 

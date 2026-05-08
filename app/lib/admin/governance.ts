@@ -694,6 +694,12 @@ export async function getAiGroundedChunkRecords(input?: {
     return [];
   }
 
+  const normalizedLimit =
+    typeof input?.limit === "number" && input.limit > 0 ? input.limit : null;
+  const candidateLimit = normalizedLimit
+    ? Math.min(Math.max(normalizedLimit * 4, 20), AI_TEXT_QUALITY_CANDIDATE_CAP)
+    : AI_TEXT_QUALITY_CANDIDATE_CAP;
+
   const rows = await db
     .select({
       id: aiDocumentChunks.id,
@@ -716,16 +722,12 @@ export async function getAiGroundedChunkRecords(input?: {
       desc(aiKnowledgeDocuments.updatedAt),
       asc(aiDocumentChunks.documentId),
       asc(aiDocumentChunks.chunkIndex),
-    );
+    )
+    .limit(candidateLimit);
 
-  const normalizedLimit =
-    typeof input?.limit === "number" && input.limit > 0 ? input.limit : null;
-  const candidateLimit = normalizedLimit
-    ? Math.min(Math.max(normalizedLimit * 4, 20), AI_TEXT_QUALITY_CANDIDATE_CAP)
-    : AI_TEXT_QUALITY_CANDIDATE_CAP;
-  const readableRows = rows
-    .slice(0, candidateLimit)
-    .filter((row) => isReadableAiEvidenceText(row.contentText));
+  const readableRows = rows.filter((row) =>
+    isReadableAiEvidenceText(row.contentText),
+  );
 
   return normalizedLimit ? readableRows.slice(0, normalizedLimit) : readableRows;
 }
