@@ -13,8 +13,14 @@ export type PdfTextExtractionResult = {
   text: string | null;
   pageCount: number | null;
   reason: string | null;
+  truncated?: boolean;
+  textLength?: number | null;
   diagnosticCode?: string;
   diagnosticMessage?: string;
+};
+
+type PdfTextExtractionOptions = {
+  maxTextLength?: number;
 };
 
 const SCANNED_PDF_MESSAGE =
@@ -23,6 +29,7 @@ const PDF_EXTRACTION_FAILURE_MESSAGE = "PDF metni çıkarılamadı.";
 const PDFJS_LOAD_FAILED = "PDFJS_LOAD_FAILED";
 const PDFJS_TEXT_CONTENT_FAILED = "PDFJS_TEXT_CONTENT_FAILED";
 const PDFJS_EMPTY_TEXT = "PDFJS_EMPTY_TEXT";
+const PDFJS_TEXT_TRUNCATED = "PDFJS_TEXT_TRUNCATED";
 const PDFJS_UNKNOWN_ERROR = "PDFJS_UNKNOWN_ERROR";
 const pdfWorkerPath = path.join(
   process.cwd(),
@@ -63,8 +70,13 @@ function getDiagnosticMessage(error: unknown) {
 
 export async function extractPdfText(
   buffer: ArrayBuffer | Uint8Array,
+  options: PdfTextExtractionOptions = {},
 ): Promise<PdfTextExtractionResult> {
   const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const maxTextLength =
+    typeof options.maxTextLength === "number" && options.maxTextLength > 0
+      ? Math.floor(options.maxTextLength)
+      : null;
   let pageCount: number | null = null;
 
   try {
@@ -92,26 +104,51 @@ export async function extractPdfText(
 
     try {
       const pages: string[] = [];
+      let collectedLength = 0;
+      let truncated = false;
 
       for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
         try {
           const page = await document.getPage(pageNumber);
           const textContent = await page.getTextContent();
-          const pageText = normalizePdfText(
+          let pageText = normalizePdfText(
             textContent.items.map((item) => getTextItemValue(item)).join(" "),
           );
 
+          if (maxTextLength !== null && pageText) {
+            const separatorLength = pages.length > 0 ? 2 : 0;
+            const remainingLength = maxTextLength - collectedLength - separatorLength;
+
+            if (remainingLength <= 0) {
+              truncated = true;
+              page.cleanup();
+              break;
+            }
+
+            if (pageText.length > remainingLength) {
+              pageText = pageText.slice(0, remainingLength).trim();
+              truncated = true;
+            }
+          }
+
           if (pageText) {
             pages.push(pageText);
+            collectedLength += pageText.length + (pages.length > 1 ? 2 : 0);
           }
 
           page.cleanup();
+
+          if (truncated) {
+            break;
+          }
         } catch (error) {
           return {
             ok: false,
             text: null,
             pageCount,
             reason: PDF_EXTRACTION_FAILURE_MESSAGE,
+            truncated: false,
+            textLength: null,
             diagnosticCode: PDFJS_TEXT_CONTENT_FAILED,
             diagnosticMessage: getDiagnosticMessage(error),
           };
@@ -126,6 +163,8 @@ export async function extractPdfText(
           text: null,
           pageCount,
           reason: SCANNED_PDF_MESSAGE,
+          truncated,
+          textLength: 0,
           diagnosticCode: PDFJS_EMPTY_TEXT,
           diagnosticMessage: "PDF.js returned no text content.",
         };
@@ -136,8 +175,12 @@ export async function extractPdfText(
         text,
         pageCount,
         reason: null,
-        diagnosticCode: undefined,
-        diagnosticMessage: undefined,
+        truncated,
+        textLength: text.length,
+        diagnosticCode: truncated ? PDFJS_TEXT_TRUNCATED : undefined,
+        diagnosticMessage: truncated
+          ? `PDF text extraction stopped at ${text.length} characters.`
+          : undefined,
       };
     } finally {
       await document.destroy();
@@ -148,6 +191,8 @@ export async function extractPdfText(
       text: null,
       pageCount,
       reason: PDF_EXTRACTION_FAILURE_MESSAGE,
+      truncated: false,
+      textLength: null,
       diagnosticCode: PDFJS_UNKNOWN_ERROR,
       diagnosticMessage: getDiagnosticMessage(error),
     };

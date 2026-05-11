@@ -89,6 +89,11 @@ type GeneratedChunk = {
   tokenCount: number;
 };
 
+type ExtractedDocumentText = {
+  text: string;
+  allowChunkTruncation: boolean;
+};
+
 const uuidSchema = z.string().uuid();
 const DOCUMENT_FETCH_TIMEOUT_MS = 10_000;
 const MAX_CHUNK_LENGTH = 680;
@@ -229,7 +234,9 @@ async function extractReadablePdfText(
     contentType: string;
   },
 ) {
-  const result = await extractPdfText(buffer);
+  const result = await extractPdfText(buffer, {
+    maxTextLength: MAX_DOCUMENT_TEXT_LENGTH,
+  });
 
   if (!result.ok || !result.text) {
     console.warn("AI ingestion PDF parse warning", {
@@ -239,12 +246,32 @@ async function extractReadablePdfText(
       diagnosticCode: result.diagnosticCode ?? "PDFJS_UNKNOWN_ERROR",
       diagnosticMessage: result.diagnosticMessage ?? result.reason ?? null,
       pageCount: result.pageCount,
+      truncated: result.truncated ?? false,
+      textLength: result.textLength ?? null,
     });
 
     throw new Error(result.reason ?? PDF_BINARY_FAILURE_MESSAGE);
   }
 
-  return requireReadableFallbackText(result.text);
+  const text = requireReadableFallbackText(result.text);
+
+  if (result.truncated) {
+    console.warn("AI ingestion PDF parse warning", {
+      productDocumentId: input.productDocumentId,
+      hostname: input.hostname,
+      contentType: input.contentType || "unknown",
+      diagnosticCode: result.diagnosticCode ?? "PDFJS_TEXT_TRUNCATED",
+      diagnosticMessage: result.diagnosticMessage ?? null,
+      pageCount: result.pageCount,
+      truncated: true,
+      textLength: result.textLength ?? text.length,
+    });
+  }
+
+  return {
+    text,
+    allowChunkTruncation: true,
+  };
 }
 
 function isReadableFallbackText(value: string) {
@@ -447,7 +474,9 @@ function splitIntoChunks(value: string) {
   return chunks;
 }
 
-async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
+async function fetchDocumentText(
+  document: ProductDocumentIngestionRecord,
+): Promise<ExtractedDocumentText> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DOCUMENT_FETCH_TIMEOUT_MS);
   const hostname = getSafeDocumentHostname(document.url);
@@ -486,12 +515,20 @@ async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
     ) {
       const responseText = new TextDecoder().decode(responseBytes);
 
-      return isHtmlLikeContent(contentType, responseText)
+      const text = isHtmlLikeContent(contentType, responseText)
         ? stripHtmlTags(responseText)
         : getBoundedExtractedText(responseText);
+
+      return {
+        text,
+        allowChunkTruncation: false,
+      };
     }
 
-    return decodeBinaryDocument(responseBuffer);
+    return {
+      text: decodeBinaryDocument(responseBuffer),
+      allowChunkTruncation: false,
+    };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("Belge fetch zaman aşımına uğradı (10s).");
@@ -507,14 +544,22 @@ async function fetchDocumentText(document: ProductDocumentIngestionRecord) {
   }
 }
 
-function buildGeneratedChunks(extractedText: string) {
-  const chunks = splitIntoChunks(extractedText);
+function buildGeneratedChunks(extractedDocument: ExtractedDocumentText) {
+  const chunks = splitIntoChunks(extractedDocument.text);
 
   if (chunks.length === 0) {
     throw new Error("Belgeden işlenebilir metin çıkarılamadı.");
   }
 
   if (chunks.length > MAX_GENERATED_CHUNKS) {
+    if (extractedDocument.allowChunkTruncation) {
+      return chunks.slice(0, MAX_GENERATED_CHUNKS).map((chunk, index) => ({
+        ...chunk,
+        chunkIndex: index,
+        pageNumber: index + 1,
+      }));
+    }
+
     throw new Error(
       "Belge metni çok büyük. Daha küçük kaynak veya parser düzenlemesi gerekli.",
     );
@@ -1511,8 +1556,8 @@ export async function ingestProductDocumentToAi(
   const database = db();
 
   try {
-    const extractedText = await fetchDocumentText(sourceDocument);
-    const generatedChunks = buildGeneratedChunks(extractedText);
+    const extractedDocument = await fetchDocumentText(sourceDocument);
+    const generatedChunks = buildGeneratedChunks(extractedDocument);
 
     let completedKnowledgeDocument: KnowledgeDocumentRecord | null = null;
     let createdKnowledgeDocument = false;
