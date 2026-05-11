@@ -124,6 +124,16 @@ export function EditProductDocumentDrawer({
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs leading-5 text-zinc-500">
+                    Belge tipi, AI onayı için kaynak bağlamını belirler.
+                    Yazılım kılavuzu veya genel destek dokümanını ürün
+                    kılavuzu olarak kaydetmeyin.
+                  </p>
+                  <p className="text-xs leading-5 text-zinc-500">
+                    Ürün kılavuzu doğrudan bu ürüne ait olmalıdır. Yardımcı
+                    yazılım veya genel üretici dokümanı için Teknik not /
+                    Yardımcı belge kullanın.
+                  </p>
                   {getFieldError(state.errors, "type") ? (
                     <p className="text-xs text-red-400">
                       {getFieldError(state.errors, "type")}

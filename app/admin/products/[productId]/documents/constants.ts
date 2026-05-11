@@ -10,12 +10,12 @@ export const PRODUCT_DOCUMENT_TYPES = [
 export const PRODUCT_DOCUMENT_STATUSES = ["draft", "active", "archived"] as const;
 
 export const PRODUCT_DOCUMENT_TYPE_OPTIONS = [
-  { value: "datasheet", label: "Datasheet" },
-  { value: "install_manual", label: "Montaj Kılavuzu" },
-  { value: "user_manual", label: "Kullanım Kılavuzu" },
+  { value: "datasheet", label: "Datasheet / Teknik veri sayfası" },
+  { value: "install_manual", label: "Montaj kılavuzu" },
+  { value: "user_manual", label: "Ürün kılavuzu" },
   { value: "warranty", label: "Garanti Belgesi" },
   { value: "certificate", label: "Sertifika" },
-  { value: "technical_note", label: "Teknik Not" },
+  { value: "technical_note", label: "Teknik not / Yardımcı belge" },
 ] as const;
 
 export const PRODUCT_DOCUMENT_STATUS_OPTIONS = [
@@ -25,12 +25,12 @@ export const PRODUCT_DOCUMENT_STATUS_OPTIONS = [
 ] as const;
 
 export const PRODUCT_DOCUMENT_TYPE_LABELS = {
-  datasheet: "Datasheet",
-  install_manual: "Montaj Kılavuzu",
-  user_manual: "Kullanım Kılavuzu",
+  datasheet: "Datasheet / Teknik veri sayfası",
+  install_manual: "Montaj kılavuzu",
+  user_manual: "Ürün kılavuzu",
   warranty: "Garanti Belgesi",
   certificate: "Sertifika",
-  technical_note: "Teknik Not",
+  technical_note: "Teknik not / Yardımcı belge",
 } as const;
 
 export const PRODUCT_DOCUMENT_STATUS_LABELS = {

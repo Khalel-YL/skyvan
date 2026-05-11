@@ -175,6 +175,13 @@ export default function KnowledgeApprovalActions({
       </summary>
 
       <div className="mt-2 space-y-1.5">
+        <div className="rounded-xl border border-amber-500/15 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-5 text-amber-100/80">
+          Onay vermeden önce belgenin doğrudan ilgili ürüne ait olduğunu ve
+          içeriğin ürün teknik bilgisini doğruladığını kontrol edin. Yazılım
+          kılavuzu, genel destek dokümanı veya dolaylı kaynaklar ürün kanıtı
+          olarak onaylanmamalıdır.
+        </div>
+
         <div className="flex flex-wrap gap-1.5">
           {actions.map((action) => (
             <button
