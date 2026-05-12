@@ -115,7 +115,7 @@ function buildClosedUsageGroups(
       item.parsingStatus !== "failed",
   );
 
-  const groups: ClosedUsageGroup[] = [
+  return [
     {
       key: "pending",
       title: "İnsan onayı bekleyen",
@@ -146,9 +146,7 @@ function buildClosedUsageGroups(
       tone: "warning",
       items: other.slice(0, 3),
     },
-  ];
-
-  return groups.filter((group) => group.items.length > 0);
+  ].filter((group) => group.items.length > 0);
 }
 
 function toneClasses(tone: RuntimeTone) {
