@@ -29,8 +29,9 @@ export default function AiExplanationProbe() {
             AI açıklama altyapısı
           </div>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-zinc-500">
-            Bu kontrol yalnızca onaylı ve okunabilir kaynaklardan sınırlı alıntı
-            kullanır; Gemini sağlayıcısı yalnızca yerel yapılandırma açıksa çağrılır.
+            Bu kontrol yalnızca insan onaylı ve okunabilir kaynak
+            parçalarından sınırlı alıntı kullanır; Gemini sağlayıcısı yalnızca
+            yerel yapılandırma açıksa çağrılır.
           </p>
         </div>
 
@@ -57,7 +58,7 @@ export default function AiExplanationProbe() {
             Kaynak metadata sayısı: {result.evidenceCount}
           </div>
           {result.output ? (
-            <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3 text-sm leading-6">
+            <div className="mt-3 whitespace-pre-line rounded-lg border border-white/10 bg-black/20 p-3 text-sm leading-6">
               <div className="mb-1 text-xs uppercase tracking-[0.18em] opacity-70">
                 AI tarafından üretilen danışma metni
               </div>

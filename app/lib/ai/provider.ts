@@ -83,15 +83,26 @@ function getProviderKey(provider: AiProviderName) {
 function getGeminiSystemInstruction() {
   return [
     "Yalnızca Türkçe yanıt ver.",
-    "Kısa, sınırlı ve danışma amaçlı bir açıklama üret.",
+    "Yalnızca sağlanan insan onaylı ve okunabilir kaynak alıntılarını kullan.",
+    "Kaynaklarda bulunmayan teknik veriyi, sınırı, sertifikayı veya ürün özelliğini uydurma.",
+    "Kısa, yapılandırılmış ve danışma amaçlı bir teknik özet üret.",
+    "Bu üç başlığı aynen kullan: Teknik değerlendirme, Kaynak dayanağı, Sınır.",
+    "Bu başlıklardan hiçbirini atlama.",
+    "Teknik değerlendirme bölümünde doğrudan kaynakta geçen güvenlik, kurulum, batarya, PV, AC, çalışma, yapılandırma, koruma veya arıza bilgilerine öncelik ver.",
+    "Kaynak dayanağı bölümünde yalnızca kısa kaynak başlıklarını listele; ham alıntıları tekrar etme.",
+    "Kaynak alıntıları yeterli değilse aynen şunu söyle: Onaylı kaynaklarda bu konuda yeterli teknik bilgi bulunamadı.",
     "Nihai mühendislik, güvenlik, hukuk, ticari ya da üretim kararı verme.",
     "Herhangi bir şeyi onayladığını iddia etme.",
     "Gizli ya da ham kanıt içeriğini ifşa etme.",
-    "Kanıt yetersizse bunu açıkça söyle.",
+    "Elektrik kurulumu için adım adım tehlikeli uygulama talimatı verme; resmi kılavuza ve yetkili uzmana yönlendir.",
+    "Genel admin tavsiyesi veya dolgu cümleleri yazma.",
   ].join(" ");
 }
 
 function buildEvidencePrompt(input: AiExplanationInput) {
+  const sourceTitles = Array.from(
+    new Set(input.evidence.map((item) => item.title.trim()).filter(Boolean)),
+  );
   const evidenceLines = input.evidence.map((item, index) => {
     const metadata = [
       `Belge ${index + 1}`,
@@ -114,7 +125,16 @@ function buildEvidencePrompt(input: AiExplanationInput) {
   return [
     `Amaç: ${input.purpose}`,
     `Maksimum çıktı karakteri: ${input.maxOutputCharacters}`,
-    "Görev: Aşağıdaki onaylı kaynaklara dayanarak Admin operatörü için kısa bir AI danışma metni üret.",
+    "Görev: Aşağıdaki onaylı ve okunabilir kaynak parçalarına dayanarak Admin operatörü için kısa, teknik ve kanıta bağlı bir danışma metni üret.",
+    "Bu üç başlığı aynen kullan ve hiçbirini atlama: Teknik değerlendirme, Kaynak dayanağı, Sınır.",
+    "Zorunlu çıktı şablonu:",
+    "Teknik değerlendirme:\n- Kaynaklarda açıkça geçen teknik bulguları yaz.\n- Belirsiz veya kaynakta yer almayan bilgiyi yorumlama.",
+    "Kaynak dayanağı:\n- Kaynak başlıklarını kısa listele.",
+    "Sınır:\n- Onaylı kaynaklarda yer almayan bilgiler yorumlanmadı.",
+    "Yetersiz kanıt durumunda yalnızca şu anlamı koru: Onaylı kaynaklarda bu konuda yeterli teknik bilgi bulunamadı.",
+    sourceTitles.length
+      ? `Kaynak başlıkları: ${sourceTitles.join(" | ")}`
+      : "Kaynak başlıkları: belirtilmedi",
     "Kanıtlar:",
     ...evidenceLines,
   ].join("\n\n");
@@ -242,7 +262,8 @@ async function generateGeminiExplanation(
     if (!output) {
       return {
         ok: false,
-        message: "AI açıklaması şu anda üretilemedi.",
+        message:
+          "AI açıklaması üretilemedi; onaylı kaynaklar mevcut ancak sağlayıcı anlamlı çıktı döndürmedi.",
         output: null,
         provider: status.provider,
         modelId: status.modelId,

@@ -9,8 +9,16 @@ import { AuditActorBindingError, requireStrictAuditActor } from "@/app/lib/admin
 import { getAiGroundedChunkRecords } from "@/app/lib/admin/governance";
 
 const MAX_EVIDENCE_CHUNKS = 5;
+const MAX_EVIDENCE_CANDIDATE_CHUNKS = 20;
 const MAX_EXCERPT_CHARACTERS = 600;
 const MAX_TOTAL_EXCERPT_CHARACTERS = 2_500;
+const REQUIRED_OUTPUT_SECTIONS = [
+  "Teknik değerlendirme",
+  "Kaynak dayanağı",
+  "Sınır",
+] as const;
+const AI_OUTPUT_BOUNDARY_TEXT =
+  "Onaylı kaynaklarda yer almayan bilgiler yorumlanmadı. Bu metin resmi kılavuzun yerine geçmez.";
 
 export type AdminAiCoreExplanationProbeResult = {
   ok: boolean;
@@ -42,12 +50,140 @@ function getBoundedExcerpt(value: string, remainingCharacters: number) {
     : normalized;
 }
 
+type GroundedEvidenceRow = Awaited<
+  ReturnType<typeof getAiGroundedChunkRecords>
+>[number];
+
+const TECHNICAL_EVIDENCE_TERMS = [
+  "inverter",
+  "smart solar",
+  "battery",
+  "batteries",
+  "pv",
+  "solar",
+  "ac",
+  "dc",
+  "installation",
+  "install",
+  "operation",
+  "configuration",
+  "settings",
+  "safety",
+  "warning",
+  "specification",
+  "technical data",
+  "troubleshooting",
+  "protection",
+  "voltage",
+  "current",
+  "power",
+  "charge",
+  "charger",
+  "mppt",
+  "akü",
+  "batarya",
+  "güneş",
+  "kurulum",
+  "montaj",
+  "çalışma",
+  "ayar",
+  "güvenlik",
+  "uyarı",
+  "teknik",
+  "özellik",
+  "koruma",
+  "gerilim",
+  "akım",
+  "güç",
+  "şarj",
+  "arıza",
+];
+
+function scoreEvidenceRow(row: GroundedEvidenceRow) {
+  const haystack = `${row.title} ${row.contentText}`.toLocaleLowerCase("tr-TR");
+
+  return TECHNICAL_EVIDENCE_TERMS.reduce(
+    (score, term) => score + (haystack.includes(term) ? 1 : 0),
+    0,
+  );
+}
+
+function selectRelevantEvidenceRows(rows: GroundedEvidenceRow[]) {
+  return [...rows]
+    .map((row, index) => ({
+      row,
+      index,
+      score: scoreEvidenceRow(row),
+    }))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return left.index - right.index;
+    })
+    .slice(0, MAX_EVIDENCE_CHUNKS)
+    .map((item) => item.row);
+}
+
+function getSourceTitles(evidence: AiEvidenceItem[]) {
+  return Array.from(
+    new Set(evidence.map((item) => item.title.trim()).filter(Boolean)),
+  );
+}
+
+function hasSection(value: string, section: (typeof REQUIRED_OUTPUT_SECTIONS)[number]) {
+  return new RegExp(`(^|\\n)\\s*${section}\\s*:`, "i").test(value);
+}
+
+function ensureBulletLines(values: string[]) {
+  if (!values.length) {
+    return "- Kaynak başlığı belirtilmedi.";
+  }
+
+  return values.map((value) => `- ${value}`).join("\n");
+}
+
+function normalizeAiCoreOutput(output: string | null, evidence: AiEvidenceItem[]) {
+  const trimmedOutput = output?.trim();
+
+  if (!trimmedOutput) {
+    return null;
+  }
+
+  const hasAllSections = REQUIRED_OUTPUT_SECTIONS.every((section) =>
+    hasSection(trimmedOutput, section),
+  );
+
+  if (hasAllSections) {
+    return trimmedOutput;
+  }
+
+  const sections: string[] = [];
+
+  if (hasSection(trimmedOutput, "Teknik değerlendirme")) {
+    sections.push(trimmedOutput);
+  } else {
+    sections.push(`Teknik değerlendirme:\n${trimmedOutput}`);
+  }
+
+  if (!hasSection(trimmedOutput, "Kaynak dayanağı")) {
+    sections.push(`Kaynak dayanağı:\n${ensureBulletLines(getSourceTitles(evidence))}`);
+  }
+
+  if (!hasSection(trimmedOutput, "Sınır")) {
+    sections.push(`Sınır:\n- ${AI_OUTPUT_BOUNDARY_TEXT}`);
+  }
+
+  return sections.join("\n\n");
+}
+
 export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCoreExplanationProbeResult> {
   try {
     await requireStrictAuditActor();
 
     const evidenceRows = await getAiGroundedChunkRecords({
-      limit: MAX_EVIDENCE_CHUNKS,
+      limit: MAX_EVIDENCE_CANDIDATE_CHUNKS,
     });
 
     if (!evidenceRows.length) {
@@ -62,8 +198,9 @@ export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCore
     }
 
     let usedExcerptCharacters = 0;
+    const selectedEvidenceRows = selectRelevantEvidenceRows(evidenceRows);
 
-    const evidence: AiEvidenceItem[] = evidenceRows.map((row) => ({
+    const evidence: AiEvidenceItem[] = selectedEvidenceRows.map((row) => ({
       documentId: row.documentId,
       chunkId: row.id,
       title: row.title,
@@ -86,7 +223,8 @@ export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCore
     }));
 
     const result = await generateAiExplanation({
-      purpose: "admin-ai-core-governance-probe",
+      purpose:
+        "Admin AI Core için onaylı kaynaklardan kısa teknik değerlendirme",
       locale: "tr",
       evidence,
       maxOutputCharacters: 700,
@@ -94,6 +232,7 @@ export async function generateAdminAiCoreExplanationProbe(): Promise<AdminAiCore
 
     return {
       ...result,
+      output: normalizeAiCoreOutput(result.output, evidence),
       evidenceCount: evidence.length,
     };
   } catch (error) {
