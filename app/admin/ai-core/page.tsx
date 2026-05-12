@@ -43,6 +43,14 @@ type KnowledgeState = {
   dbMessage: string | null;
 };
 
+type ClosedUsageGroup = {
+  key: string;
+  title: string;
+  description: string;
+  tone: RuntimeTone;
+  items: AiKnowledgeUsageRecord[];
+};
+
 const parsingStatusLabels: Record<string, string> = {
   pending: "Bekliyor",
   processing: "İşleniyor",
@@ -63,6 +71,84 @@ function getParsingStatusLabel(value: string) {
 
 function getApprovalStatusLabel(value: AiKnowledgeApprovalStatus) {
   return approvalStatusLabels[value] ?? "Onay bekliyor";
+}
+
+function getClosedUsageStatusLabel(item: AiKnowledgeUsageRecord) {
+  if (item.approvalStatus === "pending_review") {
+    return "İnsan onayı bekliyor";
+  }
+
+  if (item.approvalStatus === "revoked") {
+    return "Bilinçli olarak kapalı";
+  }
+
+  if (item.approvalStatus === "rejected") {
+    return "Reddedildi";
+  }
+
+  if (item.parsingStatus === "failed") {
+    return "İşleme hatası";
+  }
+
+  return "Kaynak doğrulaması gerekli";
+}
+
+function buildClosedUsageGroups(
+  documents: AiKnowledgeUsageRecord[],
+): ClosedUsageGroup[] {
+  const closedDocuments = documents.filter(
+    (item) => !item.readiness.approvedForAi,
+  );
+
+  const pendingReview = closedDocuments.filter(
+    (item) => item.approvalStatus === "pending_review" && item.parsingStatus !== "failed",
+  );
+  const intentionallyClosed = closedDocuments.filter(
+    (item) => item.approvalStatus === "revoked" || item.approvalStatus === "rejected",
+  );
+  const failed = closedDocuments.filter((item) => item.parsingStatus === "failed");
+  const other = closedDocuments.filter(
+    (item) =>
+      item.approvalStatus !== "pending_review" &&
+      item.approvalStatus !== "revoked" &&
+      item.approvalStatus !== "rejected" &&
+      item.parsingStatus !== "failed",
+  );
+
+  const groups: ClosedUsageGroup[] = [
+    {
+      key: "pending",
+      title: "İnsan onayı bekleyen",
+      description:
+        "AI kullanımına açılmadan önce kaynak/ürün eşleşmesi kontrol edilir.",
+      tone: "warning",
+      items: pendingReview.slice(0, 3),
+    },
+    {
+      key: "closed",
+      title: "Bilinçli olarak kapalı",
+      description: "Bu kayıtlar AI kanıtı olarak kullanılmaz.",
+      tone: "neutral",
+      items: intentionallyClosed.slice(0, 3),
+    },
+    {
+      key: "failed",
+      title: "İşleme hatası",
+      description: "Parser veya kaynak kalitesi nedeniyle AI kullanımına kapalıdır.",
+      tone: "danger",
+      items: failed.slice(0, 3),
+    },
+    {
+      key: "review",
+      title: "Kaynak doğrulaması gerekli",
+      description:
+        "Teknik hazırlık veya insan onayı tamamlanmadan AI kullanımına açılmaz.",
+      tone: "warning",
+      items: other.slice(0, 3),
+    },
+  ];
+
+  return groups.filter((group) => group.items.length > 0);
 }
 
 function toneClasses(tone: RuntimeTone) {
@@ -260,9 +346,7 @@ export default async function AICoreAdminPage() {
   const runtimeItems = getRuntimeItems({ audit, governance });
   const knowledgeState = await getKnowledgeState();
 
-  const blockedExamples = knowledgeState.documents
-    .filter((item) => !item.readiness.approvedForAi)
-    .slice(0, 5);
+  const closedUsageGroups = buildClosedUsageGroups(knowledgeState.documents);
 
   return (
     <div className="space-y-4">
@@ -514,7 +598,9 @@ export default async function AICoreAdminPage() {
           <div className={`mt-3 rounded-2xl border p-3 ${toneClasses("success")}`}>
             <div className="text-sm font-medium">Kaynaklı kullanım kayıtları</div>
             <div className="mt-2 text-sm leading-6">
-              Ham belge metni gösterilmez; yalnızca güvenli kayıt metadatası listelenir.
+              AI Core yalnızca insan onaylı ve okunabilir kaynak parçalarını
+              kullanır. Ham belge metni gösterilmez; yalnızca güvenli kayıt
+              metadatası listelenir.
             </div>
 
             <div className="mt-3 space-y-2">
@@ -562,52 +648,86 @@ export default async function AICoreAdminPage() {
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-zinc-300" />
             <h2 className="text-sm font-semibold text-white">
-              Engelli / risk örnekleri
+              AI kullanımına kapalı / bekleyen kayıtlar
             </h2>
           </div>
+          <div className="mt-2 text-xs leading-5 text-zinc-500">
+            Bu liste AI kullanımına açık olmayan kayıtları gösterir. Geri
+            çekilen kayıtlar bilinçli olarak kapalıdır; onay bekleyen kayıtlar
+            insan incelemesi bekler.
+          </div>
 
-          <div className="mt-5 space-y-3">
-            {blockedExamples.length === 0 ? (
+          <div className="mt-4 space-y-3">
+            {closedUsageGroups.length === 0 ? (
               <div className={`rounded-2xl border p-4 ${toneClasses("success")}`}>
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <CheckCircle2 className="h-4 w-4" />
-                  Görünen örneklerde kritik engelli kayıt yok
+                  Görünen örneklerde AI kullanımına kapalı kayıt yok
                 </div>
                 <div className="mt-2 text-sm">
-                  İlk bakışta AI hazırlığı dışında kalan örnek listesi oluşmadı.
+                  İlk bakışta AI kullanımına kapalı veya inceleme bekleyen örnek
+                  listesi oluşmadı.
                 </div>
               </div>
             ) : (
-              blockedExamples.map((item) => (
+              closedUsageGroups.map((group) => (
                 <div
-                  key={item.id}
-                  className={`rounded-2xl border p-4 ${toneClasses(
-                    item.parsingStatus === "failed" ? "danger" : "warning",
-                  )}`}
+                  key={group.key}
+                  className={`rounded-2xl border p-3 ${toneClasses(group.tone)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-medium text-white">
-                        {item.title}
+                        {group.title}
                       </div>
-                      <div className="mt-1 text-xs opacity-80">
-                        {item.docType} · {getParsingStatusLabel(item.parsingStatus)} · parça: {item.chunkCount}
-                        {item.hasMissingProductReference ? " · ürün bağı eksik" : ""}
+                      <div className="mt-1 text-xs leading-5 opacity-85">
+                        {group.description}
                       </div>
                     </div>
 
-                    {item.parsingStatus === "failed" ? (
+                    {group.key === "failed" ? (
                       <FileWarning className="h-4 w-4 shrink-0" />
                     ) : (
                       <AlertTriangle className="h-4 w-4 shrink-0" />
                     )}
                   </div>
 
-                  <ul className="mt-3 space-y-1 text-xs leading-5 opacity-90">
-                    {item.readiness.blockers.map((blocker) => (
-                      <li key={blocker}>• {blocker}</li>
+                  <div className="mt-3 space-y-2">
+                    {group.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-white">
+                              {item.title}
+                            </div>
+                            <div className="mt-1 text-xs opacity-80">
+                              Durum: {getClosedUsageStatusLabel(item)} ·{" "}
+                              {item.docType} ·{" "}
+                              {getParsingStatusLabel(item.parsingStatus)} ·
+                              parça: {item.chunkCount}
+                              {item.hasMissingProductReference
+                                ? " · ürün bağı eksik"
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px]">
+                            AI kullanımına kapalı
+                          </div>
+                        </div>
+
+                        {item.readiness.blockers.length > 0 ? (
+                          <ul className="mt-2 space-y-1 text-xs leading-5 opacity-85">
+                            {item.readiness.blockers.slice(0, 2).map((blocker) => (
+                              <li key={blocker}>• {blocker}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               ))
             )}
