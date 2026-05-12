@@ -101,12 +101,21 @@ function buildClosedUsageGroups(
   );
 
   const pendingReview = closedDocuments.filter(
-    (item) => item.approvalStatus === "pending_review" && item.parsingStatus !== "failed",
+    (item) =>
+      item.approvalStatus === "pending_review" &&
+      item.parsingStatus !== "failed",
   );
+
   const intentionallyClosed = closedDocuments.filter(
-    (item) => item.approvalStatus === "revoked" || item.approvalStatus === "rejected",
+    (item) =>
+      item.approvalStatus === "revoked" ||
+      item.approvalStatus === "rejected",
   );
-  const failed = closedDocuments.filter((item) => item.parsingStatus === "failed");
+
+  const failed = closedDocuments.filter(
+    (item) => item.parsingStatus === "failed",
+  );
+
   const other = closedDocuments.filter(
     (item) =>
       item.approvalStatus !== "pending_review" &&
@@ -115,7 +124,7 @@ function buildClosedUsageGroups(
       item.parsingStatus !== "failed",
   );
 
-  return [
+  const groups: ClosedUsageGroup[] = [
     {
       key: "pending",
       title: "İnsan onayı bekleyen",
@@ -134,7 +143,8 @@ function buildClosedUsageGroups(
     {
       key: "failed",
       title: "İşleme hatası",
-      description: "Parser veya kaynak kalitesi nedeniyle AI kullanımına kapalıdır.",
+      description:
+        "Parser veya kaynak kalitesi nedeniyle AI kullanımına kapalıdır.",
       tone: "danger",
       items: failed.slice(0, 3),
     },
@@ -146,8 +156,11 @@ function buildClosedUsageGroups(
       tone: "warning",
       items: other.slice(0, 3),
     },
-  ].filter((group) => group.items.length > 0);
+  ];
+
+  return groups.filter((group) => group.items.length > 0);
 }
+
 
 function toneClasses(tone: RuntimeTone) {
   if (tone === "success") {
