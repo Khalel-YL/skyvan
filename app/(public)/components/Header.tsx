@@ -61,7 +61,7 @@ export function Header() {
 
         <div className="flex items-center justify-end gap-2 justify-self-end">
           <div className="hidden lg:block">
-            <ThemeToggle />
+            <ThemeToggle locale={locale} />
           </div>
           <LanguageSwitcher />
           <Link
@@ -73,7 +73,15 @@ export function Header() {
           </Link>
           <button
             type="button"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={
+              menuOpen
+                ? locale === "tr"
+                  ? "Menüyü kapat"
+                  : "Close menu"
+                : locale === "tr"
+                  ? "Menüyü aç"
+                  : "Open menu"
+            }
             aria-expanded={menuOpen}
             aria-controls="public-mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
@@ -103,7 +111,7 @@ export function Header() {
             ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--public-border)] pt-4">
-            <ThemeToggle />
+            <ThemeToggle locale={locale} />
             <Link
               href={getLocalizedPath(locale, "proje-baslat")}
               onClick={() => setMenuOpen(false)}

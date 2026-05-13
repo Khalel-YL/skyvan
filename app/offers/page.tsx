@@ -2,8 +2,8 @@ import { getDbOrThrow } from "@/db/db";
 import { leads } from "@/db/schema";
 import { desc, isNotNull } from "drizzle-orm";
 import { 
-  FileSignature, Wallet, Calculator, ArrowRight, 
-  FileText, Send, CheckCircle2, XCircle, PenTool
+  FileSignature, Wallet, Calculator,
+  FileText, CheckCircle2, XCircle, PenTool
 } from "lucide-react";
 import AutoSubmitSelect from "./AutoSubmitSelect";
 import { moveOfferStage } from "./actions";

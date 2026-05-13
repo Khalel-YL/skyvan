@@ -235,7 +235,7 @@ const trPages: Record<string, FallbackInput> = {
     blocks: [
       { type: "hero", heading: "Önce gerçeklik, sonra vitrin.", subtext: "Public site admin onayını bekler; güvenli içerik yoksa marka anlatımıyla boşluk bırakmaz." },
       { type: "feature-list", heading: "Akış", items: ["İçerik Admin Pages içinde hazırlanır.", "SEO, açıklama ve yayın durumu kontrol edilir.", "Public route içeriği read-only olarak okur.", "Müşteri deneyimi sade, hızlı ve premium kalır."] },
-      { type: "text", heading: "AI rolü", body: "Skyvan AI is not a chatbot. Açıklar, uyarır, yönlendirir ve hazırlığı destekler; final teknik, ticari, publish veya fiyatlandırma kararı vermez." },
+      { type: "text", heading: "AI rolü", body: "Skyvan AI bir chatbot değildir. Açıklar, uyarır, yönlendirir ve hazırlığı destekler; final teknik, ticari, publish veya fiyatlandırma kararı vermez." },
       { type: "cta", heading: "Karavan deneyimini keşfet", ctaLabel: "Karavan Deneyimi", ctaHref: "/tr/karavan-deneyimi" },
     ],
   },
@@ -260,7 +260,7 @@ const trPages: Record<string, FallbackInput> = {
     seoDescription: "Skyvan mühendislik yaklaşımı; açıklanabilir uyarılar, teknik hazırlık ve nihai kararların insan onayında kalması üzerine kuruludur.",
     blocks: [
       { type: "hero", heading: "Mühendislik kararın yerini almaz; kararı hazırlar.", subtext: "Skyvan teknik riskleri görünür kılar ve karar sahiplerine daha iyi bağlam verir." },
-      { type: "text", heading: "AI sınırı", body: "Skyvan AI is not a chatbot. Açıklar, uyarır, yönlendirir ve hazırlığı destekler. Final teknik, ticari, publish veya fiyatlandırma kararlarını vermez." },
+      { type: "text", heading: "AI sınırı", body: "Skyvan AI bir chatbot değildir. Açıklar, uyarır, yönlendirir ve hazırlığı destekler. Final teknik, ticari, publish veya fiyatlandırma kararlarını vermez." },
       { type: "feature-list", heading: "Güven katmanları", items: ["Uyumluluk sinyalleri görünür olur.", "Eksikler erken fark edilir.", "Admin publish kararı içerik kalitesini korur.", "Teknik sorumluluk sistem dışına itilmez."] },
       { type: "cta", heading: "Üretim sürecine geç", ctaLabel: "Üretim Süreci", ctaHref: "/tr/uretim-sureci" },
     ],

@@ -2,19 +2,20 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 
+import type { PublicLocale } from "../lib/public-routing";
 import { type PublicThemeChoice, usePublicTheme } from "./ThemeProvider";
 
 const themeOptions: Array<{
   value: PublicThemeChoice;
-  label: string;
+  labels: Record<PublicLocale, string>;
   icon: typeof Monitor;
 }> = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", labels: { tr: "Sistem", en: "System" }, icon: Monitor },
+  { value: "light", labels: { tr: "Açık", en: "Light" }, icon: Sun },
+  { value: "dark", labels: { tr: "Koyu", en: "Dark" }, icon: Moon },
 ];
 
-export function ThemeToggle() {
+export function ThemeToggle({ locale }: { locale: PublicLocale }) {
   const { mounted, theme, setTheme } = usePublicTheme();
   const activeTheme = mounted ? theme : "system";
 
@@ -23,13 +24,14 @@ export function ThemeToggle() {
       {themeOptions.map((option) => {
         const Icon = option.icon;
         const active = activeTheme === option.value;
+        const label = option.labels[locale];
 
         return (
           <button
             key={option.value}
             type="button"
-            aria-label={option.label}
-            title={option.label}
+            aria-label={label}
+            title={label}
             onClick={() => setTheme(option.value)}
             className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition ${
               active

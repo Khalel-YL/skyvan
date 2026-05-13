@@ -4,10 +4,12 @@ import { useState, useTransition } from "react";
 import { PenTool, PartyPopper, ShieldCheck, Loader2, Lock } from "lucide-react";
 import confetti from "canvas-confetti";
 import { signCaravanProposal } from "./actions"; // Büyülü fonksiyonumuz!
+import type { ProposalOfferContent } from "./types";
 
-export default function ProposalClient({ offer, id }: { offer: any, id: string }) {
+export default function ProposalClient({ offer, id }: { offer: ProposalOfferContent; id: string }) {
   // Eğer veritabanında "SIGNED" yazıyorsa, sayfa direkt kilitli açılsın
   const isAlreadySigned = offer.status === "SIGNED";
+  const signedDate = offer.signedAt ? new Date(offer.signedAt).toLocaleDateString("tr-TR") : "";
   
   const [signed, setSigned] = useState(isAlreadySigned);
   const [totalPrice, setTotalPrice] = useState(offer.finalPrice || Number(offer.price));
@@ -49,7 +51,7 @@ const handleExtra = (name: string, price: number) => {
     <div className="space-y-12">
       {isAlreadySigned && (
         <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl flex items-center gap-3 text-emerald-500 text-sm font-bold">
-          <Lock size={18} /> Bu sözleşme {new Date(offer.signedAt).toLocaleDateString('tr-TR')} tarihinde mühürlenmiştir. Değişiklik yapılamaz.
+          <Lock size={18} /> Bu sözleşme {signedDate} tarihinde mühürlenmiştir. Değişiklik yapılamaz.
         </div>
       )}
 

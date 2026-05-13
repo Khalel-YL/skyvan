@@ -343,7 +343,9 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
         <div className="relative min-w-0">
           <p className="public-hero-stage inline-flex max-w-full rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--public-muted)] md:tracking-[0.22em]">
             {page.slug === ""
-              ? "Freedom, Engineered."
+              ? page.locale === "tr"
+                ? "Özgürlük, mühendislikle."
+                : "Freedom, Engineered."
               : page.locale === "tr"
                 ? "Premium karavan üretim sistemi"
                 : "Premium caravan production system"}

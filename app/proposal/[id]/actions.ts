@@ -4,6 +4,7 @@ import { getDbOrThrow } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import type { ProposalOfferContent } from "./types";
 
 export async function signCaravanProposal(id: string, finalPrice: number, selectedExtras: string[]) {
   try {
@@ -13,7 +14,7 @@ export async function signCaravanProposal(id: string, finalPrice: number, select
     const offerData = await db.select().from(localizedContent).where(eq(localizedContent.id, id));
     if (!offerData || offerData.length === 0) throw new Error("Teklif bulunamadı");
 
-    const currentContent = offerData[0].contentJson as any;
+    const currentContent = offerData[0].contentJson as ProposalOfferContent;
 
     // 2. İçeriği güncelle (Artık SIGNED / İmzalandı durumuna geçiyor)
     const updatedContent = {
@@ -29,16 +30,7 @@ export async function signCaravanProposal(id: string, finalPrice: number, select
       .set({ contentJson: updatedContent })
       .where(eq(localizedContent.id, id));
 
-    // 4. WhatsApp / SMS Bildirim Sinyali (Buraya ileride Twilio/Netgsm API bağlayacağız)
-    // Şu anlık terminale VIP bir mesaj düşürüyoruz!
-    console.log(`\n======================================================`);
-    console.log(`🚀 YENİ SATIŞ KAPATILDI! (SkyVan OS)`);
-    console.log(`👤 Müşteri: ${currentContent.leadName}`);
-    console.log(`💰 Toplam Tutar: ₺${finalPrice.toLocaleString()}`);
-    console.log(`🛠️ Seçilen Ekstralar: ${selectedExtras.join(", ") || "Yok"}`);
-    console.log(`======================================================\n`);
-
-    // 5. Sayfanın önbelleğini temizle ve yeni halini göster
+    // 4. Sayfanın önbelleğini temizle ve yeni halini göster
     revalidatePath(`/proposal/${id}`);
     
     return { success: true };

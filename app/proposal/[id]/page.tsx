@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { Compass, Zap } from "lucide-react";
 import { notFound } from "next/navigation";
 import ProposalClient from "./ProposalClient"; // Standart ve tertemiz import
+import type { ProposalOfferContent } from "./types";
 
 export default async function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
   const db = getDbOrThrow();
@@ -12,7 +13,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   
   const offerData = await db.select().from(localizedContent).where(eq(localizedContent.id, id));
   if (!offerData || offerData.length === 0) return notFound();
-  const offer = offerData[0].contentJson as any;
+  const offer = offerData[0].contentJson as ProposalOfferContent;
 
   return (
     <div className="min-h-screen bg-[#020202] text-white selection:bg-amber-500/30">
