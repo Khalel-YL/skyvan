@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { BrandLogo } from "./BrandLogo";
+import { usePublicTheme } from "./ThemeProvider";
 
 const INTRO_STORAGE_KEY = "skyvan-signature-intro-seen";
+const INTRO_DURATION_MS = 1960;
 
 function prefersReducedMotion() {
   return (
@@ -13,8 +15,20 @@ function prefersReducedMotion() {
   );
 }
 
+function prefersLightTheme() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: light)").matches
+  );
+}
+
 export function SkyvanSignatureIntro() {
   const [visible, setVisible] = useState(false);
+  const { mounted, theme } = usePublicTheme();
+  const themeTone =
+    mounted && (theme === "light" || (theme === "system" && prefersLightTheme()))
+      ? "light"
+      : "dark";
 
   useEffect(() => {
     if (prefersReducedMotion()) {
@@ -32,7 +46,7 @@ export function SkyvanSignatureIntro() {
     }
 
     const revealTimer = window.setTimeout(() => setVisible(true), 0);
-    const hideTimer = window.setTimeout(() => setVisible(false), 1120);
+    const hideTimer = window.setTimeout(() => setVisible(false), INTRO_DURATION_MS);
 
     return () => {
       window.clearTimeout(revealTimer);
@@ -47,22 +61,25 @@ export function SkyvanSignatureIntro() {
   return (
     <div
       className="skyvan-signature-intro fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-[#050505] text-white"
+      data-signature-theme={themeTone}
       aria-hidden="true"
     >
-      <div className="absolute inset-x-[18%] top-1/2 h-px -translate-y-1/2 bg-white/10" />
-      <div className="skyvan-signature-line absolute left-1/2 top-1/2 h-px w-[min(23rem,72vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-      <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.055] blur-2xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.16),transparent_19rem),linear-gradient(120deg,transparent,rgba(255,255,255,0.05),transparent)]" />
+      <div className="absolute inset-x-[12%] top-1/2 h-px -translate-y-1/2 bg-current opacity-10" />
+      <div className="skyvan-signature-line absolute left-1/2 top-1/2 h-px w-[min(34rem,82vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-current to-transparent opacity-70" />
+      <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current opacity-[0.055] blur-3xl" />
 
-      <div className="skyvan-signature-mark relative flex flex-col items-center gap-5">
+      <div className="skyvan-signature-mark relative flex flex-col items-center gap-6">
+        <span className="skyvan-signature-sweep absolute inset-y-[-1.5rem] left-0 w-20 -skew-x-12 bg-gradient-to-r from-transparent via-current to-transparent opacity-0" />
         <BrandLogo
           variant="logo"
-          tone="dark"
+          tone={themeTone === "light" ? "light" : "dark"}
           size="hero"
           priority
-          className="w-[min(21rem,70vw)]"
+          className="relative w-[min(29rem,82vw)]"
           showTextFallback={false}
         />
-        <span className="h-px w-24 rounded-full bg-white/18" />
+        <span className="h-px w-36 rounded-full bg-current opacity-18" />
       </div>
     </div>
   );

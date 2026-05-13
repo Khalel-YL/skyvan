@@ -8,6 +8,7 @@ import {
   Film,
   LockKeyhole,
   Sparkles,
+  Orbit,
 } from "lucide-react";
 
 import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
@@ -112,6 +113,25 @@ function isDecisionFlowBlock(block: PublicBlock) {
     (items.includes("veri") && items.includes("üretim hazırlığı")) ||
     (items.includes("rota") && items.includes("üretim güveni")) ||
     (items.includes("data") && items.includes("production readiness"))
+  );
+}
+
+function isRedundantHomeBlock(block: PublicBlock, page: PublicPageContent) {
+  if (page.slug !== "") {
+    return false;
+  }
+
+  const heading = String(
+    block.type === "text" || block.type === "feature-list" ? block.heading ?? "" : "",
+  ).toLowerCase();
+
+  return (
+    heading.includes("yolculuk öncesi kontrol kulesi") ||
+    heading.includes("özgürlük hissi") ||
+    heading.includes("the control tower before the journey") ||
+    heading.includes("freedom starts with decisions") ||
+    heading.includes("üretim ve müşteri yolculuğu") ||
+    heading.includes("production and customer journey")
   );
 }
 
@@ -341,41 +361,43 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
           { label: "Rota", detail: "Bağlam" },
           { label: "Yaşam", detail: "Senaryo" },
           { label: "Risk", detail: "Sınır" },
+          { label: "Enerji", detail: "Denge" },
           { label: "Üretim", detail: "Hazırlık" },
         ]
       : [
           { label: "Route", detail: "Context" },
           { label: "Living", detail: "Scenario" },
           { label: "Risk", detail: "Boundary" },
+          { label: "Energy", detail: "Balance" },
           { label: "Production", detail: "Readiness" },
         ];
 
   const orbitLabels =
     locale === "tr"
-      ? ["Karar", "Güven", "Hazırlık"]
-      : ["Decision", "Trust", "Preparation"];
+      ? ["Rota", "Yaşam", "Risk", "Enerji", "Üretim"]
+      : ["Route", "Living", "Risk", "Energy", "Production"];
 
   return (
-    <div className="public-cockpit-entrance relative flex h-full min-h-[25rem] flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface))] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,color-mix(in_srgb,var(--public-text)_18%,transparent),transparent_18rem),radial-gradient(circle_at_22%_78%,color-mix(in_srgb,var(--public-text)_9%,transparent),transparent_14rem)]" />
-      <div className="absolute left-1/2 top-[44%] h-[23rem] w-[23rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border)] opacity-55" />
-      <div className="absolute left-1/2 top-[44%] h-[16rem] w-[16rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border-strong)] opacity-60" />
-      <div className="absolute left-1/2 top-[44%] h-[8.5rem] w-[8.5rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border)] bg-[var(--public-bg)]/25 backdrop-blur" />
+    <div className="public-cockpit-entrance public-skyvan-orbit relative flex h-full min-h-[25rem] flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface))] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,color-mix(in_srgb,var(--public-text)_20%,transparent),transparent_18rem),radial-gradient(circle_at_18%_82%,color-mix(in_srgb,var(--public-text)_9%,transparent),transparent_14rem)]" />
+      <div className="absolute left-1/2 top-[45%] h-[24rem] w-[24rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border)] opacity-55" />
+      <div className="absolute left-1/2 top-[45%] h-[18rem] w-[18rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border-strong)] opacity-60" />
+      <div className="absolute left-1/2 top-[45%] h-[10rem] w-[10rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border)] bg-[var(--public-bg)]/28 backdrop-blur" />
 
       <div className="relative flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)] md:tracking-[0.26em]">
-          {locale === "tr" ? "Karar kokpiti" : "Decision cockpit"}
+          {locale === "tr" ? "Skyvan yörüngesi" : "Skyvan Orbit"}
         </p>
         <span className="rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[var(--public-muted)]">
-          Skyvan OS
+          {locale === "tr" ? "Yolculuk sistemi" : "Journey OS"}
         </span>
       </div>
 
       <div className="relative my-8 flex min-h-[15rem] items-center justify-center md:my-10">
-        <div className="absolute left-[10%] top-[19%] h-px w-[34%] rotate-[-18deg] bg-[var(--public-border-strong)]" />
-        <div className="absolute right-[11%] top-[24%] h-px w-[31%] rotate-[18deg] bg-[var(--public-border-strong)]" />
-        <div className="absolute bottom-[21%] left-[14%] h-px w-[29%] rotate-[17deg] bg-[var(--public-border-strong)]" />
-        <div className="absolute bottom-[20%] right-[14%] h-px w-[29%] rotate-[-17deg] bg-[var(--public-border-strong)]" />
+        <div className="absolute left-[11%] top-[18%] h-px w-[34%] rotate-[-18deg] bg-[var(--public-border-strong)]" />
+        <div className="absolute right-[12%] top-[22%] h-px w-[31%] rotate-[18deg] bg-[var(--public-border-strong)]" />
+        <div className="absolute bottom-[20%] left-[13%] h-px w-[30%] rotate-[18deg] bg-[var(--public-border-strong)]" />
+        <div className="absolute bottom-[20%] right-[13%] h-px w-[30%] rotate-[-18deg] bg-[var(--public-border-strong)]" />
 
         <div className="relative h-36 w-64 sm:h-40 sm:w-72">
           <div className="absolute left-[7%] right-[7%] top-[30%] h-[46%] rounded-[4rem] border border-[var(--public-border-strong)] bg-[linear-gradient(135deg,var(--public-surface-strong),var(--public-surface)_58%,transparent)] shadow-[0_26px_70px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.2)]" />
@@ -385,6 +407,9 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
           <div className="absolute bottom-[23%] right-[28%] h-4 w-8 rounded-full border border-[var(--public-border-strong)] bg-[var(--public-surface-strong)]" />
           <div className="absolute left-[11%] top-[30%] h-2 w-2 rounded-full bg-[var(--public-text)] opacity-75 shadow-[0_0_26px_color-mix(in_srgb,var(--public-text)_60%,transparent)]" />
           <div className="absolute right-[15%] top-[28%] h-2 w-2 rounded-full bg-[var(--public-text)] opacity-55" />
+          <div className="absolute left-1/2 top-[52%] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--public-border-strong)] bg-[var(--public-surface)] text-[var(--public-text)] shadow-[0_18px_48px_rgba(0,0,0,0.12)]">
+            <Orbit className="h-5 w-5" />
+          </div>
         </div>
 
         {orbitLabels.map((item, index) => (
@@ -392,10 +417,14 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
             key={item}
             className={`absolute rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--public-muted)] shadow-[0_14px_38px_rgba(0,0,0,0.08)] ${
               index === 0
-                ? "left-0 top-[10%]"
+                ? "left-0 top-[9%]"
                 : index === 1
-                  ? "right-0 top-[18%]"
-                  : "bottom-[5%] left-1/2 -translate-x-1/2"
+                  ? "right-0 top-[16%]"
+                  : index === 2
+                    ? "bottom-[8%] left-0"
+                    : index === 3
+                      ? "bottom-[8%] right-0"
+                      : "bottom-[-2%] left-1/2 -translate-x-1/2"
             }`}
           >
             {item}
@@ -403,7 +432,7 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
         ))}
       </div>
 
-      <div className="relative grid gap-2 sm:grid-cols-4">
+      <div className="relative grid gap-2 sm:grid-cols-5">
         {checkpoints.map((item, index) => (
           <div
             key={item.label}
@@ -427,6 +456,119 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
           : "The idea of freedom becomes more trustworthy when route, living scenario, risk boundaries, and production readiness are visible together."}
       </p>
     </div>
+  );
+}
+
+function HomeJourneyOsSections({ locale }: { locale: PublicPageContent["locale"] }) {
+  const transformation =
+    locale === "tr"
+      ? [
+          {
+            title: "Hayal",
+            body: "Özgürlük, rota, doğa, konfor ve yaşam isteği henüz dağınık bir sezgidir.",
+          },
+          {
+            title: "Karar",
+            body: "Skyvan bu isteği rota, yaşam, risk ve teknik sınırlarla okunabilir hale getirir.",
+          },
+          {
+            title: "Üretim",
+            body: "Netleşen karar, üretime hazırlanabilir kontrollü bir projeye dönüşür.",
+          },
+        ]
+      : [
+          {
+            title: "Dream",
+            body: "Freedom, route, nature, comfort, and living needs begin as an open intention.",
+          },
+          {
+            title: "Decision",
+            body: "Skyvan clarifies that intention through route, living, risk, and technical boundaries.",
+          },
+          {
+            title: "Production",
+            body: "A clarified decision becomes a controlled project that can be prepared for production.",
+          },
+        ];
+  const livingQuestions =
+    locale === "tr"
+      ? ["Nerede duracaksın?", "Nasıl yaşayacaksın?", "Hangi konfor gerçekten gerekli?"]
+      : ["Where will you stop?", "How will you live?", "Which comfort truly matters?"];
+
+  return (
+    <>
+      <SectionShell className="public-journey-os-section border-y border-[var(--public-border)] bg-[var(--public-bg-soft)]">
+        <div className="grid gap-8 lg:grid-cols-[0.38fr_0.62fr] lg:items-end">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--public-muted)]">
+              {locale === "tr" ? "Yolculuk sistemi" : "Journey OS"}
+            </p>
+            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-[var(--public-text)] md:text-5xl">
+              {locale === "tr"
+                ? "Skyvan, yolculuğu üretilebilir bir karara dönüştürür."
+                : "Skyvan turns the journey into a buildable decision."}
+            </h2>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {transformation.map((item, index) => (
+              <div
+                key={item.title}
+                className="public-journey-step relative overflow-hidden rounded-[1.6rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-5 md:min-h-60"
+              >
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)]">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-8 text-2xl font-semibold tracking-tight text-[var(--public-text)]">
+                  {item.title}
+                </h3>
+                <p className="mt-4 text-sm leading-7 text-[var(--public-muted)]">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+
+      <SectionShell>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="public-principle-panel relative overflow-hidden rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-6 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--public-muted)]">
+              {locale === "tr" ? "Yaşam senaryosu" : "Living scenario"}
+            </p>
+            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-[var(--public-text)] md:text-5xl">
+              {locale === "tr"
+                ? "Yaşam senaryosu olmadan doğru karavan olmaz."
+                : "The right caravan starts with a living scenario."}
+            </h2>
+            <div className="mt-8 grid gap-3">
+              {livingQuestions.map((question) => (
+                <div
+                  key={question}
+                  className="rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface-strong)] px-4 py-3 text-sm font-medium text-[var(--public-text)]"
+                >
+                  {question}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="public-principle-panel relative overflow-hidden rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-6 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--public-muted)]">
+              {locale === "tr" ? "Görsel güven" : "Visual trust"}
+            </p>
+            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-[var(--public-text)] md:text-5xl">
+              {locale === "tr"
+                ? "Görünen şey, üretilebilir olmalı."
+                : "What is shown must remain buildable."}
+            </h2>
+            <p className="mt-8 text-base leading-8 text-[var(--public-muted)]">
+              {locale === "tr"
+                ? "Skyvan görselleştirir; ama kandırmaz. Her görsel, karar hazırlığını güçlendirmek için kullanılır. Gerçeklik; teknik sınır, ürün bağı ve insan onayıyla korunur."
+                : "Skyvan visualizes, but does not pretend. Every visual is used to strengthen decision preparation. Reality is protected by technical boundaries, product relationships, and human approval."}
+            </p>
+          </div>
+        </div>
+      </SectionShell>
+    </>
   );
 }
 
@@ -570,12 +712,11 @@ function FeatureListBlock({
   page: PublicPageContent;
 }) {
   if (isDecisionFlowBlock(block)) {
-    const decisionItems =
-      page.slug === ""
-        ? page.locale === "tr"
-          ? ["Rota", "Yaşam", "Risk", "Teknik Hazırlık", "Üretim Güveni"]
-          : ["Route", "Living", "Risk", "Technical Readiness", "Production Trust"]
-        : block.items;
+    const decisionItems = page.slug === ""
+      ? page.locale === "tr"
+        ? ["Rota", "Yaşam", "Teknik sınır", "Risk görünürlüğü", "Üretim hazırlığı"]
+        : ["Route", "Living", "Technical boundary", "Risk visibility", "Production readiness"]
+      : block.items;
     const decisionHeading =
       page.slug === ""
         ? page.locale === "tr"
@@ -585,25 +726,9 @@ function FeatureListBlock({
     const decisionSubtext =
       page.slug === ""
         ? page.locale === "tr"
-          ? "Skyvan, özgürlük fikrini acele seçimlere değil; rota, yaşam, risk, teknik hazırlık ve üretim güveni üzerinden okunabilir bir sisteme bağlar."
-          : "Skyvan connects the idea of freedom to route, living, risk, technical readiness, and production trust instead of rushing into random choices."
+          ? "Skyvan, karavan kararını tekrar kartlara bölmez; birbirine bağlı katmanları kısa ve okunabilir bir mühendislik çerçevesine indirir."
+          : "Skyvan does not split the caravan decision into another grid; it compresses connected layers into a readable engineering frame."
         : block.subtext;
-    const descriptions =
-      page.locale === "tr"
-        ? [
-            "Rota, kullanım alışkanlığı ve teknik bağlam birlikte okunur.",
-            "Günlük ritim anlaşılır bir yaşam senaryosuna dönüşür.",
-            "Belirsizlikler erken görülebilen karar başlıklarına ayrılır.",
-            "Enerji, ağırlık ve ürün ilişkileri karar öncesi disipline edilir.",
-            "Netleşen bağlam kontrollü üretim hazırlığına taşınır.",
-          ]
-        : [
-            "Route, usage habits, and technical context are read together.",
-            "Daily rhythm becomes an understandable living scenario.",
-            "Uncertainty becomes early decision context.",
-            "Energy, weight, and product relationships are disciplined before decisions.",
-            "Clarified context moves into controlled production preparation.",
-          ];
     const aiContext =
       page.locale === "tr"
         ? {
@@ -628,13 +753,13 @@ function FeatureListBlock({
           };
 
     return (
-      <SectionShell className="bg-[var(--public-bg-soft)]">
-        <div className="grid gap-10 lg:grid-cols-[0.36fr_0.64fr] lg:items-start">
+      <SectionShell className="bg-[var(--public-bg-soft)] py-12 md:py-16">
+        <div className="grid gap-6 rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-5 md:p-7 lg:grid-cols-[0.42fr_0.58fr] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--public-muted)]">
               {page.locale === "tr" ? "Sistem zekası" : "System intelligence"}
             </p>
-            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-[var(--public-text)] md:text-5xl">
+            <h2 className="mt-4 max-w-xl text-2xl font-semibold tracking-tight text-[var(--public-text)] md:text-4xl">
               {decisionHeading}
             </h2>
             {decisionSubtext ? (
@@ -644,53 +769,45 @@ function FeatureListBlock({
             ) : null}
           </div>
 
-          <div className="public-system-panel rounded-[2rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-4 md:p-6">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="public-system-panel rounded-[1.5rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:p-5">
+            <div className="flex flex-wrap gap-2">
               {decisionItems.map((item, index) => (
                 <div
                   key={item}
-                  className="public-flow-card rounded-[1.35rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 sm:min-h-44 sm:p-5"
+                  className="rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] px-3 py-2 text-sm font-medium text-[var(--public-text)]"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--public-muted)]">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="h-px flex-1 bg-[var(--public-border)]" />
-                  </div>
-                  <h3 className="mt-5 text-xl font-semibold tracking-tight text-[var(--public-text)]">
-                    {item}
-                  </h3>
-                  <p className="mt-4 text-sm leading-7 text-[var(--public-muted)]">
-                    {descriptions[index] ?? descriptions[descriptions.length - 1]}
-                  </p>
+                  <span className="mr-2 text-xs text-[var(--public-muted)]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  {item}
                 </div>
               ))}
             </div>
-            <div className="public-ai-context-panel mt-4 grid gap-5 rounded-[1.5rem] border border-[var(--public-border)] bg-[var(--public-surface-strong)] p-4 md:grid-cols-[0.34fr_0.66fr] md:p-5">
+            <div className="public-ai-context-panel mt-4 grid gap-4 rounded-[1.25rem] border border-[var(--public-border)] bg-[var(--public-surface)] p-4 md:grid-cols-[0.34fr_0.66fr]">
               <div className="min-w-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--public-accent)] text-[var(--public-accent-text)]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--public-accent)] text-[var(--public-accent-text)]">
                   <Cpu className="h-4 w-4" />
                 </div>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)]">
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--public-muted)]">
                   {aiContext.label}
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--public-text)]">
+                <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--public-text)]">
                   Skyvan AI
                 </h3>
               </div>
               <div className="min-w-0">
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
                   {aiContext.items.map((item) => (
                     <div
                       key={item}
-                      className="public-ai-context-item flex gap-2 rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface)] p-3"
+                      className="public-ai-context-item flex gap-2 rounded-2xl border border-[var(--public-border)] bg-[var(--public-surface-strong)] px-3 py-2"
                     >
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--public-text)]" />
                       <p className="text-sm leading-6 text-[var(--public-muted)]">{item}</p>
                     </div>
                   ))}
                 </div>
-                <p className="public-ai-context-disclaimer mt-4 rounded-2xl border border-[var(--public-border)] bg-[var(--public-bg)]/30 px-4 py-3 text-xs leading-6 text-[var(--public-muted)]">
+                <p className="public-ai-context-disclaimer mt-3 rounded-2xl border border-[var(--public-border)] bg-[var(--public-bg)]/30 px-4 py-3 text-xs leading-6 text-[var(--public-muted)]">
                   {aiContext.disclaimer}
                 </p>
               </div>
@@ -855,13 +972,20 @@ function renderBlock(block: PublicBlock, page: PublicPageContent, index: number)
 }
 
 export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
-  const visibleBlocks = page.blocks.filter((block) => !(block.type === "text" && isAiBlock(block)));
+  const visibleBlocks = page.blocks.filter(
+    (block) => !(block.type === "text" && isAiBlock(block)) && !isRedundantHomeBlock(block, page),
+  );
   const showSignatureIntro = page.slug === "";
 
   return (
     <div>
       {showSignatureIntro ? <SkyvanSignatureIntro /> : null}
-      {visibleBlocks.map((block, index) => renderBlock(block, page, index))}
+      {visibleBlocks.map((block, index) => (
+        <div key={`${block.type}:${index}`}>
+          {renderBlock(block, page, index)}
+          {showSignatureIntro && index === 0 ? <HomeJourneyOsSections locale={page.locale} /> : null}
+        </div>
+      ))}
     </div>
   );
 }

@@ -81,15 +81,9 @@ const trHome: FallbackInput = {
       ctaHref: "/tr/proje-baslat",
     },
     {
-      type: "text",
-      heading: "Özgürlük hissi, güvenilir kararlarla başlar",
-      body:
-        "İyi bir karavan yalnızca yatak, mutfak veya depolama seçimi değildir. Nerede duracağını, nasıl yaşayacağını, hangi teknik sınırların konforunu etkilediğini ve hangi kararların üretime hazır olduğunu birlikte düşünür.",
-    },
-    {
       type: "feature-list",
       heading: "Skyvan karar mimarisi",
-      subtext: "Skyvan, özgürlük fikrini acele seçimlere değil; rota, yaşam, risk, teknik hazırlık ve üretim güveni üzerinden okunabilir bir sisteme bağlar.",
+      subtext: "Skyvan, karavan kararını katman katman hazırlar: rota, yaşam, teknik sınır, risk görünürlüğü ve üretim hazırlığı aynı bütün içinde okunur.",
       items: [
         "Rota",
         "Yaşam",
@@ -106,23 +100,13 @@ const trHome: FallbackInput = {
     },
     {
       type: "feature-list",
-      heading: "Kendi Karavanını Tasarla — Çok Yakında",
+      heading: "Workshop rastgele seçim için açılmayacak.",
       subtext:
-        "Skyvan Workshop bilinçli olarak kapalı tutulur. Çünkü rastgele parça seçimi değil, teknik sınırları hazır ve ürün ilişkileri doğrulanmış bir tasarım deneyimi hedeflenir.",
+        "Skyvan Workshop; ürün ilişkileri, teknik sınırlar ve üretim gerçekliği hazır olduğunda açılır. Çünkü iyi bir karavan deneyimi, acele seçimle değil, doğru hazırlanmış kararla başlar.",
       items: [
         "Bugün seçim, fiyatlandırma, form gönderimi veya lead kaydı başlatmaz.",
         "Açıldığında rota, konfor ve yaşam alışkanlıklarını kontrollü şekilde düşünmeye yardımcı olacak.",
         "Açılmadan önce bile müşteriyi koruyan güven sınırını açıkça gösterir.",
-      ],
-    },
-    {
-      type: "feature-list",
-      heading: "Üretim ve müşteri yolculuğu",
-      items: [
-        "Rota, mevsim ve günlük yaşam ihtiyacı sade bir çerçevede anlaşılır.",
-        "Araç, yaşam düzeni, enerji ve depolama beklentileri teknik bağlama oturur.",
-        "Riskler, eksikler ve onay bekleyen kararlar erken görünür hale gelir.",
-        "Admin yayın gerçekliği ve insan onayı güven sınırını korur.",
       ],
     },
     {
@@ -155,15 +139,9 @@ const enHome: FallbackInput = {
       ctaHref: "/en/proje-baslat",
     },
     {
-      type: "text",
-      heading: "Freedom starts with decisions you can trust",
-      body:
-        "A great caravan is more than a bed, kitchen, or storage choice. It is where you stop, how you live, which technical limits shape comfort, and which decisions are ready for production.",
-    },
-    {
       type: "feature-list",
       heading: "Skyvan decision architecture",
-      subtext: "Skyvan connects the idea of freedom to route, living, risk, technical readiness, and production trust instead of rushing into random choices.",
+      subtext: "Skyvan prepares the caravan decision layer by layer: route, living, technical boundary, risk visibility, and production readiness are read as one system.",
       items: [
         "Route",
         "Living",
@@ -180,23 +158,13 @@ const enHome: FallbackInput = {
     },
     {
       type: "feature-list",
-      heading: "Design Your Own Caravan — Coming Soon",
+      heading: "Workshop will not open for random selection.",
       subtext:
-        "Skyvan Workshop is intentionally controlled. The goal is not random part selection, but a design experience with ready technical boundaries and verified product relationships.",
+        "Skyvan Workshop opens when product relationships, technical boundaries, and production reality are ready. A good caravan experience starts with a prepared decision, not rushed selection.",
       items: [
         "Today, it starts no selection, pricing, form submission, or lead record.",
         "When it opens, it will help route, comfort, and living habits become easier to think through with clear boundaries.",
         "Even before launch, it shows the trust boundary that protects the customer.",
-      ],
-    },
-    {
-      type: "feature-list",
-      heading: "Production and customer journey",
-      items: [
-        "Understand route, season, and everyday living needs through a simple frame.",
-        "Place vehicle, layout, energy, and storage expectations into technical context.",
-        "Surface risks, missing inputs, and decisions that still need approval.",
-        "Keep trust bounded by admin publish state and human approval.",
       ],
     },
     {
@@ -216,7 +184,7 @@ const trPages: Record<string, FallbackInput> = {
     title: "Skyvan Sistem",
     description: "Skyvan public site, admin ve mühendislik katmanlarının nasıl tek üretim omurgasına bağlandığını anlatır.",
     seoTitle: "Skyvan Sistem | Admin Kontrollü Karavan Omurgası",
-    seoDescription: "Skyvan sistemi; Admin Pages, medya, SEO, mühendislik uyarıları ve public render katmanını güvenli şekilde bağlar.",
+    seoDescription: "Skyvan sistemi; içerik yönetimi, medya, SEO, mühendislik uyarıları ve müşteri deneyimini güvenli şekilde bağlar.",
     blocks: [
       { type: "hero", heading: "Karavan üretimi bir sistem meselesidir.", subtext: "Skyvan, public deneyimi admin tarafından yönetilen gerçek içerikle besler." },
       { type: "feature-list", heading: "Ana katmanlar", items: ["Admin Pages yayın gerçekliğini belirler.", "Public site yalnızca güvenli ve yayınlanmış içeriği okur.", "Mühendislik çekirdeği karar hazırlığını destekler.", "Audit ve publish akışı içerik güvenini korur."] },
@@ -232,7 +200,7 @@ const trPages: Record<string, FallbackInput> = {
     seoDescription: "Skyvan çalışma modeli; admin onayı, public yayın, AI destekli hazırlık ve üretim sürecini kontrollü biçimde bağlar.",
     blocks: [
       { type: "hero", heading: "Önce gerçeklik, sonra vitrin.", subtext: "Public site admin onayını bekler; güvenli içerik yoksa marka anlatımıyla boşluk bırakmaz." },
-      { type: "feature-list", heading: "Akış", items: ["İçerik Admin Pages içinde hazırlanır.", "SEO, açıklama ve yayın durumu kontrol edilir.", "Public route içeriği read-only olarak okur.", "Müşteri deneyimi sade, hızlı ve premium kalır."] },
+      { type: "feature-list", heading: "Akış", items: ["İçerik kontrollü yayın akışında hazırlanır.", "SEO, açıklama ve yayın durumu kontrol edilir.", "Müşteri yüzeyi yalnızca güvenli içeriği gösterir.", "Müşteri deneyimi sade, hızlı ve premium kalır."] },
       { type: "text", heading: "AI rolü", body: "Skyvan AI bir chatbot değildir. Açıklar, uyarır, yönlendirir ve hazırlığı destekler; final teknik, ticari, publish veya fiyatlandırma kararı vermez." },
       { type: "cta", heading: "Karavan deneyimini keşfet", ctaLabel: "Karavan Deneyimi", ctaHref: "/tr/karavan-deneyimi" },
     ],
@@ -348,7 +316,7 @@ const enPages: Record<string, FallbackInput> = Object.fromEntries(
       seoDescription:
         slug === "proje-baslat"
           ? "The Skyvan start-project page is currently a safe coming-soon surface with no form, lead creation, pricing, or configurator."
-          : "Learn how Skyvan connects governed content, engineering preparation, and a premium read-only public website.",
+          : "Learn how Skyvan connects governed content, engineering preparation, and a premium customer-facing website.",
       blocks: translateBlocks(slug, page.blocks),
     },
   ]),
@@ -453,8 +421,8 @@ export function getFallbackPage(locale: PublicLocale, slug?: string | null): Pub
     seoTitle: locale === "tr" ? "Skyvan | Güvenli Public Sayfa" : "Skyvan | Safe Public Page",
     seoDescription:
       locale === "tr"
-        ? "Skyvan public route, yayınlanmış Admin Page yoksa güvenli ve zengin yerleşik içerik gösterir."
-        : "Skyvan public routes render safe built-in content when no published Admin Page is available.",
+        ? "Skyvan, yayınlanmış içerik bulunmadığında güvenli ve zengin lansman anlatımı gösterir."
+        : "Skyvan shows safe built-in launch storytelling when no published page is available.",
     blocks: [
       {
         type: "hero",
