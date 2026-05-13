@@ -295,6 +295,10 @@ input[type="number"]::-webkit-inner-spin-button {
   animation-delay: 200ms;
 }
 
+.public-cockpit-entrance {
+  animation: public-cockpit-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
 .public-premium-cta {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.1);
   transition:
@@ -467,6 +471,19 @@ input[type="number"]::-webkit-inner-spin-button {
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
+.skyvan-signature-intro {
+  animation: skyvan-signature-away 1120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  pointer-events: none;
+}
+
+.skyvan-signature-line {
+  animation: skyvan-signature-line 980ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.skyvan-signature-mark {
+  animation: skyvan-signature-mark 1040ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+}
+
 @keyframes public-reveal-up {
   from {
     opacity: 0;
@@ -476,6 +493,18 @@ input[type="number"]::-webkit-inner-spin-button {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes public-cockpit-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -492,10 +521,65 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+@keyframes skyvan-signature-line {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-50%) scaleX(0.18);
+  }
+
+  32% {
+    opacity: 0.9;
+  }
+
+  72% {
+    opacity: 0.52;
+    transform: translateX(-50%) translateY(-50%) scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-50%) scaleX(1);
+  }
+}
+
+@keyframes skyvan-signature-mark {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.965);
+  }
+
+  34%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+
+@keyframes skyvan-signature-away {
+  0%,
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .public-reveal,
   .public-hero-glow,
-  .public-hero-stage {
+  .public-hero-stage,
+  .public-cockpit-entrance,
+  .skyvan-signature-intro,
+  .skyvan-signature-line,
+  .skyvan-signature-mark {
     animation: none;
   }
 
@@ -504,7 +588,8 @@ input[type="number"]::-webkit-inner-spin-button {
   .public-ai-context-panel,
   .public-hero-chip,
   .public-hero-module,
-  .public-hero-visual {
+  .public-hero-visual,
+  .public-cockpit-entrance {
     transition: none;
   }
 

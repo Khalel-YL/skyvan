@@ -12,6 +12,7 @@ import {
 
 import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
 import { PublicHeroVideoPlayer } from "./PublicHeroVideoPlayer";
+import { SkyvanSignatureIntro } from "./SkyvanSignatureIntro";
 import type { PublicBlock, PublicBlockMedia, PublicPageContent } from "../lib/launch-content";
 import { getLocalizedPath } from "../lib/public-routing";
 
@@ -355,7 +356,7 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
       : ["Decision", "Trust", "Preparation"];
 
   return (
-    <div className="relative flex h-full min-h-[25rem] flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface))] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
+    <div className="public-cockpit-entrance relative flex h-full min-h-[25rem] flex-col justify-between overflow-hidden rounded-[1.35rem] border border-[var(--public-border)] bg-[linear-gradient(145deg,var(--public-surface-strong),var(--public-surface))] p-4 md:min-h-[28rem] md:rounded-[1.6rem] md:p-6">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,color-mix(in_srgb,var(--public-text)_18%,transparent),transparent_18rem),radial-gradient(circle_at_22%_78%,color-mix(in_srgb,var(--public-text)_9%,transparent),transparent_14rem)]" />
       <div className="absolute left-1/2 top-[44%] h-[23rem] w-[23rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border)] opacity-55" />
       <div className="absolute left-1/2 top-[44%] h-[16rem] w-[16rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--public-border-strong)] opacity-60" />
@@ -855,9 +856,11 @@ function renderBlock(block: PublicBlock, page: PublicPageContent, index: number)
 
 export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
   const visibleBlocks = page.blocks.filter((block) => !(block.type === "text" && isAiBlock(block)));
+  const showSignatureIntro = page.slug === "";
 
   return (
     <div>
+      {showSignatureIntro ? <SkyvanSignatureIntro /> : null}
       {visibleBlocks.map((block, index) => renderBlock(block, page, index))}
     </div>
   );
