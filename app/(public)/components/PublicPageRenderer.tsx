@@ -13,8 +13,14 @@ import {
 
 import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
 import { PublicHeroVideoPlayer } from "./PublicHeroVideoPlayer";
+import { PublicMediaSurface } from "./PublicMediaSurface";
 import { SkyvanSignatureIntro } from "./SkyvanSignatureIntro";
 import type { PublicBlock, PublicBlockMedia, PublicPageContent } from "../lib/launch-content";
+import {
+  getPublicMediaForSlot,
+  resolvePublicMediaSurfaces,
+  type PublicMediaSurfaceMap,
+} from "../lib/public-media-surface";
 import { getLocalizedPath } from "../lib/public-routing";
 
 function safeHref(href: string | undefined, locale: PublicPageContent["locale"]) {
@@ -572,8 +578,18 @@ function HomeJourneyOsSections({ locale }: { locale: PublicPageContent["locale"]
   );
 }
 
-function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero" }>; page: PublicPageContent }) {
-  const media = getHeroMedia(block.media);
+function HeroBlock({
+  block,
+  page,
+  mediaSurfaces,
+}: {
+  block: Extract<PublicBlock, { type: "hero" }>;
+  page: PublicPageContent;
+  mediaSurfaces: PublicMediaSurfaceMap;
+}) {
+  const media = page.slug === "" ? null : getHeroMedia(block.media);
+  const orbitSurface =
+    page.slug === "" ? getPublicMediaForSlot(mediaSurfaces, "homepage.orbit.surface") : null;
   const homeHeroCopy =
     page.slug === ""
       ? page.locale === "tr"
@@ -673,6 +689,11 @@ function HeroBlock({ block, page }: { block: Extract<PublicBlock, { type: "hero"
             <HeroMediaVisual media={media} />
           ) : (
             <>
+              <PublicMediaSurface
+                media={orbitSurface}
+                className="opacity-[0.18] mix-blend-luminosity"
+                visualClassName="scale-105 blur-[1px]"
+              />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_8%,rgba(255,255,255,0.2),transparent_18rem),radial-gradient(circle_at_82%_76%,rgba(255,255,255,0.08),transparent_15rem),linear-gradient(145deg,rgba(255,255,255,0.075),transparent_44%)]" />
               <div className="absolute inset-x-6 bottom-10 h-24 rounded-[100%] bg-black/20 blur-3xl md:inset-x-12" />
               <DecisionCockpitVisual locale={page.locale} />
@@ -947,9 +968,14 @@ function CtaBlock({ block, page }: { block: Extract<PublicBlock, { type: "cta" }
   );
 }
 
-function renderBlock(block: PublicBlock, page: PublicPageContent, index: number) {
+function renderBlock(
+  block: PublicBlock,
+  page: PublicPageContent,
+  index: number,
+  mediaSurfaces: PublicMediaSurfaceMap,
+) {
   if (block.type === "hero") {
-    return <HeroBlock key={index} block={block} page={page} />;
+    return <HeroBlock key={index} block={block} page={page} mediaSurfaces={mediaSurfaces} />;
   }
 
   if (block.type === "text") {
@@ -976,13 +1002,14 @@ export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
     (block) => !(block.type === "text" && isAiBlock(block)) && !isRedundantHomeBlock(block, page),
   );
   const showSignatureIntro = page.slug === "";
+  const mediaSurfaces = resolvePublicMediaSurfaces(page);
 
   return (
     <div>
       {showSignatureIntro ? <SkyvanSignatureIntro /> : null}
       {visibleBlocks.map((block, index) => (
         <div key={`${block.type}:${index}`}>
-          {renderBlock(block, page, index)}
+          {renderBlock(block, page, index, mediaSurfaces)}
           {showSignatureIntro && index === 0 ? <HomeJourneyOsSections locale={page.locale} /> : null}
         </div>
       ))}
