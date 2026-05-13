@@ -10,12 +10,27 @@ export type PageMediaPickerAsset = PageBlockMedia & {
 };
 
 type MediaFilter = "all" | PageBlockMedia["mediaType"];
+type SurfaceSlotOption = {
+  value: NonNullable<PageBlockMedia["surfaceSlot"]>;
+  label: string;
+};
 
 const filters: Array<{ key: MediaFilter; label: string }> = [
   { key: "all", label: "Tümü" },
   { key: "image", label: "Görsel" },
   { key: "video", label: "Video" },
   { key: "model3d", label: "3D" },
+];
+const surfaceSlotOptions: SurfaceSlotOption[] = [
+  { value: "homepage.hero.background", label: "Ana sayfa hero arka yüzeyi" },
+  { value: "homepage.orbit.surface", label: "Ana sayfa yörünge yüzeyi" },
+  { value: "homepage.visualTrust.media", label: "Görsel güven alanı" },
+  { value: "homepage.workshop.preview", label: "Workshop önizleme" },
+  { value: "homepage.finalCta.background", label: "Final CTA arka yüzeyi" },
+  { value: "experience.hero.media", label: "Deneyim hero medya" },
+  { value: "experience.route.media", label: "Deneyim rota medya" },
+  { value: "mediaLab.featured.media", label: "Medya Lab öne çıkan medya" },
+  { value: "mediaLab.gallery.preview", label: "Medya Lab galeri önizleme" },
 ];
 
 function getTypeLabel(type: PageBlockMedia["mediaType"]) {
@@ -76,6 +91,19 @@ export function PageMediaPicker({
       return haystack.includes(normalizedQuery);
     });
   }, [filter, mediaAssets, query]);
+  const selectedSurfaceSlot = selected?.surfaceSlot ?? "";
+
+  function updateSurfaceSlot(value: string) {
+    if (!selected) {
+      return;
+    }
+
+    const surfaceSlot = surfaceSlotOptions.find((option) => option.value === value)?.value;
+    onSelect({
+      ...selected,
+      surfaceSlot,
+    });
+  }
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
@@ -99,47 +127,66 @@ export function PageMediaPicker({
       </div>
 
       {selected ? (
-        <div className="mt-3 grid gap-3 rounded-2xl border border-zinc-800 bg-black/40 p-3 md:grid-cols-[5.5rem_minmax(0,1fr)_auto] md:items-center">
-          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-            {selected.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Admin media picker displays external media library URLs.
-              <img
-                src={selected.previewUrl}
-                alt={selected.altText || selected.title}
-                className="aspect-[4/3] w-full object-cover"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] items-center justify-center text-zinc-600">
-                {selected ? (
+        <>
+          <div className="mt-3 rounded-2xl border border-sky-900/50 bg-sky-950/15 p-3">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Public görsel alanı
+            </label>
+            <select
+              value={selectedSurfaceSlot}
+              onChange={(event) => updateSurfaceSlot(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 outline-none transition focus:border-zinc-600"
+            >
+              <option value="">Seçilmedi</option>
+              {surfaceSlotOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              Boş bırakılırsa medya yalnızca mevcut blok içinde kullanılır.
+            </p>
+          </div>
+
+          <div className="mt-3 grid gap-3 rounded-2xl border border-zinc-800 bg-black/40 p-3 md:grid-cols-[5.5rem_minmax(0,1fr)_auto] md:items-center">
+            <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+              {selected.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Admin media picker displays external media library URLs.
+                <img
+                  src={selected.previewUrl}
+                  alt={selected.altText || selected.title}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-[4/3] items-center justify-center text-zinc-600">
                   <TypeIcon type={selected.mediaType} className="h-6 w-6" />
-                ) : (
-                  <ImageIcon className="h-6 w-6" />
-                )}
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-zinc-700 px-2 py-1 text-[11px] text-zinc-300">
-                {getTypeLabel(selected.mediaType)}
-              </span>
-              {selected.provider ? (
-                <span className="rounded-full border border-zinc-800 px-2 py-1 text-[11px] text-zinc-500">
-                  {selected.provider}
-                </span>
-              ) : null}
+                </div>
+              )}
             </div>
-            <p className="mt-2 truncate text-sm font-semibold text-white">{selected.title}</p>
-            <p className="mt-1 truncate text-xs text-zinc-500">{selected.url}</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-zinc-700 px-2 py-1 text-[11px] text-zinc-300">
+                  {getTypeLabel(selected.mediaType)}
+                </span>
+                {selected.provider ? (
+                  <span className="rounded-full border border-zinc-800 px-2 py-1 text-[11px] text-zinc-500">
+                    {selected.provider}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-2 truncate text-sm font-semibold text-white">{selected.title}</p>
+              <p className="mt-1 truncate text-xs text-zinc-500">{selected.url}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-2xl border border-zinc-800 px-3 py-2 text-xs text-rose-200 transition hover:border-rose-500/40 hover:bg-rose-500/10"
+            >
+              Medyayı kaldır
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded-2xl border border-zinc-800 px-3 py-2 text-xs text-rose-200 transition hover:border-rose-500/40 hover:bg-rose-500/10"
-          >
-            Medyayı kaldır
-          </button>
-        </div>
+        </>
       ) : null}
 
       {open ? (
@@ -220,6 +267,7 @@ export function PageMediaPicker({
                             embedUrl: asset.embedUrl,
                             provider: asset.provider,
                             altText: asset.altText,
+                            surfaceSlot: selected?.surfaceSlot,
                           });
                           setOpen(false);
                         }}

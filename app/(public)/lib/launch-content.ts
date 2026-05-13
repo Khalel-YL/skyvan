@@ -1,4 +1,5 @@
 import type { PublicLocale } from "./public-routing";
+import type { PublicMediaSlotName } from "./public-media-surface";
 
 export type PublicBlockMedia = {
   mediaId: string;
@@ -9,6 +10,7 @@ export type PublicBlockMedia = {
   embedUrl?: string;
   provider?: "direct" | "youtube" | "vimeo" | "external";
   altText?: string;
+  surfaceSlot?: PublicMediaSlotName;
 };
 
 export type PublicBlock =

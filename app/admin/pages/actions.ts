@@ -75,8 +75,21 @@ type PageBlock = {
     embedUrl?: string;
     provider?: "direct" | "youtube" | "vimeo" | "external";
     altText?: string;
+    surfaceSlot?: PageMediaSurfaceSlot;
   };
 };
+
+type PageMediaSurfaceSlot =
+  | "homepage.hero.background"
+  | "homepage.hero.poster"
+  | "homepage.orbit.surface"
+  | "homepage.visualTrust.media"
+  | "homepage.workshop.preview"
+  | "homepage.finalCta.background"
+  | "experience.hero.media"
+  | "experience.route.media"
+  | "mediaLab.featured.media"
+  | "mediaLab.gallery.preview";
 
 type PageContentJson = {
   isPublished: boolean;
@@ -108,6 +121,18 @@ const ALLOWED_BLOCK_TYPES = new Set<PageBlockType>([
 ]);
 const ALLOWED_MEDIA_TYPES = new Set(["image", "video", "model3d"]);
 const ALLOWED_MEDIA_PROVIDERS = new Set(["direct", "youtube", "vimeo", "external"]);
+const ALLOWED_MEDIA_SURFACE_SLOTS = new Set<PageMediaSurfaceSlot>([
+  "homepage.hero.background",
+  "homepage.hero.poster",
+  "homepage.orbit.surface",
+  "homepage.visualTrust.media",
+  "homepage.workshop.preview",
+  "homepage.finalCta.background",
+  "experience.hero.media",
+  "experience.route.media",
+  "mediaLab.featured.media",
+  "mediaLab.gallery.preview",
+]);
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -314,6 +339,7 @@ function sanitizeMedia(value: unknown): PageBlock["media"] {
   const embedUrl = String(raw.embedUrl ?? "").trim();
   const provider = String(raw.provider ?? "").trim().toLowerCase();
   const altText = String(raw.altText ?? "").trim();
+  const surfaceSlot = String(raw.surfaceSlot ?? "").trim();
 
   return {
     mediaId,
@@ -326,6 +352,9 @@ function sanitizeMedia(value: unknown): PageBlock["media"] {
       ? (provider as "direct" | "youtube" | "vimeo" | "external")
       : undefined,
     altText: altText || undefined,
+    surfaceSlot: ALLOWED_MEDIA_SURFACE_SLOTS.has(surfaceSlot as PageMediaSurfaceSlot)
+      ? (surfaceSlot as PageMediaSurfaceSlot)
+      : undefined,
   };
 }
 

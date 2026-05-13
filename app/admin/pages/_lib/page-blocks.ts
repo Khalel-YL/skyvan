@@ -7,7 +7,20 @@ export type PageBlockMedia = {
   embedUrl?: string;
   provider?: "direct" | "youtube" | "vimeo" | "external";
   altText?: string;
+  surfaceSlot?: PageMediaSurfaceSlot;
 };
+
+export type PageMediaSurfaceSlot =
+  | "homepage.hero.background"
+  | "homepage.hero.poster"
+  | "homepage.orbit.surface"
+  | "homepage.visualTrust.media"
+  | "homepage.workshop.preview"
+  | "homepage.finalCta.background"
+  | "experience.hero.media"
+  | "experience.route.media"
+  | "mediaLab.featured.media"
+  | "mediaLab.gallery.preview";
 
 export type PageContentBlock =
   | {
@@ -87,6 +100,18 @@ const supportedProviders = new Set<NonNullable<PageBlockMedia["provider"]>>([
   "vimeo",
   "external",
 ]);
+const supportedSurfaceSlots = new Set<PageMediaSurfaceSlot>([
+  "homepage.hero.background",
+  "homepage.hero.poster",
+  "homepage.orbit.surface",
+  "homepage.visualTrust.media",
+  "homepage.workshop.preview",
+  "homepage.finalCta.background",
+  "experience.hero.media",
+  "experience.route.media",
+  "mediaLab.featured.media",
+  "mediaLab.gallery.preview",
+]);
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -129,6 +154,7 @@ function normalizeMedia(value: unknown): PageBlockMedia | undefined {
   }
 
   const provider = cleanString(raw.provider).toLowerCase();
+  const surfaceSlot = cleanString(raw.surfaceSlot);
 
   return {
     mediaId,
@@ -141,6 +167,9 @@ function normalizeMedia(value: unknown): PageBlockMedia | undefined {
       ? (provider as NonNullable<PageBlockMedia["provider"]>)
       : undefined,
     altText: optionalString(raw.altText),
+    surfaceSlot: supportedSurfaceSlots.has(surfaceSlot as PageMediaSurfaceSlot)
+      ? (surfaceSlot as PageMediaSurfaceSlot)
+      : undefined,
   };
 }
 

@@ -13,6 +13,7 @@ import {
   type PublicBlockMedia,
   type PublicPageContent,
 } from "./launch-content";
+import { isPublicMediaSlotName } from "./public-media-surface";
 import {
   DEFAULT_PUBLIC_LOCALE,
   PUBLIC_LOCALES,
@@ -187,6 +188,7 @@ function normalizeMedia(value: unknown): PublicBlockMedia | undefined {
   const previewUrl = asString(raw.previewUrl);
   const embedUrl = asString(raw.embedUrl);
   const rawProvider = asString(raw.provider).toLowerCase();
+  const surfaceSlot = asString(raw.surfaceSlot);
   const provider = mediaProviders.has(rawProvider as NonNullable<PublicBlockMedia["provider"]>)
     ? (rawProvider as NonNullable<PublicBlockMedia["provider"]>)
     : mediaType === "video"
@@ -212,6 +214,7 @@ function normalizeMedia(value: unknown): PublicBlockMedia | undefined {
     embedUrl: normalizedEmbedUrl,
     provider,
     altText: asString(raw.altText) || undefined,
+    surfaceSlot: isPublicMediaSlotName(surfaceSlot) ? surfaceSlot : undefined,
   };
 }
 

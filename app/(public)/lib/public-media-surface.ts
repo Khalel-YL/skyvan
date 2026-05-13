@@ -57,6 +57,10 @@ export function getSafePublicMedia(media: PublicBlockMedia | undefined) {
     altText: media.altText?.trim() || media.title.trim() || "Skyvan",
     previewUrl: isSafeHttpUrl(media.previewUrl) ? media.previewUrl : undefined,
     embedUrl: isSafeHttpUrl(media.embedUrl) ? media.embedUrl : undefined,
+    surfaceSlot:
+      media.surfaceSlot && isPublicMediaSlotName(media.surfaceSlot)
+        ? media.surfaceSlot
+        : undefined,
   };
 }
 
@@ -66,19 +70,27 @@ function getBlockMedia(block: PublicBlock) {
 
 export function resolvePublicMediaSurfaces(page: PublicPageContent): PublicMediaSurfaceMap {
   const surfaces: PublicMediaSurfaceMap = {};
+  for (const block of page.blocks) {
+    const media = getBlockMedia(block);
+
+    if (media?.surfaceSlot) {
+      surfaces[media.surfaceSlot] = media;
+    }
+  }
+
   const heroBlock = page.blocks.find((block) => block.type === "hero");
   const heroMedia = heroBlock?.type === "hero" ? getSafePublicMedia(heroBlock.media) : null;
 
   if (heroMedia) {
     if (page.slug === "") {
-      surfaces["homepage.hero.poster"] = heroMedia;
-      surfaces["homepage.hero.background"] = heroMedia;
-      surfaces["homepage.orbit.surface"] = heroMedia;
+      surfaces["homepage.hero.poster"] ??= heroMedia;
+      surfaces["homepage.hero.background"] ??= heroMedia;
+      surfaces["homepage.orbit.surface"] ??= heroMedia;
     } else if (page.slug.includes("deneyim") || page.slug.includes("experience")) {
-      surfaces["experience.hero.media"] = heroMedia;
-      surfaces["experience.route.media"] = heroMedia;
+      surfaces["experience.hero.media"] ??= heroMedia;
+      surfaces["experience.route.media"] ??= heroMedia;
     } else if (page.slug.includes("medya-lab") || page.slug.includes("media-lab")) {
-      surfaces["mediaLab.featured.media"] = heroMedia;
+      surfaces["mediaLab.featured.media"] ??= heroMedia;
     }
   }
 
@@ -89,8 +101,8 @@ export function resolvePublicMediaSurfaces(page: PublicPageContent): PublicMedia
       continue;
     }
 
-    if (page.slug === "" && !surfaces["homepage.hero.poster"]) {
-      surfaces["homepage.hero.poster"] = media;
+    if (page.slug === "") {
+      surfaces["homepage.hero.poster"] ??= media;
     }
   }
 
