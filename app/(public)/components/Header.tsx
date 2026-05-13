@@ -68,7 +68,7 @@ export function Header() {
             href={getLocalizedPath(locale, "proje-baslat")}
             className="hidden items-center gap-2 rounded-full bg-[var(--public-accent)] px-4 py-2 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-90 lg:inline-flex"
           >
-            {locale === "tr" ? "Proje Başlat" : "Start"}
+            {locale === "tr" ? "Proje Başlat" : "Start Project"}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <button

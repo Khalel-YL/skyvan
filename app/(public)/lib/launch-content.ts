@@ -73,10 +73,10 @@ const trHome: FallbackInput = {
   blocks: [
     {
       type: "hero",
-      heading: "Karavan kararı, güven veren bir hazırlıkla başlar.",
-      subtext: "Skyvan; rota, yaşam düzeni, teknik risk ve üretim hazırlığını aynı sakin karar sisteminde netleştirir.",
+      heading: "Yolculuk başlamadan önce, güven hazırlanır.",
+      subtext: "Skyvan; rota, yaşam düzeni, teknik risk ve üretim hazırlığını kontrollü bir karavan karar yolculuğuna dönüştürür.",
       body:
-        "Burada canlı bir demo ya da satış akışı varmış gibi davranmayız. Skyvan, karar öncesi bağlamı düzenler; neyin hazır, neyin onay beklediğini açıkça gösterir.",
+        "Workshop yalnızca bir modüldür. Skyvan, karar başlamadan önce bağlamı, sınırları ve üretime hazırlığı görünür kılan sakin bir platformdur.",
       ctaLabel: "Proje Başlat",
       ctaHref: "/tr/proje-baslat",
     },
@@ -88,15 +88,14 @@ const trHome: FallbackInput = {
     },
     {
       type: "feature-list",
-      heading: "Skyvan nasıl düşünür?",
-      subtext: "Karavan fikri; acele seçimlerden uzak, bağlamı açık, riski görünür ve üretime hazırlanabilir bir karar akışına dönüşür.",
+      heading: "Skyvan karar mimarisi",
+      subtext: "Skyvan, özgürlük fikrini acele seçimlere değil; rota, yaşam, risk, teknik hazırlık ve üretim güveni üzerinden okunabilir bir sisteme bağlar.",
       items: [
-        "Veri",
-        "Senaryo",
+        "Rota",
+        "Yaşam",
         "Risk",
-        "Öneri",
-        "Kontrol",
-        "Üretim Hazırlığı",
+        "Teknik Hazırlık",
+        "Üretim Güveni",
       ],
     },
     {
@@ -109,11 +108,11 @@ const trHome: FallbackInput = {
       type: "feature-list",
       heading: "Kendi Karavanını Tasarla — Çok Yakında",
       subtext:
-        "Skyvan Workshop henüz aktif bir configurator değildir. Bu alan, yaklaşan tasarım deneyiminin net sınırlarla konumlanan dürüst duyurusudur.",
+        "Skyvan Workshop bilinçli olarak kapalı tutulur. Çünkü rastgele parça seçimi değil, teknik sınırları hazır ve ürün ilişkileri doğrulanmış bir tasarım deneyimi hedeflenir.",
       items: [
         "Bugün seçim, fiyatlandırma, form gönderimi veya lead kaydı başlatmaz.",
-        "Açıldığında rota, konfor ve yaşam alışkanlıklarını daha net düşünmeye yardımcı olacak.",
-        "Kararın yerine geçmeyen, hazırlığı güçlendiren kontrollü bir deneyim olarak konumlanacak.",
+        "Açıldığında rota, konfor ve yaşam alışkanlıklarını kontrollü şekilde düşünmeye yardımcı olacak.",
+        "Açılmadan önce bile müşteriyi koruyan güven sınırını açıkça gösterir.",
       ],
     },
     {
@@ -148,10 +147,10 @@ const enHome: FallbackInput = {
   blocks: [
     {
       type: "hero",
-      heading: "A caravan decision starts with trusted preparation.",
-      subtext: "Skyvan clarifies route, living layout, technical risk, and production readiness inside one calm decision system.",
+      heading: "Confidence is engineered before the journey begins.",
+      subtext: "Skyvan turns route, lifestyle, technical risk, and production readiness into a controlled caravan decision journey.",
       body:
-        "We do not pretend a live demo or sales flow exists. Skyvan organizes pre-decision context and shows what is ready, what is bounded, and what still needs approval.",
+        "Workshop is one module, not the whole product. Skyvan is a calm platform for making context, boundaries, and production readiness visible before decisions begin.",
       ctaLabel: "Start Project",
       ctaHref: "/en/proje-baslat",
     },
@@ -163,15 +162,14 @@ const enHome: FallbackInput = {
     },
     {
       type: "feature-list",
-      heading: "How Skyvan thinks",
-      subtext: "A caravan idea becomes a decision flow with clear context, visible risk, and production preparation that can be trusted.",
+      heading: "Skyvan decision architecture",
+      subtext: "Skyvan connects the idea of freedom to route, living, risk, technical readiness, and production trust instead of rushing into random choices.",
       items: [
-        "Data",
-        "Scenario",
+        "Route",
+        "Living",
         "Risk",
-        "Guidance",
-        "Control",
-        "Production Readiness",
+        "Technical Readiness",
+        "Production Trust",
       ],
     },
     {
@@ -184,11 +182,11 @@ const enHome: FallbackInput = {
       type: "feature-list",
       heading: "Design Your Own Caravan — Coming Soon",
       subtext:
-        "Skyvan Workshop is not an active configurator yet. This section is a clear, bounded announcement of the design experience ahead.",
+        "Skyvan Workshop is intentionally controlled. The goal is not random part selection, but a design experience with ready technical boundaries and verified product relationships.",
       items: [
         "Today, it starts no selection, pricing, form submission, or lead record.",
-        "When it opens, it will help route, comfort, and living habits become easier to think through.",
-        "It will remain a controlled experience that strengthens preparation rather than deciding for you.",
+        "When it opens, it will help route, comfort, and living habits become easier to think through with clear boundaries.",
+        "Even before launch, it shows the trust boundary that protects the customer.",
       ],
     },
     {
@@ -299,18 +297,18 @@ const trPages: Record<string, FallbackInput> = {
     blocks: [
       { type: "hero", heading: "İletişim deneyimi kontrollü açılacak.", subtext: "Bu sayfa şu anda bilgilendirme yüzeyidir; form gönderimi veya lead kaydı yapmaz." },
       { type: "text", heading: "Güvenli yaklaşım", body: "Skyvan public site üretim ve satış akışlarını tetiklemez. İletişim ve proje başlatma yüzeyleri lansman döneminde niyet ve hazırlık anlatımı olarak çalışır." },
-      { type: "cta", heading: "Proje niyet sayfasına geç", ctaLabel: "Proje Başlat", ctaHref: "/tr/proje-baslat" },
+      { type: "cta", heading: "Proje başlatma yüzeyine geç", ctaLabel: "Proje Başlat", ctaHref: "/tr/proje-baslat" },
     ],
   },
   "proje-baslat": {
     slug: "proje-baslat",
     title: "Proje Başlat",
-    description: "Skyvan proje başlat sayfası, güvenli coming-soon ve contact-intent deneyimidir.",
+    description: "Skyvan proje başlatma sayfası, güvenli coming-soon ve proje niyeti deneyimidir.",
     seoTitle: "Skyvan Proje Başlat | Çok Yakında",
-    seoDescription: "Skyvan proje başlat sayfası şu anda güvenli bir coming-soon yüzeyidir; form, lead kaydı, fiyatlandırma veya configurator içermez.",
+    seoDescription: "Skyvan proje başlatma sayfası şu anda güvenli bir coming-soon yüzeyidir; form, lead kaydı, fiyatlandırma veya configurator içermez.",
     blocks: [
-      { type: "hero", heading: "Proje başlatma deneyimi çok yakında.", subtext: "Bu sayfa güvenli bir contact-intent yüzeyidir. Form gönderimi, lead kaydı, fiyatlandırma veya configurator bağlantısı içermez." },
-      { type: "feature-list", heading: "Şu anda ne yapar?", items: ["Skyvan yaklaşımını açıklar.", "Proje hazırlığı için beklenti oluşturur.", "Operasyonel kayıt veya teklif akışı başlatmaz.", "Public siteyi read-only tutar."] },
+      { type: "hero", heading: "Proje başlatma deneyimi çok yakında.", subtext: "Bu sayfa güvenli bir proje niyeti yüzeyidir. Form gönderimi, lead kaydı, fiyatlandırma veya configurator bağlantısı içermez." },
+      { type: "feature-list", heading: "Şu anda ne yapar?", items: ["Skyvan yaklaşımını açıklar.", "Proje hazırlığı için beklenti oluşturur.", "Operasyonel kayıt veya teklif akışı başlatmaz.", "Güvenli lansman sınırını korur."] },
       { type: "cta", heading: "Sistemi keşfetmeye devam et", ctaLabel: "Ana Sayfa", ctaHref: "/tr" },
     ],
   },
@@ -345,7 +343,7 @@ const enPages: Record<string, FallbackInput> = Object.fromEntries(
           "uretim-sureci": "Skyvan Production Process",
           sss: "Skyvan FAQ",
           iletisim: "Skyvan Contact",
-          "proje-baslat": "Start a Skyvan Project | Coming Soon",
+          "proje-baslat": "Start Project | Coming Soon",
         }[slug] ?? page.seoTitle,
       seoDescription:
         slug === "proje-baslat"
@@ -372,7 +370,7 @@ function translateBlocks(slug: string, blocks: PublicBlock[]): PublicBlock[] {
           "Explains the Skyvan approach.",
           "Sets expectations for project preparation.",
           "Does not trigger offers or operational records.",
-          "Keeps the public website read-only.",
+          "Keeps the launch boundary clear.",
         ],
       },
       { type: "cta", heading: "Continue exploring the system", ctaLabel: "Home", ctaHref: "/en" },

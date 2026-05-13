@@ -61,7 +61,7 @@ export function Footer() {
       </div>
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-[var(--public-border)] px-5 py-5 text-xs text-[var(--public-muted)] md:px-8">
         <span>© {new Date().getFullYear()} Skyvan</span>
-        <span>{locale === "tr" ? "Public yayın katmanı" : "Public render layer"}</span>
+        <span>{locale === "tr" ? "Skyvan deneyim yüzeyi" : "Skyvan experience surface"}</span>
       </div>
     </footer>
   );
