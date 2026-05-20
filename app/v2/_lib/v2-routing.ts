@@ -27,10 +27,10 @@ const pagesByLocale: Record<V2Locale, Record<V2PageKey, V2PageDefinition>> = {
     home: {
       key: "home",
       slug: "",
-      title: "Skyvan V2",
+      title: "Skyvan",
       eyebrow: "Skyvan Journey OS",
       description:
-        "Skyvan V2, karavan kararını rota, yaşam, risk, enerji ve üretim hazırlığıyla birlikte ele alan yeni public deneyim alanıdır.",
+        "Skyvan, karavan kararını rota, yaşam, risk, enerji ve üretim hazırlığıyla birlikte ele alan yeni deneyim alanıdır.",
     },
     system: {
       key: "system",
@@ -102,17 +102,17 @@ const pagesByLocale: Record<V2Locale, Record<V2PageKey, V2PageDefinition>> = {
       title: "İletişim",
       eyebrow: "Bağlantı",
       description:
-        "Skyvan V2 iletişim yüzeyi, kontrollü proje yolculuğu için hazırlanacaktır.",
+        "Skyvan iletişim yüzeyi, kontrollü proje yolculuğu için hazırlanacaktır.",
     },
   },
   en: {
     home: {
       key: "home",
       slug: "",
-      title: "Skyvan V2",
+      title: "Skyvan",
       eyebrow: "Skyvan Journey OS",
       description:
-        "Skyvan V2 is the new public experience for preparing caravan decisions through route, living, risk, energy, and production readiness.",
+        "Skyvan is the new public experience for preparing caravan decisions through route, living, risk, energy, and production readiness.",
     },
     system: {
       key: "system",
@@ -184,7 +184,7 @@ const pagesByLocale: Record<V2Locale, Record<V2PageKey, V2PageDefinition>> = {
       title: "Contact",
       eyebrow: "Connection",
       description:
-        "The Skyvan V2 contact surface will support the controlled project journey.",
+        "The Skyvan contact surface will support the controlled project journey.",
     },
   },
 };

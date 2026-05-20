@@ -5,7 +5,7 @@ import { V2RouteShell } from "../../_components/V2RouteShell";
 import { getV2PageBySlug, isV2Locale } from "../../_lib/v2-routing";
 
 export const metadata: Metadata = {
-  title: "Skyvan V2",
+  title: "Skyvan",
   robots: {
     index: false,
     follow: false,
