@@ -566,6 +566,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
 
       {isDrawerOpen ? (
         <AddLeadDrawer
+          key={selectedLead?.id ?? "new-lead"}
           buildVersionOptions={buildVersionOptions}
           initialData={selectedLead}
         />

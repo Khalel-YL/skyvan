@@ -273,6 +273,8 @@ export function AddOfferDrawer({ leadOptions, initialData }: Props) {
                   <option value="expired">Süresi geçti</option>
                 </select>
               </label>
+
+              <FieldError message={state.errors?.status} />
             </div>
 
             {state.errors?.form ? (

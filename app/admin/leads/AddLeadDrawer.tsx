@@ -8,7 +8,6 @@ import { saveLead } from "./action";
 import {
   initialLeadFormState,
   type LeadFormState,
-  type LeadFormValues,
   type LeadStatus,
 } from "./types";
 
@@ -33,18 +32,17 @@ type AddLeadDrawerProps = {
   initialData: LeadInitialData;
 };
 
-function getMergedValues(
-  state: LeadFormState,
-  initialData: LeadInitialData,
-): LeadFormValues {
-  if (initialData) {
-    return {
-      ...initialData,
-      ...state.values,
-    };
+function getInitialState(initialData: LeadInitialData): LeadFormState {
+  if (!initialData) {
+    return initialLeadFormState;
   }
 
-  return state.values;
+  return {
+    ok: false,
+    message: "",
+    values: initialData,
+    errors: initialLeadFormState.errors,
+  };
 }
 
 const inputClassName =
@@ -57,7 +55,7 @@ export function AddLeadDrawer({
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     saveLead,
-    initialLeadFormState,
+    getInitialState(initialData),
   );
 
   useEffect(() => {
@@ -67,7 +65,7 @@ export function AddLeadDrawer({
     }
   }, [router, state.ok]);
 
-  const values = getMergedValues(state, initialData);
+  const values = state.values;
 
   const selectedBuildVersionId = values.buildVersionId;
   const selectedStatus = values.status;
@@ -196,6 +194,10 @@ export function AddLeadDrawer({
                 <option value="converted">Dönüştü</option>
                 <option value="lost">Kaybedildi</option>
               </select>
+
+              {state.errors.status ? (
+                <p className="text-xs text-rose-300">{state.errors.status}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">

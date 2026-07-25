@@ -108,6 +108,71 @@ function StatChip({ label, value }: { label: string; value: number }) {
   );
 }
 
+function getOfferNotice(input: {
+  action?: string;
+  code?: string;
+  message?: string;
+}) {
+  if (input.action === "deleted") {
+    return {
+      tone: "success" as const,
+      message: "Teklif silindi.",
+    };
+  }
+
+  if (input.action !== "error") {
+    return null;
+  }
+
+  if (input.message) {
+    return {
+      tone: "error" as const,
+      message: input.message,
+    };
+  }
+
+  if (input.code === "invalid-id") {
+    return {
+      tone: "error" as const,
+      message: "Teklif kimliği geçersiz olduğu için işlem durduruldu.",
+    };
+  }
+
+  if (input.code === "audit-actor-required") {
+    return {
+      tone: "error" as const,
+      message: "Admin audit oturumu doğrulanamadığı için teklif işlemi durduruldu.",
+    };
+  }
+
+  if (input.code === "order-dependency-blocked") {
+    return {
+      tone: "error" as const,
+      message: "Bu teklif bağlı sipariş içerdiği için silinemez.",
+    };
+  }
+
+  if (input.code === "critical-delete-blocked") {
+    return {
+      tone: "error" as const,
+      message:
+        "Kritik teklif durumundaki kayıt governance kilidi nedeniyle silinemez.",
+    };
+  }
+
+  if (input.code === "db-write-failed") {
+    return {
+      tone: "error" as const,
+      message: "Veritabanı bağlantısı nedeniyle teklif işlemi tamamlanamadı.",
+    };
+  }
+
+  return {
+    tone: "error" as const,
+    message: "Teklif işlemi tamamlanamadı.",
+  };
+}
+
 export default async function Page({
   searchParams,
 }: {
@@ -116,6 +181,9 @@ export default async function Page({
     status?: string;
     new?: string;
     edit?: string;
+    offerAction?: string;
+    offerCode?: string;
+    offerMessage?: string;
   }>;
 }) {
   if (!db) {
@@ -131,6 +199,11 @@ export default async function Page({
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const selectedStatus =
     typeof params.status === "string" ? params.status.trim() : "all";
+  const offerNotice = getOfferNotice({
+    action: params.offerAction,
+    code: params.offerCode,
+    message: params.offerMessage,
+  });
 
   const whereClause = and(
     selectedStatus !== "all"
@@ -310,6 +383,18 @@ export default async function Page({
           Teklif oluşturma kapalı. Çünkü teklif kaydı bir müşteri adayına
           bağlıdır ve müşteri adayı da proje sürümü bağı ister. Önce uygun bir
           müşteri adayı oluşturulmalı.
+        </div>
+      ) : null}
+
+      {offerNotice ? (
+        <div
+          className={`rounded-2xl border px-3 py-2 text-sm ${
+            offerNotice.tone === "success"
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+              : "border-rose-500/20 bg-rose-500/10 text-rose-200"
+          }`}
+        >
+          {offerNotice.message}
         </div>
       ) : null}
 

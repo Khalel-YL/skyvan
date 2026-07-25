@@ -19,6 +19,8 @@ export type LeadFormErrors = {
   buildVersionId: string;
   fullName: string;
   email: string;
+  status?: string;
+  form?: string;
 };
 
 export type LeadFormState = {

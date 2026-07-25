@@ -1,152 +1,83 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { count, eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { validate as validateUuid } from "uuid";
 
-import { getDbOrThrow } from "@/db/db";
-import { buildVersions, leads, offers } from "@/db/schema";
+import {
+  AuditActorBindingError,
+  requireStrictAuditActor,
+} from "@/app/lib/admin/audit";
 
 import {
   initialLeadFormErrors,
   initialLeadFormState,
   type LeadFormState,
-  type LeadStatus,
 } from "./types";
+import {
+  deleteLeadInTransaction,
+  LeadMutationError,
+  LeadNoopMutation,
+  saveLeadInTransaction,
+} from "./transactions";
+import { validateLeadForm } from "./validation";
 
 function getTrimmed(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function normalizeOptional(value: string) {
-  return value.length > 0 ? value : null;
+function buildLeadsRedirectUrl(params: {
+  notice: string;
+  noticeTone: "success" | "warning" | "error";
+}) {
+  const searchParams = new URLSearchParams({
+    notice: params.notice,
+    noticeTone: params.noticeTone,
+  });
+
+  return `/admin/leads?${searchParams.toString()}`;
 }
 
-function normalizeLeadStatus(value: string): LeadStatus {
-  if (
-    value === "new" ||
-    value === "contacted" ||
-    value === "qualified" ||
-    value === "converted" ||
-    value === "lost"
-  ) {
-    return value;
+function getLeadActionDatabaseErrorMessage(error: unknown) {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  if (message.includes("database_url") || message.includes("fetch failed")) {
+    return "Veritabanı bağlantısı nedeniyle lead işlemi tamamlanamadı.";
   }
 
-  return "new";
-}
+  if (message.includes("foreign key")) {
+    return "Build versiyonu bağı işlem sırasında değiştiği için lead işlemi tamamlanamadı.";
+  }
 
-function isValidEmail(value: string) {
-  if (!value) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  return "Lead kaydı sırasında beklenmeyen bir hata oluştu.";
 }
 
 export async function saveLead(
   _prevState: LeadFormState,
   formData: FormData,
 ): Promise<LeadFormState> {
-  const db = getDbOrThrow();
+  const parsed = validateLeadForm(formData);
 
-  const id = getTrimmed(formData, "id");
-  const buildVersionId = getTrimmed(formData, "buildVersionId");
-  const fullName = getTrimmed(formData, "fullName");
-  const email = getTrimmed(formData, "email");
-  const phoneNumber = getTrimmed(formData, "phoneNumber");
-  const whatsappOptIn = String(formData.get("whatsappOptIn") ?? "") === "on";
-  const status = normalizeLeadStatus(getTrimmed(formData, "status"));
-
-  const values = {
-    id,
-    buildVersionId,
-    fullName,
-    email,
-    phoneNumber,
-    whatsappOptIn,
-    status,
-  };
-
-  const errors = {
-    ...initialLeadFormErrors,
-  };
-
-  if (!buildVersionId) {
-    errors.buildVersionId = "Build versiyonu seçmelisin.";
-  }
-
-  if (!fullName) {
-    errors.fullName = "Ad soyad zorunludur.";
-  } else if (fullName.length < 2) {
-    errors.fullName = "Ad soyad en az 2 karakter olmalıdır.";
-  }
-
-  if (email && !isValidEmail(email)) {
-    errors.email = "Geçerli bir e-posta gir.";
-  }
-
-  if (errors.buildVersionId || errors.fullName || errors.email) {
+  if (!parsed.ok || !parsed.status) {
     return {
       ok: false,
       message: "Form eksik veya hatalı.",
-      values,
-      errors,
+      values: parsed.values,
+      errors: parsed.errors,
     };
   }
 
   try {
-    const buildVersionRow = await db
-      .select({ id: buildVersions.id })
-      .from(buildVersions)
-      .where(eq(buildVersions.id, buildVersionId))
-      .limit(1);
+    const auditActor = await requireStrictAuditActor();
 
-    if (!buildVersionRow[0]) {
-      return {
-        ok: false,
-        message: "Seçilen build versiyonu bulunamadı.",
-        values,
-        errors: {
-          ...initialLeadFormErrors,
-          buildVersionId: "Geçerli bir build versiyonu seç.",
-        },
-      };
-    }
-
-    if (id) {
-      const leadRow = await db
-        .select({ id: leads.id })
-        .from(leads)
-        .where(eq(leads.id, id))
-        .limit(1);
-
-      if (!leadRow[0]) {
-        return {
-          ok: false,
-          message: "Düzenlenmek istenen lead kaydı bulunamadı.",
-          values,
-          errors,
-        };
-      }
-
-      await db
-        .update(leads)
-        .set({
-          buildVersionId,
-          fullName,
-          email: normalizeOptional(email),
-          phoneNumber: normalizeOptional(phoneNumber),
-          whatsappOptIn,
-          status,
-        })
-        .where(eq(leads.id, id));
-    } else {
-      await db.insert(leads).values({
-        buildVersionId,
-        fullName,
-        email: normalizeOptional(email),
-        phoneNumber: normalizeOptional(phoneNumber),
-        whatsappOptIn,
-        status,
-      });
-    }
+    await saveLeadInTransaction(
+      {
+        ...parsed.values,
+        status: parsed.status,
+      },
+      auditActor,
+    );
 
     revalidatePath("/admin/leads");
     revalidatePath("/admin/offers");
@@ -154,45 +85,101 @@ export async function saveLead(
     return {
       ...initialLeadFormState,
       ok: true,
-      message: id ? "Lead güncellendi." : "Lead oluşturuldu.",
+      message: parsed.values.id ? "Lead güncellendi." : "Lead oluşturuldu.",
     };
   } catch (error) {
+    if (error instanceof AuditActorBindingError) {
+      return {
+        ok: false,
+        message: "Lead kaydı güvenli şekilde tamamlanamadı.",
+        values: parsed.values,
+        errors: {
+          ...initialLeadFormErrors,
+          form: "Admin audit oturumu doğrulanamadığı için lead işlemi durduruldu.",
+        },
+      };
+    }
+
+    if (error instanceof LeadNoopMutation) {
+      return {
+        ok: false,
+        message: error.message,
+        values: parsed.values,
+        errors: {
+          ...initialLeadFormErrors,
+          form: "Değişiklik yapılmadığı için audit kaydı üretilmedi.",
+        },
+      };
+    }
+
+    if (error instanceof LeadMutationError) {
+      return {
+        ok: false,
+        message: error.message,
+        values: parsed.values,
+        errors: {
+          ...initialLeadFormErrors,
+          ...error.fieldErrors,
+        },
+      };
+    }
+
     console.error("saveLead error", error);
 
     return {
       ok: false,
-      message: "Lead kaydı sırasında beklenmeyen bir hata oluştu.",
-      values,
-      errors,
+      message: getLeadActionDatabaseErrorMessage(error),
+      values: parsed.values,
+      errors: {
+        ...initialLeadFormErrors,
+        form: "Kayıt tamamlanamadı. Build versiyonu bağı ve audit yazımı tekrar kontrol edilmeli.",
+      },
     };
   }
 }
 
 export async function deleteLead(formData: FormData): Promise<void> {
-  const db = getDbOrThrow();
   const id = getTrimmed(formData, "id");
+  let redirectUrl = buildLeadsRedirectUrl({
+    notice: "Lead silindi.",
+    noticeTone: "success",
+  });
 
-  if (!id) {
-    return;
+  if (!id || !validateUuid(id)) {
+    redirect(
+      buildLeadsRedirectUrl({
+        notice: "Lead kimliği geçersiz olduğu için silme işlemi durduruldu.",
+        noticeTone: "error",
+      }),
+    );
   }
 
   try {
-    const offerCountRow = await db
-      .select({ count: count(offers.id) })
-      .from(offers)
-      .where(eq(offers.leadId, id));
+    const auditActor = await requireStrictAuditActor();
 
-    const relatedOfferCount = Number(offerCountRow[0]?.count ?? 0);
-
-    if (relatedOfferCount > 0) {
-      return;
-    }
-
-    await db.delete(leads).where(eq(leads.id, id));
+    await deleteLeadInTransaction(id, auditActor);
 
     revalidatePath("/admin/leads");
     revalidatePath("/admin/offers");
   } catch (error) {
-    console.error("deleteLead error", error);
+    if (error instanceof AuditActorBindingError) {
+      redirectUrl = buildLeadsRedirectUrl({
+        notice: "Admin audit oturumu doğrulanamadığı için lead silinemedi.",
+        noticeTone: "error",
+      });
+    } else if (error instanceof LeadMutationError) {
+      redirectUrl = buildLeadsRedirectUrl({
+        notice: error.fieldErrors?.form ?? error.message,
+        noticeTone: "error",
+      });
+    } else {
+      console.error("deleteLead error", error);
+      redirectUrl = buildLeadsRedirectUrl({
+        notice: "Lead silme işlemi tamamlanamadı.",
+        noticeTone: "error",
+      });
+    }
   }
+
+  redirect(redirectUrl);
 }
