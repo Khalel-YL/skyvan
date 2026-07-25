@@ -1,11 +1,12 @@
 "use client";
 
 import { Layers3, Plus, X } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import { saveWorkshopAsset } from "./actions";
 import {
   initialWorkshopAssetFormState,
+  type WorkshopAssetFormValues,
   type WorkshopAssetListItem,
   type WorkshopAssetOption,
 } from "./types";
@@ -31,6 +32,34 @@ const cameraViewSuggestions = [
   "interior",
   "exterior",
 ];
+
+function getInitialFormValues(
+  initialData?: WorkshopAssetListItem | null,
+): WorkshopAssetFormValues {
+  return {
+    id: initialData?.id ?? "",
+    productId: initialData?.productId ?? "",
+    modelId: initialData?.modelId ?? "",
+    cameraView: initialData?.cameraView ?? "",
+    zIndexLayer: String(initialData?.zIndexLayer ?? 10),
+    assetUrl: initialData?.assetUrl ?? "",
+    fallbackUrl: initialData?.fallbackUrl ?? "",
+  };
+}
+
+function getFormValuesKey(values: WorkshopAssetFormValues) {
+  return [
+    values.id,
+    values.productId,
+    values.modelId,
+    values.cameraView,
+    values.zIndexLayer,
+    values.assetUrl,
+    values.fallbackUrl,
+  ]
+    .map((value) => `${value.length}:${value}`)
+    .join("|");
+}
 
 function Field({
   label,
@@ -66,146 +95,156 @@ function WorkshopAssetForm({
     initialWorkshopAssetFormState,
   );
   const isEdit = Boolean(initialData?.id);
-  const [cameraView, setCameraView] = useState(initialData?.cameraView ?? "");
+  const values = state.values ?? getInitialFormValues(initialData);
+  const formValuesKey = getFormValuesKey(values);
+  const cameraViewRef = useRef<HTMLInputElement>(null);
 
   return (
     <form action={formAction} className="space-y-4 p-4">
-      {isEdit ? <input type="hidden" name="id" value={initialData?.id} /> : null}
-
       {state.message ? (
         <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
           {state.message}
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Ürün" error={state.fieldErrors.productId}>
-          <select
-            name="productId"
-            defaultValue={initialData?.productId ?? ""}
-            className={inputClassName}
-            aria-invalid={Boolean(state.fieldErrors.productId)}
-            required
-          >
-            <option value="">Ürün seç</option>
-            {productOptions.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.label}
-              </option>
-            ))}
-          </select>
-        </Field>
+      <div key={formValuesKey} className="space-y-4">
+        {isEdit ? (
+          <input type="hidden" name="id" value={values.id || initialData?.id} />
+        ) : null}
 
-        <Field label="Araç modeli" error={state.fieldErrors.modelId}>
-          <select
-            name="modelId"
-            defaultValue={initialData?.modelId ?? ""}
-            className={inputClassName}
-            aria-invalid={Boolean(state.fieldErrors.modelId)}
-            required
-          >
-            <option value="">Model seç</option>
-            {modelOptions.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-[1fr_160px]">
-        <Field
-          label="Kamera görünümü"
-          hint="Örn: isometric, side, front, rear, texture-preview"
-          error={state.fieldErrors.cameraView}
-        >
-          <div className="space-y-2">
-            <input
-              name="cameraView"
-              value={cameraView}
-              onChange={(event) => setCameraView(event.target.value)}
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label="Ürün" error={state.fieldErrors.productId}>
+            <select
+              name="productId"
+              defaultValue={values.productId}
               className={inputClassName}
-              placeholder="isometric"
-              aria-invalid={Boolean(state.fieldErrors.cameraView)}
+              aria-invalid={Boolean(state.fieldErrors.productId)}
+              required
+            >
+              <option value="">Ürün seç</option>
+              {productOptions.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Araç modeli" error={state.fieldErrors.modelId}>
+            <select
+              name="modelId"
+              defaultValue={values.modelId}
+              className={inputClassName}
+              aria-invalid={Boolean(state.fieldErrors.modelId)}
+              required
+            >
+              <option value="">Model seç</option>
+              {modelOptions.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[1fr_160px]">
+          <Field
+            label="Kamera görünümü"
+            hint="Örn: isometric, side, front, rear, texture-preview"
+            error={state.fieldErrors.cameraView}
+          >
+            <div className="space-y-2">
+              <input
+                ref={cameraViewRef}
+                name="cameraView"
+                defaultValue={values.cameraView}
+                className={inputClassName}
+                placeholder="isometric"
+                aria-invalid={Boolean(state.fieldErrors.cameraView)}
+                required
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {cameraViewSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => {
+                      if (cameraViewRef.current) {
+                        cameraViewRef.current.value = suggestion;
+                      }
+                    }}
+                    className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-100"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Field>
+
+          <Field
+            label="Katman sırası"
+            hint="Küçük sayı önce çizilir; büyük sayı üstte kalır."
+            error={state.fieldErrors.zIndexLayer}
+          >
+            <input
+              name="zIndexLayer"
+              type="number"
+              step="1"
+              defaultValue={values.zIndexLayer}
+              className={inputClassName}
+              aria-invalid={Boolean(state.fieldErrors.zIndexLayer)}
               required
             />
-            <div className="flex flex-wrap gap-1.5">
-              {cameraViewSuggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setCameraView(suggestion)}
-                  className="rounded-full border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-100"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-        </Field>
+          </Field>
+        </div>
 
         <Field
-          label="Katman sırası"
-          hint="Küçük sayı önce çizilir; büyük sayı üstte kalır."
-          error={state.fieldErrors.zIndexLayer}
+          label="Varlık URL"
+          hint="Örn: /workshop-assets/models/ducato-class-l2h2/products/mas-001/isometric/layer-010-table.webp. Dosya yükleme bu sprintte yok."
+          error={state.fieldErrors.assetUrl}
         >
           <input
-            name="zIndexLayer"
-            type="number"
-            step="1"
-            defaultValue={initialData?.zIndexLayer ?? 10}
+            name="assetUrl"
+            defaultValue={values.assetUrl}
             className={inputClassName}
-            aria-invalid={Boolean(state.fieldErrors.zIndexLayer)}
+            placeholder="/workshop-assets/models/.../layer-010-table.webp"
+            aria-invalid={Boolean(state.fieldErrors.assetUrl)}
             required
           />
         </Field>
-      </div>
 
-      <Field
-        label="Varlık URL"
-        hint="Örn: /workshop-assets/models/ducato-class-l2h2/products/mas-001/isometric/layer-010-table.webp. Dosya yükleme bu sprintte yok."
-        error={state.fieldErrors.assetUrl}
-      >
-        <input
-          name="assetUrl"
-          defaultValue={initialData?.assetUrl ?? ""}
-          className={inputClassName}
-          placeholder="/workshop-assets/models/.../layer-010-table.webp"
-          aria-invalid={Boolean(state.fieldErrors.assetUrl)}
-          required
-        />
-      </Field>
-
-      <Field
-        label="Yedek URL"
-        hint="Opsiyonel. Ana varlık yüklenemezse kullanılacak güvenli yedek yol. Örn: /workshop-assets/models/ducato-class-l2h2/fallback/missing-layer.webp"
-        error={state.fieldErrors.fallbackUrl}
-      >
-        <input
-          name="fallbackUrl"
-          defaultValue={initialData?.fallbackUrl ?? ""}
-          className={inputClassName}
-          placeholder="/workshop-assets/models/.../fallback/missing-layer.webp"
-          aria-invalid={Boolean(state.fieldErrors.fallbackUrl)}
-        />
-      </Field>
-
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 pt-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+        <Field
+          label="Yedek URL"
+          hint="Opsiyonel. Ana varlık yüklenemezse kullanılacak güvenli yedek yol. Örn: /workshop-assets/models/ducato-class-l2h2/fallback/missing-layer.webp"
+          error={state.fieldErrors.fallbackUrl}
         >
-          Vazgeç
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-xl border border-sky-500/25 bg-sky-500/15 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending ? "Kaydediliyor..." : isEdit ? "Güncelle" : "Kaydet"}
-        </button>
+          <input
+            name="fallbackUrl"
+            defaultValue={values.fallbackUrl}
+            className={inputClassName}
+            placeholder="/workshop-assets/models/.../fallback/missing-layer.webp"
+            aria-invalid={Boolean(state.fieldErrors.fallbackUrl)}
+          />
+        </Field>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 pt-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-xl border border-sky-500/25 bg-sky-500/15 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending ? "Kaydediliyor..." : isEdit ? "Güncelle" : "Kaydet"}
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -269,6 +308,7 @@ export default function AddWorkshopAssetDrawer({
             </div>
 
             <WorkshopAssetForm
+              key={initialData?.id ?? "new-workshop-asset"}
               initialData={initialData}
               productOptions={productOptions}
               modelOptions={modelOptions}

@@ -9,10 +9,13 @@ export type WorkshopAssetFieldName =
   | "assetUrl"
   | "fallbackUrl";
 
+export type WorkshopAssetFormValues = Record<WorkshopAssetFieldName, string>;
+
 export type WorkshopAssetFormState = {
   status: WorkshopAssetActionStatus;
   message: string | null;
   fieldErrors: Partial<Record<WorkshopAssetFieldName, string>>;
+  values?: WorkshopAssetFormValues;
 };
 
 export const initialWorkshopAssetFormState: WorkshopAssetFormState = {

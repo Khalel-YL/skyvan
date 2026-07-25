@@ -67,19 +67,23 @@ function getFlashMessage(
       case "hotspot-in-use":
         return {
           tone: "error",
-          message:
-            "Bu varlık hotspot eşleşmeleri tarafından kullanılıyor; önce eşleşmeleri kaldır.",
+          message: "Bu Workshop varlığı bağlı hotspot kayıtları içerdiği için silinemez.",
         };
       case "audit-actor-required":
         return {
           tone: "error",
-          message: "İz kaydı/admin aktörü doğrulanamadığı için işlem durduruldu.",
+          message: "Admin audit oturumu doğrulanamadı. Lütfen tekrar giriş yapıp işlemi yeniden deneyin.",
         };
       case "audit-write-failed":
         return {
           tone: "error",
+          message: "İz kaydı yazılamadığı için işlem geri alındı.",
+        };
+      case "duplicate-slot":
+        return {
+          tone: "error",
           message:
-            "Workshop varlığı silindi ancak iz kaydı yazılamadığı için işlem tam başarılı kabul edilmedi.",
+            "Aynı ürün, model, kamera görünümü ve katman sırası için bir Workshop varlığı zaten mevcut.",
         };
       case "relation-blocked":
         return {
