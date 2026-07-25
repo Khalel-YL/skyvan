@@ -1442,16 +1442,12 @@ export default function ConfiguratorClient({
     setSavedAiDecisionProducts([]);
     setHasAiDecisionBundleError(false);
 
-    const totalPrice = cart.reduce(
-      (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
-      0,
-    );
-
     const result = await saveEngineeringBuild({
       vehicleId: activeVehicle.id,
-      cart,
-      stats,
-      totalPrice,
+      cart: cart.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })),
     });
 
     if (result.success) {

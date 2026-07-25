@@ -9,10 +9,16 @@ import {
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { Truck, Box, CheckCircle2, FileText, ArrowLeft, Printer, Hammer } from "lucide-react";
+import { Truck, Box, CheckCircle2, FileText, ArrowLeft, Hammer } from "lucide-react";
 import Link from "next/link";
+import PrintButton from "./PrintButton";
 
-export default async function OfferPage({ params }: { params: { shortCode: string } }) {
+export default async function OfferPage({
+  params,
+}: {
+  params: Promise<{ shortCode: string }>;
+}) {
+  const { shortCode } = await params;
   const db = getDbOrThrow();
 
   const buildRows = await db
@@ -23,7 +29,7 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
     })
     .from(builds)
     .innerJoin(models, eq(builds.modelId, models.id))
-    .where(eq(builds.shortCode, params.shortCode))
+    .where(eq(builds.shortCode, shortCode))
     .limit(1);
 
   const build = buildRows[0];
@@ -135,10 +141,7 @@ export default async function OfferPage({ params }: { params: { shortCode: strin
           <ArrowLeft className="h-4 w-4" />
           <span className="text-[10px] font-bold uppercase tracking-widest">Atölyeye Dön</span>
         </Link>
-        <button onClick={() => window.print()} className="bg-zinc-900 border border-zinc-800 px-6 py-3 rounded-2xl flex items-center gap-3 hover:bg-zinc-800 transition-all">
-            <Printer className="h-4 w-4 text-blue-400" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">PDF Kaydet</span>
-        </button>
+        <PrintButton />
       </div>
 
       <main className="max-w-5xl mx-auto bg-zinc-950 border border-zinc-900 rounded-[3rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.5)]">
