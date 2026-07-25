@@ -5,7 +5,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { insertAuditLogWithActor } from "@/app/lib/admin/audit";
-import { getDbOrThrow, hasDatabaseUrl } from "@/db/db";
+import { getDbOrThrow, hasDatabaseUrl, runDatabaseTransaction } from "@/db/db";
 import { users } from "@/db/schema";
 
 const ADMIN_BOOTSTRAP_SECRET_ENV = "SKYVAN_ADMIN_BOOTSTRAP_SECRET";
@@ -237,14 +237,13 @@ export async function claimInitialAdminOwnership(input: {
     );
   }
 
-  const database = getDbOrThrow();
   const now = new Date();
   let claimedUser: ReturnType<typeof mapBootstrapUser> | null = null;
   let previousUser: ReturnType<typeof mapBootstrapUser> | null = null;
   let claimed = false;
   let mutationError: AdminBootstrapError | null = null;
 
-  await database.transaction(async (tx) => {
+  await runDatabaseTransaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${ADMIN_BOOTSTRAP_LOCK_KEY})`);
 
     const adminCountRows = await tx

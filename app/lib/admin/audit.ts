@@ -1,9 +1,10 @@
 import "server-only";
 
 import { eq } from "drizzle-orm";
+import { validate as validateUuid } from "uuid";
 
 import { getAdminAccessState } from "@/app/lib/auth/server";
-import { db, getDbOrThrow } from "@/db/db";
+import { db, getDbOrThrow, type TransactionClient } from "@/db/db";
 import { auditLogs, publishRevisions, users } from "@/db/schema";
 import { getGovernanceRuntime } from "./governance";
 
@@ -58,9 +59,9 @@ export type StrictAuditActor = {
   reason: string;
 };
 
-export type StrictAuditDatabase = {
-  insert: ReturnType<typeof getDbOrThrow>["insert"];
-};
+export type StrictAuditDatabase =
+  | Pick<ReturnType<typeof getDbOrThrow>, "insert">
+  | Pick<TransactionClient, "insert">;
 
 export type AuditInsertDatabase = StrictAuditDatabase;
 
@@ -82,9 +83,7 @@ export class AuditActorBindingError extends Error {
 }
 
 function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
+  return validateUuid(value);
 }
 
 function getActorPreview(actorId: string) {
