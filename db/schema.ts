@@ -325,18 +325,42 @@ export const scenarioMappings = pgTable(
 // ─────────────────────────────────────────────────────────────
 // 4. CONFIGURATOR & BUILDS
 // ─────────────────────────────────────────────────────────────
-export const builds = pgTable("builds", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  shortCode: text("short_code").notNull().unique(),
-  userId: uuid("user_id"),
-  sessionId: text("session_id").notNull(),
-  modelId: uuid("model_id")
-    .notNull()
-    .references(() => models.id, { onDelete: "restrict" }),
-  currentVersionId: uuid("current_version_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const publicSessions = pgTable(
+  "public_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("uq_public_sessions_token_hash").on(table.tokenHash),
+    index("idx_public_sessions_expires_at").on(table.expiresAt),
+    index("idx_public_sessions_last_seen_at").on(table.lastSeenAt),
+  ],
+);
+
+export const builds = pgTable(
+  "builds",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    shortCode: text("short_code").notNull().unique(),
+    userId: uuid("user_id"),
+    sessionId: text("session_id").notNull(),
+    publicSessionId: uuid("public_session_id").references(() => publicSessions.id, {
+      onDelete: "set null",
+    }),
+    modelId: uuid("model_id")
+      .notNull()
+      .references(() => models.id, { onDelete: "restrict" }),
+    currentVersionId: uuid("current_version_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("idx_builds_public_session_id").on(table.publicSessionId)],
+);
 
 export const buildVersions = pgTable(
   "build_versions",

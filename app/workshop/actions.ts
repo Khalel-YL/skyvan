@@ -10,6 +10,12 @@ import {
   PublicWorkshopBuildMutationError,
 } from "./transactions";
 import {
+  preparePublicWorkshopIdentity,
+  PublicWorkshopIdentityError,
+  setPublicWorkshopSessionCookie,
+  type PreparedPublicWorkshopIdentity,
+} from "./identity";
+import {
   parseSaveEngineeringBuildInput,
   type SaveEngineeringBuildInput,
 } from "./validation";
@@ -36,17 +42,37 @@ function getSafeErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function getSafeLogErrorMessage(error: unknown) {
+  if (
+    error instanceof PublicWorkshopBuildMutationError ||
+    error instanceof PublicWorkshopIdentityError
+  ) {
+    return error.message;
+  }
+
+  return "internal-error";
+}
+
 function logWorkshopActionError(
   action: string,
   error: unknown,
-  meta: { productCount?: number; hasShortCode?: boolean },
+  meta: {
+    productCount?: number;
+    hasShortCode?: boolean;
+    hadExistingCookie?: boolean;
+    reusedPublicSession?: boolean;
+    createdPublicSession?: boolean;
+  },
 ) {
   console.error(`workshop/${action} write error`, {
     action,
     productCount: meta.productCount,
     hasShortCode: meta.hasShortCode,
+    hadExistingCookie: meta.hadExistingCookie,
+    reusedPublicSession: meta.reusedPublicSession,
+    createdPublicSession: meta.createdPublicSession,
     errorName: getSafeErrorName(error),
-    errorMessage: getSafeErrorMessage(error),
+    errorMessage: getSafeLogErrorMessage(error),
   });
 }
 
@@ -86,6 +112,24 @@ export async function saveEngineeringBuild(
     };
   }
 
+  let publicIdentity: PreparedPublicWorkshopIdentity;
+
+  try {
+    publicIdentity = await preparePublicWorkshopIdentity();
+  } catch (error) {
+    if (error instanceof PublicWorkshopIdentityError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    return {
+      success: false,
+      error: "Workshop oturum güvenliği henüz yapılandırılmadı.",
+    };
+  }
+
   const parsed = parseSaveEngineeringBuildInput(data);
 
   if (!parsed.ok) {
@@ -96,7 +140,29 @@ export async function saveEngineeringBuild(
   }
 
   try {
-    const result = await persistPublicWorkshopBuild(parsed.input);
+    const result = await persistPublicWorkshopBuild({
+      ...parsed.input,
+      publicIdentity: {
+        existingTokenHash: publicIdentity.existingTokenHash,
+        candidateTokenHash: publicIdentity.candidateTokenHash,
+      },
+    });
+    const rawToken = result.publicSession.reusedExistingSession
+      ? publicIdentity.existingRawToken
+      : publicIdentity.candidateRawToken;
+
+    if (!rawToken) {
+      return {
+        success: false,
+        error: "Workshop oturumu doğrulanamadı.",
+      };
+    }
+
+    await setPublicWorkshopSessionCookie({
+      rawToken,
+      expiresAt: result.publicSession.expiresAt,
+    });
+
     let aiDecisionBundle: ProductSelectionAiDecisionBundle | null = null;
 
     try {
@@ -116,6 +182,7 @@ export async function saveEngineeringBuild(
     logWorkshopActionError("saveEngineeringBuild", error, {
       productCount: parsed.input.productIds.length,
       hasShortCode: false,
+      hadExistingCookie: publicIdentity.hadExistingCookie,
     });
 
     if (error instanceof PublicWorkshopBuildMutationError) {

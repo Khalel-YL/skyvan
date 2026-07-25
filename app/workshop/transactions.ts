@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomInt, randomUUID } from "node:crypto";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 
 import { runDatabaseTransaction, type TransactionClient } from "@/db/db";
 import {
@@ -12,8 +12,10 @@ import {
   models,
   packages,
   products,
+  publicSessions,
 } from "@/db/schema";
 
+import { getPublicWorkshopSessionExpiresAt } from "./identity";
 import type { ParsedWorkshopBuildInput } from "./validation";
 
 type WorkshopBuildProductRow = {
@@ -35,6 +37,11 @@ type PersistedWorkshopBuild = {
   versionId: string;
   shortCode: string;
   selectedProductIds: string[];
+  publicSession: {
+    reusedExistingSession: boolean;
+    createdNewSession: boolean;
+    expiresAt: Date;
+  };
 };
 
 type WorkshopBuildStateSnapshot = {
@@ -57,6 +64,19 @@ const SHORT_CODE_ATTEMPTS = 8;
 
 async function acquireMutationLock(tx: TransactionClient, lockKey: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
+}
+
+async function acquireSortedMutationLocks(
+  tx: TransactionClient,
+  lockKeys: string[],
+) {
+  const uniqueLockKeys = Array.from(new Set(lockKeys)).sort((left, right) =>
+    left.localeCompare(right, "en"),
+  );
+
+  for (const lockKey of uniqueLockKeys) {
+    await acquireMutationLock(tx, lockKey);
+  }
 }
 
 function createPublicShortCode() {
@@ -268,7 +288,10 @@ function computeTotals(input: {
 
 async function createBuildWithShortCode(
   tx: TransactionClient,
-  modelId: string,
+  input: {
+    modelId: string;
+    publicSessionId: string;
+  },
 ) {
   for (let attempt = 0; attempt < SHORT_CODE_ATTEMPTS; attempt += 1) {
     const shortCode = createPublicShortCode();
@@ -291,7 +314,8 @@ async function createBuildWithShortCode(
         shortCode,
         userId: null,
         sessionId: randomUUID(),
-        modelId,
+        publicSessionId: input.publicSessionId,
+        modelId: input.modelId,
         currentVersionId: null,
         updatedAt: new Date(),
       })
@@ -312,10 +336,102 @@ async function createBuildWithShortCode(
   );
 }
 
+async function resolvePublicSession(
+  tx: TransactionClient,
+  input: {
+    existingTokenHash: string | null;
+    candidateTokenHash: string;
+  },
+) {
+  const now = new Date();
+  const expiresAt = getPublicWorkshopSessionExpiresAt(now);
+  const lockKeys = [`public-session-token:${input.candidateTokenHash}`];
+
+  if (input.existingTokenHash) {
+    lockKeys.push(`public-session-token:${input.existingTokenHash}`);
+  }
+
+  await acquireSortedMutationLocks(tx, lockKeys);
+
+  if (input.existingTokenHash) {
+    const refreshedRows = await tx
+      .update(publicSessions)
+      .set({
+        lastSeenAt: now,
+        expiresAt,
+      })
+      .where(
+        and(
+          eq(publicSessions.tokenHash, input.existingTokenHash),
+          isNull(publicSessions.revokedAt),
+          gt(publicSessions.expiresAt, now),
+        ),
+      )
+      .returning({
+        id: publicSessions.id,
+        expiresAt: publicSessions.expiresAt,
+      });
+
+    const refreshedSession = refreshedRows[0] ?? null;
+
+    if (refreshedSession) {
+      return {
+        id: refreshedSession.id,
+        expiresAt: refreshedSession.expiresAt,
+        reusedExistingSession: true,
+        createdNewSession: false,
+      };
+    }
+  }
+
+  const candidateRows = await tx
+    .select({ id: publicSessions.id })
+    .from(publicSessions)
+    .where(eq(publicSessions.tokenHash, input.candidateTokenHash))
+    .limit(1);
+
+  if (candidateRows[0]) {
+    throw new PublicWorkshopBuildMutationError("Workshop oturumu oluşturulamadı.");
+  }
+
+  const insertedRows = await tx
+    .insert(publicSessions)
+    .values({
+      tokenHash: input.candidateTokenHash,
+      createdAt: now,
+      lastSeenAt: now,
+      expiresAt,
+      revokedAt: null,
+    })
+    .returning({
+      id: publicSessions.id,
+      expiresAt: publicSessions.expiresAt,
+    });
+
+  const insertedSession = insertedRows[0] ?? null;
+
+  if (!insertedSession) {
+    throw new PublicWorkshopBuildMutationError("Workshop oturumu oluşturulamadı.");
+  }
+
+  return {
+    id: insertedSession.id,
+    expiresAt: insertedSession.expiresAt,
+    reusedExistingSession: false,
+    createdNewSession: true,
+  };
+}
+
 export async function persistPublicWorkshopBuild(
-  input: ParsedWorkshopBuildInput,
+  input: ParsedWorkshopBuildInput & {
+    publicIdentity: {
+      existingTokenHash: string | null;
+      candidateTokenHash: string;
+    };
+  },
 ): Promise<PersistedWorkshopBuild> {
   return runDatabaseTransaction(async (tx) => {
+    const publicSession = await resolvePublicSession(tx, input.publicIdentity);
     const model = await assertActiveModel(tx, input.vehicleId);
     const customPackage = await assertCustomEngineeringPackage(tx, input.vehicleId);
     const productRows = await assertEligibleProducts(tx, input);
@@ -324,7 +440,10 @@ export async function persistPublicWorkshopBuild(
       products: productRows,
       cart: input.cart,
     });
-    const newBuild = await createBuildWithShortCode(tx, input.vehicleId);
+    const newBuild = await createBuildWithShortCode(tx, {
+      modelId: input.vehicleId,
+      publicSessionId: publicSession.id,
+    });
 
     await acquireMutationLock(tx, `build-version:${newBuild.id}`);
 
@@ -380,6 +499,11 @@ export async function persistPublicWorkshopBuild(
       versionId: insertedVersion.id,
       shortCode: newBuild.shortCode,
       selectedProductIds: input.productIds,
+      publicSession: {
+        reusedExistingSession: publicSession.reusedExistingSession,
+        createdNewSession: publicSession.createdNewSession,
+        expiresAt: publicSession.expiresAt,
+      },
     };
   });
 }
