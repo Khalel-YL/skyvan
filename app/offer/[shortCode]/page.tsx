@@ -9,7 +9,17 @@ import {
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { Truck, Box, CheckCircle2, FileText, ArrowLeft, Hammer } from "lucide-react";
+import {
+  Truck,
+  Box,
+  CheckCircle2,
+  CircleAlert,
+  FileText,
+  ArrowLeft,
+  Hammer,
+  OctagonAlert,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import PrintButton from "./PrintButton";
 
@@ -121,6 +131,36 @@ export default async function OfferPage({
             panelClassName: "border-green-900/60 bg-green-950/20",
           }
     : null;
+
+  const offerAiTruthfulSummary =
+    !hasAiInput || aiBridgeFailed || !offerAiAggregate
+      ? {
+          title: "AI değerlendirmesi kullanılamıyor",
+          body: "Bu yapılandırma AI veya mühendislik tarafından onaylanmış sayılmaz. Nihai uygunluk için teknik inceleme gerekir.",
+          Icon: CircleAlert,
+          iconClassName: "text-zinc-500",
+        }
+      : offerAiAggregate.status === "blocker" || offerAiAggregate.blockerCount > 0
+        ? {
+            title: "AI değerlendirmesi engel sinyali içeriyor",
+            body: "Mevcut ürün ve kural verileri teknik inceleme gerektiren engeller gösteriyor. Bu sonuç mühendislik onayı değildir.",
+            Icon: OctagonAlert,
+            iconClassName: "text-red-400",
+          }
+        : offerAiAggregate.status === "warning" || offerAiAggregate.warningCount > 0
+          ? {
+              title: "AI değerlendirmesi uyarı içeriyor",
+              body: "Mevcut ürün ve kural verileri ek teknik inceleme gerektiren uyarılar içeriyor. Bu sonuç mühendislik onayı değildir.",
+              Icon: TriangleAlert,
+              iconClassName: "text-amber-400",
+            }
+          : {
+              title: "AI destekli ön değerlendirme tamamlandı",
+              body: "Mevcut ürün verileri ve kural sinyallerine göre otomatik bir ön değerlendirme yapılmıştır. Bu sonuç tavsiye niteliğindedir ve mühendislik onayı yerine geçmez.",
+              Icon: CheckCircle2,
+              iconClassName: "text-blue-400",
+            };
+  const OfferAiSummaryIcon = offerAiTruthfulSummary.Icon;
 
   const selectedProducts = selectedProductRows.map((item) => ({
     quantity: item.quantity,
@@ -237,11 +277,11 @@ export default async function OfferPage({
             {/* TOTAL */}
             <div className="mt-20 flex flex-col md:flex-row justify-between items-center bg-zinc-900 p-10 rounded-[3rem] border border-zinc-800 shadow-inner">
                 <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-green-500">
-                        <CheckCircle2 className="h-5 w-5" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Mühendislik Onayı Verildi</span>
+                    <div className={`flex items-center gap-2 ${offerAiTruthfulSummary.iconClassName}`}>
+                        <OfferAiSummaryIcon className="h-5 w-5" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{offerAiTruthfulSummary.title}</span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 max-w-xs leading-relaxed">Bu belge dijital atölye çıktısıdır ve donanım uyumluluğu SkyVan AI tarafından denetlenmiştir.</p>
+                    <p className="text-[11px] text-zinc-500 max-w-xs leading-relaxed">{offerAiTruthfulSummary.body}</p>
                 </div>
                 <div className="text-right">
                     <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-[0.4em] mb-3">Toplam Yatırım Bedeli</span>
