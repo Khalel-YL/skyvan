@@ -26,18 +26,22 @@ type RuntimeItem = {
   tone: RuntimeTone;
 };
 
+type KnowledgeReadFailureCode = "database-unavailable" | "knowledge-read-failed";
+
 type KnowledgeState = {
+  ok: boolean;
+  errorCode: KnowledgeReadFailureCode | null;
   documents: AiKnowledgeUsageRecord[];
-  totalCount: number;
-  technicalReadyCount: number;
-  readyCount: number;
-  blockedCount: number;
-  failedCount: number;
-  queueCount: number;
-  completedWithoutChunksCount: number;
-  missingProductReferenceCount: number;
-  approvalStatusCounts: Record<AiKnowledgeApprovalStatus, number>;
-  groundedChunkCount: number;
+  totalCount: number | null;
+  technicalReadyCount: number | null;
+  readyCount: number | null;
+  blockedCount: number | null;
+  failedCount: number | null;
+  queueCount: number | null;
+  completedWithoutChunksCount: number | null;
+  missingProductReferenceCount: number | null;
+  approvalStatusCounts: Record<AiKnowledgeApprovalStatus, number> | null;
+  groundedChunkCount: number | null;
   sourceRows: AiKnowledgeUsageRecord[];
   dbAvailable: boolean;
   dbMessage: string | null;
@@ -64,6 +68,41 @@ const approvalStatusLabels: Record<AiKnowledgeApprovalStatus, string> = {
   rejected: "Reddedildi",
   revoked: "Geri çekildi",
 };
+
+const unavailableMetricLabel = "Kullanılamıyor";
+
+function getEmptyApprovalStatusCounts(): Record<AiKnowledgeApprovalStatus, number> {
+  return {
+    pending_review: 0,
+    approved: 0,
+    rejected: 0,
+    revoked: 0,
+  };
+}
+
+function formatKnowledgeMetric(value: number | null) {
+  return value === null ? unavailableMetricLabel : value;
+}
+
+function getSafeErrorName(error: unknown) {
+  if (error instanceof Error && error.name.trim()) {
+    return error.name.trim();
+  }
+
+  return typeof error;
+}
+
+function logAiCoreReadFailure(input: {
+  operation: string;
+  errorCode: KnowledgeReadFailureCode;
+  error: unknown;
+}) {
+  console.error("ai-core-read-failed", {
+    operation: input.operation,
+    errorCode: input.errorCode,
+    errorName: getSafeErrorName(input.error),
+  });
+}
 
 function getParsingStatusLabel(value: string) {
   return parsingStatusLabels[value] ?? value;
@@ -246,26 +285,23 @@ function getRuntimeItems(params: {
 async function getKnowledgeState(): Promise<KnowledgeState> {
   if (!db) {
     return {
+      ok: false,
+      errorCode: "database-unavailable",
       documents: [],
-      totalCount: 0,
-      technicalReadyCount: 0,
-      readyCount: 0,
-      blockedCount: 0,
-      failedCount: 0,
-      queueCount: 0,
-      completedWithoutChunksCount: 0,
-      missingProductReferenceCount: 0,
-      approvalStatusCounts: {
-        pending_review: 0,
-        approved: 0,
-        rejected: 0,
-        revoked: 0,
-      },
-      groundedChunkCount: 0,
+      totalCount: null,
+      technicalReadyCount: null,
+      readyCount: null,
+      blockedCount: null,
+      failedCount: null,
+      queueCount: null,
+      completedWithoutChunksCount: null,
+      missingProductReferenceCount: null,
+      approvalStatusCounts: null,
+      groundedChunkCount: null,
       sourceRows: [],
       dbAvailable: false,
       dbMessage:
-        "Veritabanı çevrimdışı olduğu için AI bilgi görünürlüğü şu anda yalnızca çalışma seviyesinde gösteriliyor.",
+        "DATABASE_URL tanımlı olmadığı için AI Core kayıtları doğrulanamadı.",
     };
   }
 
@@ -285,18 +321,15 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
         acc[item.approvalStatus] += 1;
         return acc;
       },
-      {
-        pending_review: 0,
-        approved: 0,
-        rejected: 0,
-        revoked: 0,
-      },
+      getEmptyApprovalStatusCounts(),
     );
     const groundedChunkCount = evaluatedDocuments
       .filter((item) => item.readiness.approvedForAi)
       .reduce((sum, item) => sum + item.chunkCount, 0);
 
     return {
+      ok: true,
+      errorCode: null,
       documents: evaluatedDocuments,
       totalCount: evaluatedDocuments.length,
       technicalReadyCount,
@@ -324,29 +357,30 @@ async function getKnowledgeState(): Promise<KnowledgeState> {
       dbMessage: null,
     };
   } catch (error) {
-    console.error("ai-core governance page error:", error);
+    logAiCoreReadFailure({
+      operation: "getAiUsageKnowledgeRecords",
+      errorCode: "knowledge-read-failed",
+      error,
+    });
 
     return {
+      ok: false,
+      errorCode: "knowledge-read-failed",
       documents: [],
-      totalCount: 0,
-      technicalReadyCount: 0,
-      readyCount: 0,
-      blockedCount: 0,
-      failedCount: 0,
-      queueCount: 0,
-      completedWithoutChunksCount: 0,
-      missingProductReferenceCount: 0,
-      approvalStatusCounts: {
-        pending_review: 0,
-        approved: 0,
-        rejected: 0,
-        revoked: 0,
-      },
-      groundedChunkCount: 0,
+      totalCount: null,
+      technicalReadyCount: null,
+      readyCount: null,
+      blockedCount: null,
+      failedCount: null,
+      queueCount: null,
+      completedWithoutChunksCount: null,
+      missingProductReferenceCount: null,
+      approvalStatusCounts: null,
+      groundedChunkCount: null,
       sourceRows: [],
-      dbAvailable: false,
+      dbAvailable: true,
       dbMessage:
-        "AI bilgi kayıtları okunurken beklenmeyen bir hata oluştu. Çalışma görünürlüğü korunuyor.",
+        "AI Core kayıtları doğrulanamadı. Sayaçlar gerçek veri olarak yorumlanmamalıdır.",
     };
   }
 }
@@ -406,11 +440,11 @@ export default async function AICoreAdminPage() {
           </h2>
         </div>
 
-        {!knowledgeState.dbAvailable && knowledgeState.dbMessage ? (
+        {!knowledgeState.ok && knowledgeState.dbMessage ? (
           <div className={`rounded-2xl border p-3 ${toneClasses("warning")}`}>
             <div className="flex items-center gap-3">
               <ShieldAlert className="h-5 w-5" />
-              <div className="text-sm font-medium">Bilgi görünürlüğü güvenli modda</div>
+              <div className="text-sm font-medium">AI Core kayıtları doğrulanamadı</div>
             </div>
             <div className="mt-3 text-sm leading-6">{knowledgeState.dbMessage}</div>
           </div>
@@ -420,7 +454,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
             <div className="text-xs text-zinc-500">Toplam belge</div>
             <div className="mt-1 text-2xl font-semibold text-white">
-              {knowledgeState.totalCount}
+              {formatKnowledgeMetric(knowledgeState.totalCount)}
             </div>
             <div className="mt-2 text-xs text-zinc-500">
               AI bilgi kayıtları
@@ -430,7 +464,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200">
             <div className="text-xs text-emerald-300/80">Teknik hazırlık</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.technicalReadyCount}
+              {formatKnowledgeMetric(knowledgeState.technicalReadyCount)}
             </div>
             <div className="mt-2 text-xs text-emerald-300/80">
               Tamamlandı ve parça üretmiş belge sayısı
@@ -440,7 +474,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sky-200">
             <div className="text-xs text-sky-300/80">AI kullanımına açık</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.readyCount}
+              {formatKnowledgeMetric(knowledgeState.readyCount)}
             </div>
             <div className="mt-2 text-xs text-sky-300/80">
               Teknik hazırlığı ve insan onayı tamamlanan kayıtlar
@@ -450,7 +484,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-rose-200">
             <div className="text-xs text-rose-300/80">AI kullanımına kapalı</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.blockedCount}
+              {formatKnowledgeMetric(knowledgeState.blockedCount)}
             </div>
             <div className="mt-2 text-xs text-rose-300/80">
               Teknik hazırlığı veya insan onayı eksik kayıtlar
@@ -460,7 +494,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-200">
             <div className="text-xs text-amber-300/80">Bekleyen / işlenen</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.queueCount}
+              {formatKnowledgeMetric(knowledgeState.queueCount)}
             </div>
             <div className="mt-2 text-xs text-amber-300/80">
               İşleme kuyruğundaki kayıtlar
@@ -470,7 +504,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sky-200">
             <div className="text-xs text-sky-300/80">Kaynak parçası</div>
             <div className="mt-1 text-2xl font-semibold">
-              {knowledgeState.groundedChunkCount}
+              {formatKnowledgeMetric(knowledgeState.groundedChunkCount)}
             </div>
             <div className="mt-2 text-xs text-sky-300/80">
               AI kullanımına açık belgelerden okunabilir parça toplamı
@@ -480,7 +514,7 @@ export default async function AICoreAdminPage() {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
             <div className="text-xs text-zinc-500">Hatalı</div>
             <div className="mt-1 text-2xl font-semibold text-white">
-              {knowledgeState.failedCount}
+              {formatKnowledgeMetric(knowledgeState.failedCount)}
             </div>
             <div className="mt-2 text-xs text-zinc-500">
               İşleme hatası alan belgeler
@@ -520,7 +554,7 @@ export default async function AICoreAdminPage() {
                   }`}
                 >
                   {getApprovalStatusLabel(status)}:{" "}
-                  {knowledgeState.approvalStatusCounts[status]}
+                  {knowledgeState.approvalStatusCounts?.[status] ?? unavailableMetricLabel}
                 </span>
               ))}
             </div>
@@ -559,16 +593,18 @@ export default async function AICoreAdminPage() {
                 Teknik hazır oranı
               </div>
               <div className="mt-2 text-lg font-semibold text-white">
-                {knowledgeState.totalCount > 0
-                  ? `%${Math.round(
-                      (knowledgeState.technicalReadyCount / knowledgeState.totalCount) *
-                        100,
-                    )}`
-                  : "%0"}
+                {knowledgeState.totalCount === null || knowledgeState.technicalReadyCount === null
+                  ? unavailableMetricLabel
+                  : knowledgeState.totalCount > 0
+                    ? `%${Math.round(
+                        (knowledgeState.technicalReadyCount / knowledgeState.totalCount) *
+                          100,
+                      )}`
+                    : "%0"}
               </div>
               <div className="mt-2 text-sm text-zinc-400">
-                {knowledgeState.technicalReadyCount} / {knowledgeState.totalCount} kayıt
-                teknik işleme şartlarını geçiyor; {knowledgeState.readyCount} kayıt AI
+                {formatKnowledgeMetric(knowledgeState.technicalReadyCount)} / {formatKnowledgeMetric(knowledgeState.totalCount)} kayıt
+                teknik işleme şartlarını geçiyor; {formatKnowledgeMetric(knowledgeState.readyCount)} kayıt AI
                 kullanımına açık.
               </div>
             </div>
@@ -578,7 +614,7 @@ export default async function AICoreAdminPage() {
                 Parçasız tamamlandı
               </div>
               <div className="mt-2 text-lg font-semibold text-white">
-                {knowledgeState.completedWithoutChunksCount}
+                {formatKnowledgeMetric(knowledgeState.completedWithoutChunksCount)}
               </div>
               <div className="mt-2 text-sm text-zinc-400">
                 Tamamlandı görünen ama parça üretmeyen kayıtlar AI için engelli sayılır.
@@ -590,7 +626,7 @@ export default async function AICoreAdminPage() {
                 Eksik ürün bağı
               </div>
               <div className="mt-2 text-lg font-semibold text-white">
-                {knowledgeState.missingProductReferenceCount}
+                {formatKnowledgeMetric(knowledgeState.missingProductReferenceCount)}
               </div>
               <div className="mt-2 text-sm text-zinc-400">
                 Kural kitabı dışındaki belgelerde ürün bağı eksikse AI hazırlığı düşer.
@@ -669,7 +705,18 @@ export default async function AICoreAdminPage() {
           </div>
 
           <div className="mt-4 space-y-3">
-            {closedUsageGroups.length === 0 ? (
+            {!knowledgeState.ok ? (
+              <div className={`rounded-2xl border p-4 ${toneClasses("warning")}`}>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <ShieldAlert className="h-4 w-4" />
+                  Kapalı kayıtlar doğrulanamadı
+                </div>
+                <div className="mt-2 text-sm">
+                  AI kullanımına kapalı veya inceleme bekleyen kayıtlar şu anda
+                  güvenilir şekilde okunamadı.
+                </div>
+              </div>
+            ) : closedUsageGroups.length === 0 ? (
               <div className={`rounded-2xl border p-4 ${toneClasses("success")}`}>
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <CheckCircle2 className="h-4 w-4" />
@@ -743,7 +790,7 @@ export default async function AICoreAdminPage() {
               ))
             )}
 
-            {knowledgeState.dbAvailable && knowledgeState.documents.length === 0 ? (
+            {knowledgeState.ok && knowledgeState.documents.length === 0 ? (
               <div className={`rounded-2xl border p-4 ${toneClasses("neutral")}`}>
                 <div className="text-sm font-medium">Henüz bilgi kaydı yok</div>
                 <div className="mt-2 text-sm">
