@@ -10,6 +10,8 @@ import {
   type WorkshopAssetLayerMetadata,
 } from "@/app/workshop/_lib/workshop-assets";
 
+export const dynamic = "force-dynamic";
+
 function sanitizeWorkshopAssetLayers(
   assets: Awaited<ReturnType<typeof getWorkshopAssetsForModel>>,
 ): WorkshopAssetLayerMetadata[] {
