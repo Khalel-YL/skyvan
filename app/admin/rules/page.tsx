@@ -377,10 +377,24 @@ function getFlashMessage(params: Awaited<RulesPageProps["searchParams"]>) {
     return "Kural kaydı kaldırıldı.";
   }
 
+  if (params?.ruleAction === "unchanged") {
+    return "Kural üzerinde kaydedilecek değişiklik yok.";
+  }
+
   if (params?.ruleAction === "error") {
     switch (params.ruleCode) {
       case "invalid-id":
         return "Geçersiz kural işlemi isteği alındı.";
+      case "audit-actor-required":
+        return "Admin audit oturumu doğrulanamadı. Lütfen tekrar giriş yapıp işlemi yeniden deneyin.";
+      case "not-found":
+        return "Kural kaydı bulunamadı. Listeyi yenileyip tekrar deneyin.";
+      case "condition-cascade-failed":
+        return "Kural koşulları doğrulanamadığı için kaldırma işlemi durduruldu.";
+      case "concurrent-rule-change":
+        return "Kural kaydı başka bir işlem tarafından değiştirildi. Listeyi yenileyip tekrar deneyin.";
+      case "db-write-failed":
+        return "Veritabanı yazım hatası nedeniyle kural işlemi tamamlanamadı.";
       case "delete-failed":
         return "Kural kaldırılırken beklenmeyen bir hata oluştu.";
       default:
