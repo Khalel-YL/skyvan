@@ -25,29 +25,16 @@ import AddPageDrawer from "./AddPageDrawer";
 import type { PageMediaPickerAsset } from "./_components/PageMediaPicker";
 import { deletePage, repairPageSlug } from "./actions";
 
-type SearchParamsInput =
-  | Promise<{
-      q?: string;
-      locale?: string;
-      publish?: string;
-      edit?: string;
-      entityId?: string;
-      seedLocale?: string;
-      seedTitle?: string;
-    }>
-  | {
-      q?: string;
-      locale?: string;
-      publish?: string;
-      edit?: string;
-      entityId?: string;
-      seedLocale?: string;
-      seedTitle?: string;
-    }
-  | undefined;
-
 type Props = {
-  searchParams?: SearchParamsInput;
+  searchParams?: Promise<{
+    q?: string;
+    locale?: string;
+    publish?: string;
+    edit?: string;
+    entityId?: string;
+    seedLocale?: string;
+    seedTitle?: string;
+  }>;
 };
 
 type PageContentJson = {
