@@ -16,6 +16,7 @@ import {
 } from "@/db/schema";
 
 import { getPublicWorkshopSessionExpiresAt } from "./identity";
+import { getAnonymousPublicBuildExpiresAt } from "./retention";
 import type { ParsedWorkshopBuildInput } from "./validation";
 
 type WorkshopBuildProductRow = {
@@ -293,6 +294,8 @@ async function createBuildWithShortCode(
     publicSessionId: string;
   },
 ) {
+  const now = new Date();
+
   for (let attempt = 0; attempt < SHORT_CODE_ATTEMPTS; attempt += 1) {
     const shortCode = createPublicShortCode();
 
@@ -317,7 +320,10 @@ async function createBuildWithShortCode(
         publicSessionId: input.publicSessionId,
         modelId: input.modelId,
         currentVersionId: null,
-        updatedAt: new Date(),
+        expiresAt: getAnonymousPublicBuildExpiresAt(now),
+        retentionLockedAt: null,
+        retentionReason: null,
+        updatedAt: now,
       })
       .returning({
         id: builds.id,

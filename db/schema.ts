@@ -356,10 +356,20 @@ export const builds = pgTable(
       .notNull()
       .references(() => models.id, { onDelete: "restrict" }),
     currentVersionId: uuid("current_version_id"),
+    expiresAt: timestamp("expires_at"),
+    retentionLockedAt: timestamp("retention_locked_at"),
+    retentionReason: text("retention_reason"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("idx_builds_public_session_id").on(table.publicSessionId)],
+  (table) => [
+    index("idx_builds_public_session_id").on(table.publicSessionId),
+    index("idx_builds_expires_at").on(table.expiresAt),
+    index("idx_builds_public_session_expires_at").on(
+      table.publicSessionId,
+      table.expiresAt,
+    ),
+  ],
 );
 
 export const buildVersions = pgTable(
@@ -521,31 +531,39 @@ export const leads = pgTable("leads", {
   whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(false),
   status: leadStatusEnum("status").default("new").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [index("idx_leads_build_version_id").on(table.buildVersionId)]);
 
-export const offers = pgTable("offers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  leadId: uuid("lead_id")
-    .notNull()
-    .references(() => leads.id, { onDelete: "cascade" }),
-  offerReference: text("offer_reference").notNull().unique(),
-  validUntil: timestamp("valid_until").notNull(),
-  totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: offerStatusEnum("status").default("sent").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const offers = pgTable(
+  "offers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    offerReference: text("offer_reference").notNull().unique(),
+    validUntil: timestamp("valid_until").notNull(),
+    totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull(),
+    status: offerStatusEnum("status").default("sent").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("idx_offers_lead_id").on(table.leadId)],
+);
 
-export const orders = pgTable("orders", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  offerId: uuid("offer_id")
-    .notNull()
-    .references(() => offers.id, { onDelete: "restrict" }),
-  productionStatus: productionStatusEnum("production_status").default("pending").notNull(),
-  estimatedDeliveryDate: date("estimated_delivery_date"),
-  vinNumber: text("vin_number").unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const orders = pgTable(
+  "orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    offerId: uuid("offer_id")
+      .notNull()
+      .references(() => offers.id, { onDelete: "restrict" }),
+    productionStatus: productionStatusEnum("production_status").default("pending").notNull(),
+    estimatedDeliveryDate: date("estimated_delivery_date"),
+    vinNumber: text("vin_number").unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("idx_orders_offer_id").on(table.offerId)],
+);
 
 export const productionUpdates = pgTable("production_updates", {
   id: uuid("id").defaultRandom().primaryKey(),
