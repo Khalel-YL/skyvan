@@ -6,19 +6,11 @@ import { buildVersions, leads, offers, orders, productionUpdates } from "@/db/sc
 
 import { AddOrderDrawer } from "./AddOrderDrawer";
 
-type SearchParamsInput =
-  | Promise<{
-      q?: string;
-      status?: string;
-    }>
-  | {
-      q?: string;
-      status?: string;
-    }
-  | undefined;
-
 type Props = {
-  searchParams?: SearchParamsInput;
+  searchParams?: Promise<{
+    q?: string;
+    status?: string;
+  }>;
 };
 
 type ProductionStatus =
