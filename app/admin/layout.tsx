@@ -6,6 +6,8 @@ import { getAdminBootstrapState } from "@/app/lib/auth/bootstrap";
 import { getAdminAccessState } from "@/app/lib/auth/server";
 import { AdminShell } from "./_components/admin-shell";
 
+export const dynamic = "force-dynamic";
+
 function getAccessStatusLabel(status: string) {
   switch (status) {
     case "secret_missing":
