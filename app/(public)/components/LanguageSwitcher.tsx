@@ -10,10 +10,14 @@ export function LanguageSwitcher() {
   const locale = getLocaleFromPathname(pathname);
 
   return (
-    <div className="inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] p-1 text-[11px] font-medium">
+    <div className="inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] p-1 text-[12px] font-medium">
       {(["tr", "en"] as const).map((nextLocale) => (
         <Link
           key={nextLocale}
+          lang={nextLocale}
+          hrefLang={nextLocale}
+          aria-label={nextLocale === "tr" ? "Türkçe" : "English"}
+          aria-current={locale === nextLocale ? "page" : undefined}
           href={getLanguageSwitchPath(pathname, nextLocale)}
           className={`rounded-full px-3 py-2 transition ${
             locale === nextLocale

@@ -20,7 +20,7 @@ export function ThemeToggle({ locale }: { locale: PublicLocale }) {
   const activeTheme = mounted ? theme : "system";
 
   return (
-    <div className="inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] p-1">
+    <div role="group" aria-label={locale === "tr" ? "Görünüm" : "Appearance"} className="sv-theme-toggle inline-flex rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] p-1">
       {themeOptions.map((option) => {
         const Icon = option.icon;
         const active = activeTheme === option.value;
@@ -31,9 +31,10 @@ export function ThemeToggle({ locale }: { locale: PublicLocale }) {
             key={option.value}
             type="button"
             aria-label={label}
+            aria-pressed={active}
             title={label}
             onClick={() => setTheme(option.value)}
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition ${
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
               active
                 ? "bg-[var(--public-accent)] text-[var(--public-accent-text)]"
                 : "text-[var(--public-muted)] hover:bg-[var(--public-subtle)] hover:text-[var(--public-text)]"

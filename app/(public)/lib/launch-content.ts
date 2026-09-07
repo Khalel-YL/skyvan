@@ -1,6 +1,10 @@
 import type { PublicLocale } from "./public-routing";
 import type { PublicMediaSlotName } from "./public-media-surface";
 
+import { publicLaunchContent } from "./public-launch-copy";
+import { curatedPublicSlugs, publicEditorialContent } from "./public-editorial-content";
+export { publicLaunchContent, type PublicLaunchCopy } from "./public-launch-copy";
+
 export type PublicBlockMedia = {
   mediaId: string;
   mediaType: "image" | "video" | "model3d";
@@ -28,17 +32,20 @@ export type PublicBlock =
       heading?: string;
       body?: string;
       content?: string;
+      media?: PublicBlockMedia;
     }
   | {
       type: "feature-list";
       heading?: string;
       subtext?: string;
       items: string[];
+      media?: PublicBlockMedia;
     }
   | {
       type: "stats";
       heading?: string;
       stats: Array<{ label: string; value: string }>;
+      media?: PublicBlockMedia;
     }
   | {
       type: "decision-system-preview";
@@ -49,6 +56,7 @@ export type PublicBlock =
       body?: string;
       ctaLabel?: string;
       ctaHref?: string;
+      media?: PublicBlockMedia;
     };
 
 export type PublicPageContent = {
@@ -64,121 +72,19 @@ export type PublicPageContent = {
 
 type FallbackInput = Omit<PublicPageContent, "locale" | "source">;
 
-const trHome: FallbackInput = {
-  slug: "",
-  title: "Skyvan",
-  description:
-    "Skyvan, karavan kararlarını rota, yaşam senaryosu, risk ve üretim hazırlığı üzerinden sakin ve güvenilir bir sisteme dönüştürür.",
-  seoTitle: "Skyvan | Sistemli Karavan Üretimi",
-  seoDescription:
-    "Skyvan; rota, yaşam senaryosu, risk ve üretim hazırlığını aynı kontrollü karar sisteminde buluşturan premium karavan yaklaşımıdır.",
-  blocks: [
-    {
-      type: "hero",
-      heading: "Yolculuk başlamadan önce, güven hazırlanır.",
-      subtext: "Skyvan; rota, yaşam düzeni, teknik risk ve üretim hazırlığını kontrollü bir karavan karar yolculuğuna dönüştürür.",
-      body:
-        "Workshop yalnızca bir modüldür. Skyvan, karar başlamadan önce bağlamı, sınırları ve üretime hazırlığı görünür kılan sakin bir platformdur.",
-      ctaLabel: "Proje Başlat",
-      ctaHref: "/tr/proje-baslat",
-    },
-    {
-      type: "feature-list",
-      heading: "Skyvan karar mimarisi",
-      subtext: "Skyvan, karavan kararını katman katman hazırlar: rota, yaşam, teknik sınır, risk görünürlüğü ve üretim hazırlığı aynı bütün içinde okunur.",
-      items: [
-        "Rota",
-        "Yaşam",
-        "Risk",
-        "Teknik Hazırlık",
-        "Üretim Güveni",
-      ],
-    },
-    {
-      type: "text",
-      heading: "Skyvan AI kararın yerini almaz",
-      body:
-        "Skyvan AI bir chatbot değildir.\nFinal teknik, ticari veya üretim kararı vermez.\nKarar öncesi bağlamı açıklar, riskleri görünür kılar ve insan onayını daha bilinçli hale getirir.",
-    },
-    {
-      type: "feature-list",
-      heading: "Workshop rastgele seçim için açılmayacak.",
-      subtext:
-        "Skyvan Workshop; ürün ilişkileri, teknik sınırlar ve üretim gerçekliği hazır olduğunda açılır. Çünkü iyi bir karavan deneyimi, acele seçimle değil, doğru hazırlanmış kararla başlar.",
-      items: [
-        "Bugün seçim, fiyatlandırma, form gönderimi veya lead kaydı başlatmaz.",
-        "Açıldığında rota, konfor ve yaşam alışkanlıklarını kontrollü şekilde düşünmeye yardımcı olacak.",
-        "Açılmadan önce bile müşteriyi koruyan güven sınırını açıkça gösterir.",
-      ],
-    },
-    {
-      type: "cta",
-      heading: "Yolculuğun güvenilir bir hazırlıkla başlasın",
-      body:
-        "Skyvan yaklaşımını keşfet; rota, konfor, risk ve üretim hazırlığını daha kontrollü bir başlangıçta bir araya getir. Proje başlatma sayfası şu anda yalnızca güvenli bir bilgilendirme yüzeyidir.",
-      ctaLabel: "Proje Başlat",
-      ctaHref: "/tr/proje-baslat",
-    },
-  ],
-};
-
-const enHome: FallbackInput = {
-  slug: "",
-  title: "Skyvan",
-  description:
-    "Skyvan turns caravan decisions into a calm system of route context, living scenarios, risk, and production readiness.",
-  seoTitle: "Skyvan | Premium Caravan Production",
-  seoDescription:
-    "Skyvan connects route, living scenarios, risk, and production readiness through a controlled premium caravan decision system.",
-  blocks: [
-    {
-      type: "hero",
-      heading: "Confidence is engineered before the journey begins.",
-      subtext: "Skyvan turns route, lifestyle, technical risk, and production readiness into a controlled caravan decision journey.",
-      body:
-        "Workshop is one module, not the whole product. Skyvan is a calm platform for making context, boundaries, and production readiness visible before decisions begin.",
-      ctaLabel: "Start Project",
-      ctaHref: "/en/proje-baslat",
-    },
-    {
-      type: "feature-list",
-      heading: "Skyvan decision architecture",
-      subtext: "Skyvan prepares the caravan decision layer by layer: route, living, technical boundary, risk visibility, and production readiness are read as one system.",
-      items: [
-        "Route",
-        "Living",
-        "Risk",
-        "Technical Readiness",
-        "Production Trust",
-      ],
-    },
-    {
-      type: "text",
-      heading: "Skyvan AI does not replace decisions",
-      body:
-        "Skyvan AI is not a chatbot.\nIt does not make final technical, commercial, or production decisions.\nIt explains context, surfaces risks, and helps human approval become better informed.",
-    },
-    {
-      type: "feature-list",
-      heading: "Workshop will not open for random selection.",
-      subtext:
-        "Skyvan Workshop opens when product relationships, technical boundaries, and production reality are ready. A good caravan experience starts with a prepared decision, not rushed selection.",
-      items: [
-        "Today, it starts no selection, pricing, form submission, or lead record.",
-        "When it opens, it will help route, comfort, and living habits become easier to think through with clear boundaries.",
-        "Even before launch, it shows the trust boundary that protects the customer.",
-      ],
-    },
-    {
-      type: "cta",
-      heading: "Begin the journey with trusted preparation",
-      body:
-        "Explore the Skyvan approach and bring route, comfort, risk, and production readiness into a more controlled beginning. The start-project page is currently a safe information surface only.",
-      ctaLabel: "Start Project",
-      ctaHref: "/en/proje-baslat",
-    },
-  ],
-};
+function makeHomeFallback(locale: PublicLocale): FallbackInput {
+  const copy = publicLaunchContent[locale];
+  return {
+    slug: "", title: "Skyvan", description: copy.hero.subtext,
+    seoTitle: `Skyvan | ${copy.footer}`, seoDescription: copy.definition.body,
+    blocks: [
+      { type: "hero", heading: copy.hero.heading, subtext: copy.hero.subtext, body: copy.hero.body, ctaLabel: copy.hero.primaryCta, ctaHref: `/${locale}#discover-skyvan` },
+      { type: "text", heading: copy.definition.heading, body: copy.definition.body },
+    ],
+  };
+}
+const trHome = makeHomeFallback("tr");
+const enHome = makeHomeFallback("en");
 
 const trPages: Record<string, FallbackInput> = {
   sistem: {
@@ -298,7 +204,7 @@ const enPages: Record<string, FallbackInput> = Object.fromEntries(
           "uretim-sureci": "Production Process",
           sss: "FAQ",
           iletisim: "Contact",
-          "proje-baslat": "Start Project",
+          "proje-baslat": "Start a Project",
         }[slug] ?? page.title,
       description:
         slug === "proje-baslat"
@@ -394,6 +300,22 @@ function translateBlocks(slug: string, blocks: PublicBlock[]): PublicBlock[] {
 
     return block;
   });
+}
+
+// Curated public routes always have a complete localized editorial baseline.
+for (const locale of ["tr", "en"] as const) {
+  const pages = locale === "tr" ? trPages : enPages;
+  for (const slug of curatedPublicSlugs) {
+    const story = publicEditorialContent[locale][slug];
+    pages[slug] = {
+      slug,
+      title: story.title,
+      description: story.body,
+      seoTitle: story.seoTitle,
+      seoDescription: story.seoDescription,
+      blocks: [{ type: "hero", heading: story.heading, subtext: story.body }],
+    };
+  }
 }
 
 export const fallbackSlugs = Object.keys(trPages);

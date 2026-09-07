@@ -9,6 +9,7 @@ const CROSS_LOCALE_STATIC_SLUGS = new Set([
   "muhendislik",
   "uretim-sureci",
   "sss",
+  "hakkimizda",
   "iletisim",
   "proje-baslat",
 ]);

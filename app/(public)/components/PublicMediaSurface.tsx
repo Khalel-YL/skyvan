@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
 import type { PublicBlockMedia } from "../lib/launch-content";
 import { getSafePublicMedia } from "../lib/public-media-surface";
 
@@ -5,17 +8,20 @@ type PublicMediaSurfaceProps = {
   media: PublicBlockMedia | null | undefined;
   className?: string;
   visualClassName?: string;
+  fallback?: ReactNode;
 };
 
 export function PublicMediaSurface({
   media,
   className = "",
   visualClassName = "",
+  fallback = null,
 }: PublicMediaSurfaceProps) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const safeMedia = getSafePublicMedia(media ?? undefined);
 
-  if (!safeMedia) {
-    return null;
+  if (!safeMedia || failedUrl === safeMedia.url) {
+    return fallback;
   }
 
   const imageUrl = safeMedia.previewUrl || safeMedia.url;
@@ -26,7 +32,8 @@ export function PublicMediaSurface({
         {/* eslint-disable-next-line @next/next/no-img-element -- Public media can be admin-managed external URLs. */}
         <img
           src={imageUrl}
-          alt={safeMedia.altText}
+          alt={safeMedia.altText || safeMedia.title}
+          onError={() => setFailedUrl(safeMedia.url)}
           className={`h-full w-full object-cover ${visualClassName}`}
         />
       </div>
@@ -39,6 +46,7 @@ export function PublicMediaSurface({
         <video
           className={`h-full w-full object-cover ${visualClassName}`}
           poster={safeMedia.previewUrl}
+          onError={() => setFailedUrl(safeMedia.url)}
           muted
           playsInline
           loop
@@ -57,12 +65,13 @@ export function PublicMediaSurface({
         {/* eslint-disable-next-line @next/next/no-img-element -- Public media previews can be admin-managed external URLs. */}
         <img
           src={safeMedia.previewUrl}
-          alt={safeMedia.altText}
+          alt={safeMedia.altText || safeMedia.title}
+          onError={() => setFailedUrl(safeMedia.url)}
           className={`h-full w-full object-cover ${visualClassName}`}
         />
       </div>
     );
   }
 
-  return null;
+  return fallback;
 }

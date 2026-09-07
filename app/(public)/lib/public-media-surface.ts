@@ -65,7 +65,7 @@ export function getSafePublicMedia(media: PublicBlockMedia | undefined) {
 }
 
 function getBlockMedia(block: PublicBlock) {
-  return block.type === "hero" ? getSafePublicMedia(block.media) : null;
+  return "media" in block ? getSafePublicMedia(block.media) : null;
 }
 
 export function resolvePublicMediaSurfaces(page: PublicPageContent): PublicMediaSurfaceMap {

@@ -14,8 +14,11 @@ import {
 import { HomeDecisionSystemPreview } from "./HomeDecisionSystemPreview";
 import { PublicHeroVideoPlayer } from "./PublicHeroVideoPlayer";
 import { PublicMediaSurface } from "./PublicMediaSurface";
-import { SkyvanSignatureIntro } from "./SkyvanSignatureIntro";
+import { PublicEditorialPage } from "./PublicEditorialPage";
+import { PublicLaunchPage } from "./PublicLaunchPage";
 import type { PublicBlock, PublicBlockMedia, PublicPageContent } from "../lib/launch-content";
+import { hasInternalLaunchTerms } from "../lib/public-launch-selection";
+import { isCuratedPublicSlug } from "../lib/public-editorial-content";
 import {
   getPublicMediaForSlot,
   resolvePublicMediaSurfaces,
@@ -56,13 +59,35 @@ function safeHref(href: string | undefined, locale: PublicPageContent["locale"])
 }
 
 function ctaLabel(label: string, href: string | undefined, locale: PublicPageContent["locale"]) {
-  const normalizedHref = String(href ?? "").trim().replace(/\/+$/g, "");
-
-  if (normalizedHref.endsWith("/proje-baslat")) {
-    return locale === "tr" ? "Proje Başlat" : "Start Project";
+  if (isProjectStartHref(href)) {
+    return locale === "tr" ? "Proje Başlat" : "Start a Project";
   }
 
   return label;
+}
+
+function isProjectStartHref(href: string | undefined) {
+  return String(href ?? "").trim().replace(/\/+$/g, "").endsWith("/proje-baslat");
+}
+
+function UpcomingBadge({
+  locale,
+  inverse = false,
+}: {
+  locale: PublicPageContent["locale"];
+  inverse?: boolean;
+}) {
+  return (
+    <span
+      className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium ${
+        inverse
+          ? "border-current text-current opacity-70"
+          : "border-[var(--public-border)] text-[var(--public-muted)]"
+      }`}
+    >
+      {locale === "tr" ? "Yakında" : "Coming Soon"}
+    </span>
+  );
 }
 
 function SectionShell({
@@ -139,6 +164,18 @@ function isRedundantHomeBlock(block: PublicBlock, page: PublicPageContent) {
     heading.includes("üretim ve müşteri yolculuğu") ||
     heading.includes("production and customer journey")
   );
+}
+
+function isCustomerFacingEditorialBlock(block: PublicBlock) {
+  const text = block.type === "text"
+    ? `${block.heading ?? ""} ${block.body ?? ""} ${block.content ?? ""}`
+    : block.type === "feature-list"
+      ? `${block.heading ?? ""} ${block.subtext ?? ""} ${block.items.join(" ")}`
+      : block.type === "cta"
+        ? `${block.heading} ${block.body ?? ""} ${block.ctaLabel ?? ""}`
+        : "";
+
+  return !hasInternalLaunchTerms(text);
 }
 
 function isSafeHttpUrl(value: string | undefined) {
@@ -465,6 +502,8 @@ function DecisionCockpitVisual({ locale }: { locale: PublicPageContent["locale"]
   );
 }
 
+// Retained until the remaining launch batches replace the former home sections.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function HomeJourneyOsSections({ locale }: { locale: PublicPageContent["locale"] }) {
   const transformation =
     locale === "tr"
@@ -651,13 +690,16 @@ function HeroBlock({
           ) : null}
           {block.ctaLabel ? (
             <div className="public-hero-stage mt-8">
-              <Link
-                href={safeHref(block.ctaHref, page.locale)}
-                className="public-premium-cta inline-flex items-center gap-2 rounded-full bg-[var(--public-accent)] px-6 py-3 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-95"
-              >
-                {ctaLabel(block.ctaLabel, block.ctaHref, page.locale)}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={safeHref(block.ctaHref, page.locale)}
+                  className="public-premium-cta inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--public-accent)] px-5 text-[0.8125rem] font-medium text-[var(--public-accent-text)] transition hover:opacity-95"
+                >
+                  {ctaLabel(block.ctaLabel, block.ctaHref, page.locale)}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                {isProjectStartHref(block.ctaHref) ? <UpcomingBadge locale={page.locale} /> : null}
+              </div>
               <p className="mt-3 max-w-md text-[0.72rem] font-medium leading-5 text-[var(--public-muted)]">
                 {heroTrustLine}
               </p>
@@ -878,8 +920,8 @@ function FeatureListBlock({
               </div>
               <p className="mt-8 max-w-md text-sm leading-7 text-[var(--public-muted)]">
                 {page.locale === "tr"
-                  ? "Bu alan seçim ekranı, fiyat aracı veya çalışan configurator değildir. Skyvan, açılmadan önce bile neyin hazır olduğunu ve neyin kapalı kaldığını net söyler."
-                  : "This is not a selection screen, pricing tool, or working configurator. Skyvan is clear about what is ready and what remains closed before launch."}
+                  ? "Workshop yakında araç, yaşam tercihleri ve teknik değerlendirmeyi daha rehberli bir başlangıçta bir araya getirecek."
+                  : "Workshop will soon bring vehicle context, living preferences, and technical review together in a more guided beginning."}
               </p>
             </div>
           </div>
@@ -954,13 +996,18 @@ function CtaBlock({ block, page }: { block: Extract<PublicBlock, { type: "cta" }
             ) : null}
           </div>
           {block.ctaLabel ? (
-            <Link
-              href={safeHref(block.ctaHref, page.locale)}
-              className="public-premium-cta inline-flex items-center justify-center gap-2 rounded-full bg-[var(--public-accent-text)] px-6 py-3 text-sm font-semibold text-[var(--public-accent)] transition hover:opacity-90"
-            >
-              {ctaLabel(block.ctaLabel, block.ctaHref, page.locale)}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={safeHref(block.ctaHref, page.locale)}
+                className="public-premium-cta inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[var(--public-accent-text)] px-5 text-[0.8125rem] font-medium text-[var(--public-accent)] transition hover:opacity-90"
+              >
+                {ctaLabel(block.ctaLabel, block.ctaHref, page.locale)}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              {isProjectStartHref(block.ctaHref) ? (
+                <UpcomingBadge locale={page.locale} inverse />
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -998,19 +1045,39 @@ function renderBlock(
 }
 
 export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
+  if (page.slug === "") {
+    return <PublicLaunchPage page={page} />;
+  }
+
+  if (isCuratedPublicSlug(page.slug)) {
+    const surfaces = resolvePublicMediaSurfaces(page);
+    const publishedBlocks = page.source === "admin" && page.slug !== "proje-baslat"
+      ? page.blocks.filter((block) => block.type !== "hero" && isCustomerFacingEditorialBlock(block))
+      : [];
+
+    return (
+      <PublicEditorialPage page={page}>
+        {publishedBlocks.length > 0
+          ? publishedBlocks.map((block, index) => (
+              <div key={`${block.type}:${index}`}>
+                {renderBlock(block, page, index, surfaces)}
+              </div>
+            ))
+          : undefined}
+      </PublicEditorialPage>
+    );
+  }
+
   const visibleBlocks = page.blocks.filter(
     (block) => !(block.type === "text" && isAiBlock(block)) && !isRedundantHomeBlock(block, page),
   );
-  const showSignatureIntro = page.slug === "";
   const mediaSurfaces = resolvePublicMediaSurfaces(page);
 
   return (
     <div>
-      {showSignatureIntro ? <SkyvanSignatureIntro /> : null}
       {visibleBlocks.map((block, index) => (
         <div key={`${block.type}:${index}`}>
           {renderBlock(block, page, index, mediaSurfaces)}
-          {showSignatureIntro && index === 0 ? <HomeJourneyOsSections locale={page.locale} /> : null}
         </div>
       ))}
     </div>

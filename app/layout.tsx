@@ -22,10 +22,11 @@ const skyvanFont = Orbitron({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://skyvan.com.tr"),
   title: {
-    default: "Skyvan OS",
-    template: "%s · Skyvan OS",
+    default: "Skyvan",
+    template: "%s · Skyvan",
   },
-  description: "Skyvan karavan işletim sistemi ve yönetim omurgası.",
+  description:
+    "Skyvan, araç ve yaşam projesini rota, günlük yaşam ve teknik değerlendirme etrafında birlikte düşünmeye yardımcı olur.",
   icons: {
     icon: "/brand/png/emblem-dark.png",
     apple: "/brand/png/emblem-dark.png",

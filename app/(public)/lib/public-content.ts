@@ -257,6 +257,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       type,
       heading: heading || undefined,
       body: body || undefined,
+      media: normalizeMedia(raw.media),
     };
   }
 
@@ -272,6 +273,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       heading: asString(raw.heading) || undefined,
       subtext: asString(raw.subtext) || undefined,
       items,
+      media: normalizeMedia(raw.media),
     };
   }
 
@@ -286,6 +288,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       type,
       heading: asString(raw.heading) || undefined,
       stats,
+      media: normalizeMedia(raw.media),
     };
   }
 
@@ -302,6 +305,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       body: asString(raw.body) || undefined,
       ctaLabel: asString(raw.ctaLabel) || undefined,
       ctaHref: asString(raw.ctaHref) || undefined,
+      media: normalizeMedia(raw.media),
     };
   }
 

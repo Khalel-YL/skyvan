@@ -2,127 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
-
+import { useRef, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { getLocaleFromPathname, getLocalizedPath } from "../lib/public-routing";
+import { publicLaunchContent } from "../lib/public-launch-copy";
 import { BrandLogo } from "./BrandLogo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
+import { PublicProjectAction } from "./PublicProjectAction";
 
-const navItems = {
-  tr: [
-    { label: "Sistem", slug: "sistem" },
-    { label: "Nasıl Çalışır", slug: "nasil-calisir" },
-    { label: "Mühendislik", slug: "muhendislik" },
-    { label: "SSS", slug: "sss" },
-  ],
-  en: [
-    { label: "System", slug: "sistem" },
-    { label: "How it works", slug: "nasil-calisir" },
-    { label: "Engineering", slug: "muhendislik" },
-    { label: "FAQ", slug: "sss" },
-  ],
-};
-
-export function Header() {
+export function Header(): React.JSX.Element {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
+  const copy = publicLaunchContent[locale];
   const [menuOpen, setMenuOpen] = useState(false);
-
+  const toggle = useRef<HTMLButtonElement>(null);
+  const home = getLocalizedPath(locale);
+  const items = [
+    { label: copy.nav.discover, href: `${home}#discover-skyvan` },
+    { label: copy.nav.workshop, href: `${home}#workshop` },
+    { label: copy.nav.engineering, href: getLocalizedPath(locale, "muhendislik") },
+    { label: copy.nav.about, href: getLocalizedPath(locale, "hakkimizda") },
+  ];
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--public-border)] bg-[var(--public-bg)]/90 backdrop-blur-xl">
-      <div className="mx-auto grid min-h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3 md:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <Link href={getLocalizedPath(locale)} className="group flex min-w-0 items-center justify-self-start">
-          <div className="flex items-center gap-3">
-            <BrandLogo
-              variant="emblem"
-              tone="auto"
-              size="headerEmblem"
-              priority
-            />
-            <span className="font-[var(--font-skyvan)] tracking-[var(--skyvan-tracking)] uppercase font-semibold text-[13px] md:text-[14px] text-[var(--public-text)] transition group-hover:opacity-75">
-              SKYVAN
-            </span>
-          </div>
-        </Link>
-
-        <nav className="hidden items-center justify-center gap-6 text-sm text-[var(--public-muted)] lg:flex">
-          {navItems[locale].map((item) => (
-            <Link
-              key={item.slug}
-              href={getLocalizedPath(locale, item.slug)}
-              className="transition hover:text-[var(--public-text)]"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center justify-end gap-2 justify-self-end">
-          <div className="hidden lg:block">
-            <ThemeToggle locale={locale} />
-          </div>
-          <LanguageSwitcher />
-          <Link
-            href={getLocalizedPath(locale, "proje-baslat")}
-            className="hidden items-center gap-2 rounded-full bg-[var(--public-accent)] px-4 py-2 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-90 lg:inline-flex"
-          >
-            {locale === "tr" ? "Proje Başlat" : "Start Project"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <button
-            type="button"
-            aria-label={
-              menuOpen
-                ? locale === "tr"
-                  ? "Menüyü kapat"
-                  : "Close menu"
-                : locale === "tr"
-                  ? "Menüyü aç"
-                  : "Open menu"
-            }
-            aria-expanded={menuOpen}
-            aria-controls="public-mobile-menu"
-            onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--public-border)] bg-[var(--public-surface)] text-[var(--public-text)] transition hover:bg-[var(--public-subtle)] lg:hidden"
-          >
-            {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
+    <header className="sv-header" onKeyDown={(event) => { if (event.key === "Escape" && menuOpen) { setMenuOpen(false); toggle.current?.focus(); } }}>
+      <a href="#public-main" className="sv-skip">{locale === "tr" ? "İçeriğe geç" : "Skip to content"}</a>
+      <div className="sv-container sv-header-row">
+        <Link href={home} className="sv-brand" aria-label="Skyvan" onClick={() => setMenuOpen(false)}><BrandLogo variant="emblem" tone="auto" size="headerEmblem" priority /><span>SKYVAN</span></Link>
+        <nav className="sv-desktop-nav" aria-label={locale === "tr" ? "Ana menü" : "Main navigation"}>{items.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}</nav>
+        <div className="sv-header-tools">
+          <div className="sv-desktop-tool"><ThemeToggle locale={locale} /></div>
+          <span onClick={() => setMenuOpen(false)}><LanguageSwitcher /></span>
+          <div className="sv-desktop-tool"><PublicProjectAction locale={locale} /></div>
+          <button ref={toggle} type="button" className="sv-menu-toggle" aria-label={menuOpen ? (locale === "tr" ? "Menüyü kapat" : "Close menu") : (locale === "tr" ? "Menüyü aç" : "Open menu")} aria-expanded={menuOpen} aria-controls="public-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
         </div>
       </div>
-      <div
-        id="public-mobile-menu"
-        className={`overflow-hidden border-t border-[var(--public-border)] bg-[var(--public-bg)]/95 transition-[max-height,opacity] duration-200 ease-out lg:hidden ${
-          menuOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="mx-auto w-full max-w-7xl px-5 py-4 md:px-8">
-          <div className="flex flex-col gap-2 text-sm text-[var(--public-muted)]">
-            {navItems[locale].map((item) => (
-              <Link
-                key={item.slug}
-                href={getLocalizedPath(locale, item.slug)}
-                onClick={() => setMenuOpen(false)}
-                className="rounded-2xl border border-transparent px-3 py-3 transition hover:border-[var(--public-border)] hover:bg-[var(--public-surface)] hover:text-[var(--public-text)]"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--public-border)] pt-4">
-            <ThemeToggle locale={locale} />
-            <Link
-              href={getLocalizedPath(locale, "proje-baslat")}
-              onClick={() => setMenuOpen(false)}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--public-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--public-accent-text)] transition hover:opacity-90"
-            >
-              {locale === "tr" ? "Proje Başlat" : "Start Project"}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </div>
+      <div hidden={!menuOpen} className="sv-mobile-menu" id="public-mobile-menu"><div className="sv-container"><nav aria-label={locale === "tr" ? "Mobil menü" : "Mobile navigation"}>{items.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>{item.label}</Link>)}</nav><div className="sv-mobile-tools"><ThemeToggle locale={locale} /><span onClick={() => setMenuOpen(false)}><PublicProjectAction locale={locale} /></span></div></div></div>
     </header>
   );
 }

@@ -19,8 +19,12 @@ function readStoredTheme(): PublicThemeChoice {
     return "system";
   }
 
-  const value = window.localStorage.getItem(STORAGE_KEY);
-  return value === "light" || value === "dark" || value === "system" ? value : "system";
+  try {
+    const value = window.localStorage.getItem(STORAGE_KEY);
+    return value === "light" || value === "dark" || value === "system" ? value : "system";
+  } catch {
+    return "system";
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -42,7 +46,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mounted,
       setTheme: (nextTheme) => {
         setThemeState(nextTheme);
-        window.localStorage.setItem(STORAGE_KEY, nextTheme);
+        try {
+          window.localStorage.setItem(STORAGE_KEY, nextTheme);
+        } catch {
+          // The in-memory choice still applies when browser storage is unavailable.
+        }
       },
     }),
     [mounted, theme],
@@ -50,7 +58,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <PublicThemeContext.Provider value={value}>
-      <div className="public-site min-h-screen" data-public-theme={theme}>
+      <div className="public-site sv-public min-h-screen" data-public-theme={theme}>
         {children}
       </div>
     </PublicThemeContext.Provider>
