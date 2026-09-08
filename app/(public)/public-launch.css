@@ -116,6 +116,7 @@
 .sv-public .sv-hero-body { max-width: 27rem; margin-top: .75rem; font-size: .9rem; }
 .sv-hero .sv-actions { max-width: 36rem; }
 .sv-hero-bottom { position: absolute; bottom: 1.5rem; left: 5%; display: flex; justify-content: space-between; gap: 2rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .15em; color: var(--public-muted); }
+.sv-hero-bottom > span:last-child { position: relative; padding: .45rem .75rem; border-radius: 99px; background: var(--public-bg); }
 .sv-introduction { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center; padding-block: 4rem 1rem; }
 .sv-introduction h2 { font-size: clamp(1.8rem, 2.4vw, 2.7rem); }
 .sv-introduction > p { max-width: 38rem; }
@@ -288,7 +289,7 @@
 .sv-editorial-gallery > h2 { max-width: 20em; }
 .sv-editorial-gallery-intro { max-width: 45rem; margin: 1.2rem 0 2.5rem; }
 .sv-editorial-note { margin-block: 0 clamp(3rem, 6vw, 6rem); max-width: 65rem; padding: 1.5rem; border-left: 2px solid var(--public-border-strong); background: var(--public-bg-soft); }
-.sv-workshop-architecture { position: relative; isolation: isolate; overflow: hidden; padding: clamp(1.5rem, 4vw, 4rem); border: 1px solid var(--public-border); border-radius: var(--public-radius-workshop); background: var(--public-bg-soft); }
+.sv-workshop-architecture { position: relative; isolation: isolate; overflow: hidden; padding: clamp(1.5rem, 4vw, 4rem); padding-bottom: clamp(1.5rem, 2.25vw, 2rem); border: 1px solid var(--public-border); border-radius: var(--public-radius-workshop); background: var(--public-bg-soft); }
 .sv-workshop-architecture-geometry { position: absolute; z-index: -1; inset: 0; opacity: .65; pointer-events: none; }
 .sv-workshop-architecture-geometry::before { content: ""; position: absolute; top: -10rem; right: -7rem; width: 28rem; height: 28rem; border: 1px solid var(--public-border); border-radius: 50%; }
 .sv-workshop-architecture-geometry span { position: absolute; border: 1px solid var(--public-border); border-radius: 50%; }
@@ -299,7 +300,7 @@
 .sv-workshop-architecture > header h2 { max-width: 13em; }
 .sv-workshop-architecture > header > div:last-child p { max-width: 36rem; }
 .sv-workshop-architecture > header .sv-status { margin-top: 1rem; }
-.sv-workshop-architecture ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 3rem 0 0; padding: 0; border-top: 1px solid var(--public-border-strong); list-style: none; }
+.sv-workshop-architecture ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 2.25rem 0 0; padding: 0; border-top: 1px solid var(--public-border-strong); list-style: none; }
 .sv-workshop-architecture ol li { min-width: 0; padding: 1.25rem 1rem 1.5rem 0; }
 .sv-workshop-architecture ol li + li { padding-left: 1rem; border-left: 1px solid var(--public-border); }
 .sv-workshop-architecture ol li > span { display: block; margin-bottom: 1.3rem; font-size: .7rem; letter-spacing: .14em; color: var(--public-muted); }
@@ -328,6 +329,14 @@
 }
 @media (min-width: 1600px) {
   .sv-hero-bottom { left: calc((100% - 1440px) / 2); }
+}
+@media (min-width: 1280px) {
+  .sv-theme-trigger { width: 44px; padding: 0; }
+  .sv-theme-trigger > span, .sv-theme-trigger > svg:last-child { display: none; }
+}
+@media (min-width: 768px) {
+  .sv-hero-bottom { right: 1.5rem; width: auto; }
+  .sv-hero-bottom > span:last-child { box-shadow: .75rem 0 0 var(--public-bg); }
 }
 @media (max-width: 1279px) {
   .sv-desktop-nav, .sv-desktop-tool { display: none; }
@@ -376,6 +385,7 @@
   .sv-hero .sv-eyebrow { letter-spacing: .15em; font-size: .75rem; }
   .sv-vehicle-media { position: relative; inset: auto; order: 1; z-index: 0; width: 100%; aspect-ratio: 1.35; margin-top: 1.5rem; }
   .sv-vehicle-media img { object-position: 70% center; }
+  .sv-vehicle-media::after { content: ""; position: absolute; z-index: 2; right: 0; bottom: 0; width: 10rem; height: 2.5rem; pointer-events: none; background: linear-gradient(90deg, transparent, var(--public-bg) 80%); }
   .sv-hero::after { display: none; }
   .sv-hero-bottom { position: static; order: 2; font-size: .75rem; gap: 1rem; margin-block: 1rem .5rem; letter-spacing: .06em; }
   .sv-hero-bottom > span:first-child { max-width: 55%; }
