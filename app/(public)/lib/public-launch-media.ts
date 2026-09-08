@@ -1,4 +1,4 @@
-import type { PublicBlockMedia } from "./launch-content";
+import type { PublicBlockMedia, PublicSemanticMediaRole } from "./launch-content";
 import { getSafePublicMedia } from "./public-media-surface";
 
 export const publicLaunchAssets = {
@@ -75,15 +75,7 @@ export const publicLaunchAssets = {
 } as const;
 
 export type PublicLaunchAssetId = keyof typeof publicLaunchAssets;
-export type PublicLaunchMediaRole =
-  | "launch.hero"
-  | "launch.engineering"
-  | "editorial.about.hero"
-  | "editorial.living.hero"
-  | "editorial.engineering.hero"
-  | "editorial.system.hero"
-  | "editorial.process.hero"
-  | "editorial.production.hero";
+export type PublicLaunchMediaRole = PublicSemanticMediaRole;
 
 type ApprovedCmsLaunchMedia = {
   role: PublicLaunchMediaRole;

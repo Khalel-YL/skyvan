@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { PublicBlockMedia } from "../lib/launch-content";
 import { getSafePublicMedia } from "../lib/public-media-surface";
 
@@ -8,6 +8,7 @@ type PublicMediaSurfaceProps = {
   media: PublicBlockMedia | null | undefined;
   className?: string;
   visualClassName?: string;
+  visualStyle?: CSSProperties;
   fallback?: ReactNode;
 };
 
@@ -15,6 +16,7 @@ export function PublicMediaSurface({
   media,
   className = "",
   visualClassName = "",
+  visualStyle,
   fallback = null,
 }: PublicMediaSurfaceProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function PublicMediaSurface({
           alt={safeMedia.altText || safeMedia.title}
           onError={() => setFailedUrl(safeMedia.url)}
           className={`h-full w-full object-cover ${visualClassName}`}
+          style={visualStyle}
         />
       </div>
     );
@@ -45,6 +48,7 @@ export function PublicMediaSurface({
       <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
         <video
           className={`h-full w-full object-cover ${visualClassName}`}
+          style={visualStyle}
           poster={safeMedia.previewUrl}
           onError={() => setFailedUrl(safeMedia.url)}
           muted
@@ -68,6 +72,7 @@ export function PublicMediaSurface({
           alt={safeMedia.altText || safeMedia.title}
           onError={() => setFailedUrl(safeMedia.url)}
           className={`h-full w-full object-cover ${visualClassName}`}
+          style={visualStyle}
         />
       </div>
     );

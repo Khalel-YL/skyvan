@@ -61,7 +61,7 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
           <div className="sv-section-heading"><h2 id="workshop-title">{copy.workshop.heading}</h2><p>{copy.workshop.body}</p></div>
           <ol className="sv-steps">{copy.workshop.steps.map((step, index) => <li key={step.title}><span className="sv-step-number">0{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
           <p className="sv-workshop-note">{copy.workshop.note}</p>
-          <Link href={getLocalizedPath(page.locale, "sistem")} className="sv-text-link">{copy.workshop.cta}<ArrowUpRight size={17} aria-hidden="true" /></Link>
+          <Link href={getLocalizedPath(page.locale, "workshop")} className="sv-text-link">{copy.workshop.cta}<ArrowUpRight size={17} aria-hidden="true" /></Link>
         </div>
       </section>
       <section id="engineering-confidence" className="sv-container sv-section" aria-labelledby="engineering-title">

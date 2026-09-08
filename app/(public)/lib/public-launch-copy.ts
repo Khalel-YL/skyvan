@@ -2,7 +2,7 @@ import type { PublicLocale } from "./public-routing";
 
 type Story = { eyebrow: string; heading: string; body: string };
 type Item = { title: string; body: string };
-type DiscoverySlug = "hakkimizda" | "muhendislik" | "sistem" | "nasil-calisir";
+type DiscoverySlug = "hakkimizda" | "muhendislik" | "workshop" | "nasil-calisir";
 type DiscoveryItem = Item & { id: string; linkLabel: string; slug: DiscoverySlug };
 export type PublicLaunchCopy = {
   nav: { discover: string; workshop: string; engineering: string; about: string };
@@ -44,7 +44,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
         { id: "lightweight-decisions", title: "Hafiflik, tek bir malzemeden daha büyük bir karardır.", body: "Karavana eklenen her malzeme kullanılabilir taşıma kapasitesini, aracın davranışını ve diğer seçimler için kalan payı etkiler. Skyvan, malzeme kararlarını görünüş kadar proje bütünü içindeki ağırlık etkisiyle ele alır.", linkLabel: "Deneyimimizi tanıyın", slug: "hakkimizda" },
         { id: "buildable-design", title: "Görünen şey, üretilebilir olmalı.", body: "Yerleşim, dolaşım, kapı ve pencere açıklıkları, teknik sistemler ve bakım erişimi birbirinden kopmadan çözülmelidir.", linkLabel: "Mühendislik yaklaşımı", slug: "muhendislik" },
         { id: "service-access", title: "Bugünün düzeni, yarının bakımını engellememeli.", body: "Su, elektrik, depolama ve mobilya kararları; bağlantılara, koruma elemanlarına ve kontrol noktalarına erişimi korumalıdır.", linkLabel: "Proje nasıl ilerler?", slug: "nasil-calisir" },
-        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Workshop’u tanıyın", slug: "sistem" },
+        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Workshop’u tanıyın", slug: "workshop" },
       ],
     },
     product: {
@@ -118,7 +118,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
         { id: "lightweight-decisions", title: "Lightness is bigger than a single material choice.", body: "Every material added to a motorhome affects usable payload, vehicle behaviour and the margin left for other decisions. Skyvan considers materials for their place in the whole project, not appearance alone.", linkLabel: "Meet our experience", slug: "hakkimizda" },
         { id: "buildable-design", title: "What you see must be buildable.", body: "Layout, circulation, doors and windows, technical systems and maintenance access need to remain connected from design onward.", linkLabel: "Our engineering approach", slug: "muhendislik" },
         { id: "service-access", title: "Today’s layout should not obstruct tomorrow’s maintenance.", body: "Water, electrical, storage and furniture decisions should preserve access to connections, protection devices and inspection points.", linkLabel: "See how a project develops", slug: "nasil-calisir" },
-        { id: "connected-choices", title: "Components are not isolated purchases.", body: "Solar panels, controllers, batteries, inverters, loads, usable area and protection requirements need to be evaluated in the same context.", linkLabel: "Meet Workshop", slug: "sistem" },
+        { id: "connected-choices", title: "Components are not isolated purchases.", body: "Solar panels, controllers, batteries, inverters, loads, usable area and protection requirements need to be evaluated in the same context.", linkLabel: "Meet Workshop", slug: "workshop" },
       ],
     },
     product: {

@@ -9,7 +9,7 @@ import { getLocaleFromPathname, getLocalizedPath } from "../lib/public-routing";
 import { BrandLogo } from "./BrandLogo";
 
 const groups: Array<{ key: "explore" | "approach" | "help"; slugs: CuratedPublicSlug[] }> = [
-  { key: "explore", slugs: ["karavan-deneyimi", "nasil-calisir", "sistem"] },
+  { key: "explore", slugs: ["karavan-deneyimi", "nasil-calisir", "workshop"] },
   { key: "approach", slugs: ["hakkimizda", "muhendislik", "uretim-sureci"] },
   { key: "help", slugs: ["sss", "iletisim", "proje-baslat"] },
 ];

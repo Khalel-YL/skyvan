@@ -1,9 +1,32 @@
-import type { PublicLocale } from "./public-routing";
+import { getCanonicalPublicSlug, type PublicLocale } from "./public-routing";
 import type { PublicMediaSlotName } from "./public-media-surface";
 
 import { publicLaunchContent } from "./public-launch-copy";
 import { curatedPublicSlugs, publicEditorialContent } from "./public-editorial-content";
 export { publicLaunchContent, type PublicLaunchCopy } from "./public-launch-copy";
+
+export type PublicSemanticMediaRole =
+  | "launch.hero"
+  | "launch.engineering"
+  | "editorial.about.hero"
+  | "editorial.living.hero"
+  | "editorial.engineering.hero"
+  | "editorial.workshop.hero"
+  | "editorial.process.hero"
+  | "editorial.production.hero"
+  | "editorial.about.section"
+  | "editorial.living.section"
+  | "editorial.engineering.section"
+  | "editorial.workshop.section"
+  | "editorial.process.section"
+  | "editorial.production.section"
+  | "editorial.general.section";
+
+export type PublicEditorialPresentation = {
+  sectionId: string;
+  visual: "inherit" | "none" | "media";
+  layout?: "text-only" | "media-left" | "media-right" | "wide-media";
+};
 
 export type PublicBlockMedia = {
   mediaId: string;
@@ -15,6 +38,9 @@ export type PublicBlockMedia = {
   provider?: "direct" | "youtube" | "vimeo" | "external";
   altText?: string;
   surfaceSlot?: PublicMediaSlotName;
+  semanticRole?: PublicSemanticMediaRole;
+  focalPosition?: { x: number; y: number };
+  fit?: "contain" | "cover";
 };
 
 export type PublicBlock =
@@ -26,6 +52,7 @@ export type PublicBlock =
       ctaLabel?: string;
       ctaHref?: string;
       media?: PublicBlockMedia;
+      editorial?: PublicEditorialPresentation;
     }
   | {
       type: "text";
@@ -33,6 +60,7 @@ export type PublicBlock =
       body?: string;
       content?: string;
       media?: PublicBlockMedia;
+      editorial?: PublicEditorialPresentation;
     }
   | {
       type: "feature-list";
@@ -40,12 +68,14 @@ export type PublicBlock =
       subtext?: string;
       items: string[];
       media?: PublicBlockMedia;
+      editorial?: PublicEditorialPresentation;
     }
   | {
       type: "stats";
       heading?: string;
       stats: Array<{ label: string; value: string }>;
       media?: PublicBlockMedia;
+      editorial?: PublicEditorialPresentation;
     }
   | {
       type: "decision-system-preview";
@@ -57,6 +87,7 @@ export type PublicBlock =
       ctaLabel?: string;
       ctaHref?: string;
       media?: PublicBlockMedia;
+      editorial?: PublicEditorialPresentation;
     };
 
 export type PublicPageContent = {
@@ -87,8 +118,8 @@ const trHome = makeHomeFallback("tr");
 const enHome = makeHomeFallback("en");
 
 const trPages: Record<string, FallbackInput> = {
-  sistem: {
-    slug: "sistem",
+  workshop: {
+    slug: "workshop",
     title: "Skyvan Sistem",
     description: "Skyvan public site, admin ve mühendislik katmanlarının nasıl tek üretim omurgasına bağlandığını anlatır.",
     seoTitle: "Skyvan Sistem | Admin Kontrollü Karavan Omurgası",
@@ -197,7 +228,7 @@ const enPages: Record<string, FallbackInput> = Object.fromEntries(
       ...page,
       title:
         {
-          sistem: "Skyvan System",
+          workshop: "Skyvan Workshop",
           "nasil-calisir": "How Skyvan Works",
           "karavan-deneyimi": "Caravan Experience",
           muhendislik: "Engineering",
@@ -212,7 +243,7 @@ const enPages: Record<string, FallbackInput> = Object.fromEntries(
           : `Skyvan ${slug} page for the governed public launch experience.`,
       seoTitle:
         {
-          sistem: "Skyvan System | Governed Caravan Platform",
+          workshop: "Skyvan Workshop | Connected Project Approach",
           "nasil-calisir": "How Skyvan Works | From Content to Production",
           "karavan-deneyimi": "Caravan Experience | Skyvan",
           muhendislik: "Skyvan Engineering | Trust and Preparation",
@@ -267,7 +298,7 @@ function translateBlocks(slug: string, blocks: PublicBlock[]): PublicBlock[] {
       return {
         ...block,
         heading:
-          slug === "sistem"
+          slug === "workshop"
             ? "Caravan production is a system problem."
             : slug === "nasil-calisir"
               ? "Reality first. Showcase second."
@@ -321,7 +352,7 @@ for (const locale of ["tr", "en"] as const) {
 export const fallbackSlugs = Object.keys(trPages);
 
 export function getFallbackPage(locale: PublicLocale, slug?: string | null): PublicPageContent {
-  const normalizedSlug = String(slug ?? "").trim();
+  const normalizedSlug = getCanonicalPublicSlug(String(slug ?? "").trim());
   const source = locale === "en" ? enPages : trPages;
   const fallback = normalizedSlug ? source[normalizedSlug] : locale === "en" ? enHome : trHome;
 

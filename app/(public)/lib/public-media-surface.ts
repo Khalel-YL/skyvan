@@ -1,4 +1,9 @@
-import type { PublicBlock, PublicBlockMedia, PublicPageContent } from "./launch-content";
+import type {
+  PublicBlock,
+  PublicBlockMedia,
+  PublicEditorialPresentation,
+  PublicPageContent,
+} from "./launch-content";
 
 export const publicMediaSlotNames = [
   "homepage.hero.background",
@@ -15,6 +20,27 @@ export const publicMediaSlotNames = [
 
 export type PublicMediaSlotName = (typeof publicMediaSlotNames)[number];
 export type PublicMediaSurfaceMap = Partial<Record<PublicMediaSlotName, PublicBlockMedia>>;
+export type ResolvedEditorialVisual = "none" | "curated" | "managed";
+
+export function resolveEditorialVisual({
+  presentation,
+  hasCuratedVisual,
+  hasApprovedMedia,
+}: {
+  presentation?: PublicEditorialPresentation;
+  hasCuratedVisual: boolean;
+  hasApprovedMedia: boolean;
+}): ResolvedEditorialVisual {
+  if (presentation?.visual === "none" || presentation?.layout === "text-only") {
+    return "none";
+  }
+
+  if (presentation?.visual === "media" && hasApprovedMedia) {
+    return "managed";
+  }
+
+  return hasCuratedVisual ? "curated" : "none";
+}
 
 const publicMediaSlots = new Set<PublicMediaSlotName>(publicMediaSlotNames);
 const supportedMediaTypes = new Set<PublicBlockMedia["mediaType"]>([

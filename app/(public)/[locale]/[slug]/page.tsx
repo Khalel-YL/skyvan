@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { JsonLd } from "../../components/JsonLd";
 import { PublicPageRenderer } from "../../components/PublicPageRenderer";
@@ -9,7 +9,12 @@ import {
   getPublicSlugPage,
   normalizePublicLocale,
 } from "../../lib/public-content";
-import { isPublicLocale } from "../../lib/public-routing";
+import {
+  getCanonicalPublicSlug,
+  getLocalizedPath,
+  isPublicLocale,
+  LEGACY_WORKSHOP_SLUG,
+} from "../../lib/public-routing";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +25,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: rawLocale, slug } = await params;
   const locale = normalizePublicLocale(rawLocale);
-  const page = await getPublicSlugPage(locale, slug);
+  const page = await getPublicSlugPage(locale, getCanonicalPublicSlug(slug));
 
   if (!page) {
     notFound();
@@ -31,8 +36,10 @@ export async function generateMetadata({
 
 export default async function PublicSlugPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale: rawLocale, slug } = await params;
 
@@ -40,7 +47,18 @@ export default async function PublicSlugPage({
     redirect(`/tr/${slug}`);
   }
 
-  const page = await getPublicSlugPage(rawLocale, slug);
+  if (slug === LEGACY_WORKSHOP_SLUG) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(await searchParams)) {
+      for (const item of Array.isArray(value) ? value : value ? [value] : []) {
+        query.append(key, item);
+      }
+    }
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    permanentRedirect(`${getLocalizedPath(rawLocale, "workshop")}${suffix}`);
+  }
+
+  const page = await getPublicSlugPage(rawLocale, getCanonicalPublicSlug(slug));
 
   if (!page) {
     notFound();

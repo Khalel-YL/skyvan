@@ -4,7 +4,7 @@ export const curatedPublicSlugs = [
   "hakkimizda",
   "karavan-deneyimi",
   "muhendislik",
-  "sistem",
+  "workshop",
   "nasil-calisir",
   "uretim-sureci",
   "sss",
@@ -29,6 +29,14 @@ export type PublicEditorialCopy = {
   note?: string;
   status?: string;
   faqGroups?: EditorialFaqGroup[];
+  decisionArchitecture?: {
+    eyebrow: string;
+    heading: string;
+    body: string;
+    stages: Array<{ title: string; body: string }>;
+    authority: Array<{ title: string; body: string }>;
+    note: string;
+  };
 };
 
 const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
@@ -46,7 +54,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "workshop-extension", heading: "Workshop, bu deneyimin gelecekteki uzantısıdır.", body: "Hazırlanan Workshop; araç, yerleşim ve ürün seçimlerinin birbirini nasıl etkilediğini müşteriye anlaşılır biçimde göstermeyi amaçlıyor. Bu deneyim henüz kullanıma açık değildir." },
       { id: "human-responsibility", heading: "Son kararın sorumluluğu insanda kalır.", body: "Dijital rehberlik seçenekleri açıklayabilir ve açık soruları gösterebilir. Projeye özgü nihai teknik ve ticari kararlar ise uzman incelemesi ve insan onayı gerektirir." },
     ],
-    actions: [{ label: "Karavan Deneyimi", slug: "karavan-deneyimi" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Workshop", slug: "sistem" }],
+    actions: [{ label: "Karavan Deneyimi", slug: "karavan-deneyimi" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Workshop", slug: "workshop" }],
   },
   "karavan-deneyimi": {
     title: "Karavan Deneyimi", seoTitle: "Karavan Deneyimi | Skyvan", seoDescription: "Oturum, uyku, mutfak, kişisel alan, depolama ve günlük hareketin bir karavan yerleşiminde nasıl buluştuğunu keşfedin.", eyebrow: "Karavan deneyimi",
@@ -58,7 +66,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "personal-space", heading: "Kişisel alan, karavan ölçeğinde.", body: "Birleşik ıslak hacim ve ayrı duş–tuvalet düzenleri farklı alan tercihleri sunar. Kapının açılışı, kurulanma alanı, temizlik, havalandırma, çevresindeki geçiş ve servis erişimi günlük kullanımın parçasıdır." },
       { id: "storage", heading: "Yanınızda taşıdığınız hayat için yer.", body: "Saklama, geriye kalan boşlukları doldurmak değildir. Sık kullanılan eşyalara erişim, büyük parçaların yerleşimi ve yükün araç içindeki dağılımı birlikte ele alınır. Her ek işlev alan, sabitleme, su, enerji ve servis ihtiyacıyla değerlendirilir." },
     ],
-    actions: [{ label: "Workshop’u Tanıyın", slug: "sistem" }, { label: "Mühendislik Yaklaşımı", slug: "muhendislik" }],
+    actions: [{ label: "Workshop’u Tanıyın", slug: "workshop" }, { label: "Mühendislik Yaklaşımı", slug: "muhendislik" }],
   },
   muhendislik: {
     title: "Mühendislik", seoTitle: "Mühendislik Yaklaşımı | Skyvan", seoDescription: "Skyvan’ın araç bağlamı, fiziksel yerleşim, enerji, su, kontrol ve insan onayını birlikte ele alan mühendislik yaklaşımı.", eyebrow: "Mühendislik",
@@ -74,9 +82,9 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "technical-review", heading: "Teknik inceleme, açık soruları karara dönüştürür.", body: "Eksik bilgi varsa uygunluk çözülmemiş kalır. Doğrulanmış veriler ve belirli kurallar kesin uyumsuzlukları ayırır; nihai teknik ve ticari kararlar projeye özgü insan onayı gerektirir." },
     ],
     note: "Bilgi eksikse, uygunluk sonucu da net değildir. Teknik değerlendirme açık soruları görünür kılar; nihai teknik ve ticari karar insan onayıyla verilir.",
-    actions: [{ label: "Workshop Yaklaşımını İncele", slug: "sistem" }, { label: "Üretime Hazırlık", slug: "uretim-sureci" }],
+    actions: [{ label: "Workshop Yaklaşımını İncele", slug: "workshop" }, { label: "Üretime Hazırlık", slug: "uretim-sureci" }],
   },
-  sistem: {
+  workshop: {
     title: "Skyvan ve Workshop", seoTitle: "Skyvan Workshop Yaklaşımı | Skyvan", seoDescription: "Araç, yaşam alanı ve teknik seçimlerin planlanan Workshop deneyiminde nasıl birlikte ele alınacağını keşfedin.", eyebrow: "Skyvan Workshop",
     heading: "Bir seçimin, bütün projeyi nasıl etkilediğini anlayın.", body: "Skyvan, araç, yaşam alanı ve teknik seçimleri aynı bağlamda ele alan bir deneyim geliştiriyor. Workshop, bu yaklaşımın müşteriye açılacak bölümü olarak hazırlanıyor.", status: "Yakında",
     sections: [
@@ -89,6 +97,22 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "project-sealing", heading: "Projeyi incelemeye hazır bir kapsamda sabitleyin.", body: "Seçimler, uyarılar ve açık sorular ortak bir proje özetinde buluşacak. Projenin sabitlenmesi otomatik onay anlamına gelmeyecek; nihai teknik ve ticari kararlar insan incelemesi gerektirecek." },
       { id: "progress-visibility", heading: "İlerlemeyi sade bir görünümde izleyin.", body: "Planlanan müşteri görünümü, projenin hangi aşamada olduğunu ve hangi soruların yanıt beklediğini anlaşılır biçimde gösterecek. Canlı proje oluşturma ve takip bugün kullanıma açık değildir." },
     ],
+    decisionArchitecture: {
+      eyebrow: "Workshop yaklaşımı", heading: "Skyvan karar mimarisi", body: "Workshop, bir seçimi tek başına göstermek yerine kararın yolculuk bağlamından üretime hazırlığa uzanan etkisini açıklamayı amaçlıyor.",
+      stages: [
+        { title: "Rota ve bağlam", body: "Araç, varyant ve kullanım çerçevesi." },
+        { title: "Yaşam biçimi", body: "Oturum, uyku, mutfak, banyo ve depolama öncelikleri." },
+        { title: "Teknik sınırlar", body: "Fiziksel yerleşim, elektriksel uyum ve servis gereksinimleri." },
+        { title: "Risk görünürlüğü", body: "Kesin uyumsuzluklar, uyarılar ve çözülmemiş sorular." },
+        { title: "Üretime hazırlık", body: "İnsan incelemesine hazır, açık bir proje kapsamı." },
+      ],
+      authority: [
+        { title: "Yapay zekâ", body: "Açıklar, uyarır ve alternatif önerir." },
+        { title: "Doğrulanmış kurallar", body: "Kesin uyumsuzluklarda ilerlemeyi engeller." },
+        { title: "İnsan onayı", body: "Nihai teknik ve ticari kararı verir." },
+      ],
+      note: "Bu panel, hazırlanmakta olan Workshop yaklaşımının açıklamasıdır; çalışan bir yapılandırıcı veya canlı proje durumu değildir.",
+    },
     actions: [{ label: "Proje Başlat", slug: "proje-baslat" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Nasıl Çalışır", slug: "nasil-calisir" }],
   },
   "nasil-calisir": {
@@ -160,7 +184,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "technical-question", heading: "Hangi soruların netleşmesini istersiniz?", body: "Bir ürünün sığıp sığmadığı, enerji ihtiyacı veya yatak dönüşümü gibi konuları not edin. Bunları şimdi çözmeniz gerekmiyor; amaç ihtiyaçlarınızı daha açık ifade edebilmek." },
     ],
     note: "Proje başlatma deneyimi hazırlanıyor.",
-    actions: [{ label: "Yaşam Alanlarını Keşfet", slug: "karavan-deneyimi" }, { label: "Workshop’u Tanı", slug: "sistem" }],
+    actions: [{ label: "Yaşam Alanlarını Keşfet", slug: "karavan-deneyimi" }, { label: "Workshop’u Tanı", slug: "workshop" }],
   },
 };
 
@@ -177,7 +201,7 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "open-technical-questions", heading: "We keep unresolved questions visible.", body: "Missing information is not a compatibility result. When dimensions, product data or installation conditions still need verification, saying so clearly is safer than progressing on an assumption." },
       { id: "workshop-extension", heading: "Workshop is the future extension of this experience.", body: "The planned Workshop is intended to show customers how vehicle, layout and product choices affect one another. The experience is not yet available to use." },
       { id: "human-responsibility", heading: "People remain responsible for final decisions.", body: "Digital guidance may explain options and surface open questions. Project-specific technical and commercial decisions still require expert review and human approval." },
-    ], actions: [{ label: "Motorhome Living", slug: "karavan-deneyimi" }, { label: "Engineering", slug: "muhendislik" }, { label: "Workshop", slug: "sistem" }],
+    ], actions: [{ label: "Motorhome Living", slug: "karavan-deneyimi" }, { label: "Engineering", slug: "muhendislik" }, { label: "Workshop", slug: "workshop" }],
   },
   "karavan-deneyimi": {
     title: "Motorhome Living", seoTitle: "Motorhome Living | Skyvan", seoDescription: "Explore how lounging, sleeping, cooking, personal space, storage and movement come together in a motorhome.", eyebrow: "Motorhome living",
@@ -188,7 +212,7 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "kitchen", heading: "A compact galley with a considered flow.", body: "Preparation space, sink, cooking and storage need to work without obstructing one another. Additional appliances require working space, ventilation, connections and energy as part of the layout discussion." },
       { id: "personal-space", heading: "Personal space at motorhome scale.", body: "Combined wet rooms and separate shower and toilet compartments make different demands on a layout. Door movement, drying space, cleaning, ventilation, circulation and service access all matter." },
       { id: "storage", heading: "Space for the life you bring with you.", body: "Storage is more than filling leftover gaps. Access, larger belongings and load distribution need to be considered together. Every additional function brings space, restraint, water, energy and servicing requirements." },
-    ], actions: [{ label: "Meet Workshop", slug: "sistem" }, { label: "Engineering Approach", slug: "muhendislik" }],
+    ], actions: [{ label: "Meet Workshop", slug: "workshop" }, { label: "Engineering Approach", slug: "muhendislik" }],
   },
   muhendislik: {
     title: "Engineering", seoTitle: "Engineering Approach | Skyvan", seoDescription: "How Skyvan considers vehicle context, physical fit, energy, water, controls and human approval.", eyebrow: "Engineering",
@@ -202,9 +226,9 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "water-service", heading: "Plan water systems around maintenance as well as use.", body: "Storage and distribution points need consideration for cleaning, inspection and maintenance. Avoiding unnecessary dismantling to reach a connection is one reason to plan service access early." },
       { id: "controls", heading: "Keep essential functions understandable.", body: "Controls should make living-space functions clear to monitor and use. Access and system behaviour belong in the same discussion; the interface study shown is not a finished automation product." },
       { id: "technical-review", heading: "Technical review turns open questions into accountable decisions.", body: "When information is missing, compatibility remains unresolved. Verified data and defined rules distinguish confirmed incompatibilities; final technical and commercial decisions require project-specific human approval." },
-    ], note: "Missing information means compatibility is unresolved. Technical review makes open questions visible; final technical and commercial decisions require human approval.", actions: [{ label: "Explore the Workshop Approach", slug: "sistem" }, { label: "Preparing for Production", slug: "uretim-sureci" }],
+    ], note: "Missing information means compatibility is unresolved. Technical review makes open questions visible; final technical and commercial decisions require human approval.", actions: [{ label: "Explore the Workshop Approach", slug: "workshop" }, { label: "Preparing for Production", slug: "uretim-sureci" }],
   },
-  sistem: {
+  workshop: {
     title: "Skyvan and Workshop", seoTitle: "The Skyvan Workshop Approach | Skyvan", seoDescription: "How vehicle, living-space and technical choices will remain connected in the planned Workshop experience.", eyebrow: "Skyvan Workshop", status: "Coming soon",
     heading: "Understand how one choice affects the whole project.", body: "Skyvan is developing an experience that keeps vehicle, living-space and technical choices connected. Workshop is being prepared as the customer-facing part of that approach.",
     sections: [
@@ -216,7 +240,24 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "technical-validation", heading: "Validate physical placement and technical compatibility separately.", body: "For example, a customer may wish to select four solar panels; that number is neither a recommendation nor a compatibility result.", bullets: ["Do the panels physically fit the usable roof while preserving openings and service clearances?", "Are panel voltage and current values, and the array configuration, compatible with the selected controller and electrical context?", "Validated deterministic rules identify confirmed incompatibilities and may block incompatible combinations. AI may explain why, warn and suggest alternatives; missing information remains unresolved."] },
       { id: "project-sealing", heading: "Seal a scope that is ready for review.", body: "Selections, warnings and open questions will meet in a shared project summary. Sealing the project will not mean automatic approval; final technical and commercial decisions will require human review." },
       { id: "progress-visibility", heading: "See progress in a simple customer view.", body: "The planned customer view will show which stage the project has reached and which questions still need answers. Live project creation and tracking are not available today." },
-    ], actions: [{ label: "Start a Project", slug: "proje-baslat" }, { label: "Engineering", slug: "muhendislik" }, { label: "How It Works", slug: "nasil-calisir" }],
+    ],
+    decisionArchitecture: {
+      eyebrow: "Workshop approach", heading: "Skyvan decision architecture", body: "Workshop is intended to explain how a choice travels from journey context to production readiness, rather than presenting it in isolation.",
+      stages: [
+        { title: "Route and context", body: "Vehicle, variant and intended use." },
+        { title: "Lifestyle", body: "Priorities for seating, sleep, galley, bathroom and storage." },
+        { title: "Technical boundaries", body: "Physical placement, electrical compatibility and service needs." },
+        { title: "Risk visibility", body: "Confirmed incompatibilities, warnings and unresolved questions." },
+        { title: "Production readiness", body: "A clear project scope prepared for human review." },
+      ],
+      authority: [
+        { title: "AI", body: "Explains, warns and suggests alternatives." },
+        { title: "Validated rules", body: "Block progress when incompatibility is confirmed." },
+        { title: "Human approval", body: "Makes the final technical and commercial decision." },
+      ],
+      note: "This panel explains the Workshop approach now in preparation; it is not a functioning configurator or live project state.",
+    },
+    actions: [{ label: "Start a Project", slug: "proje-baslat" }, { label: "Engineering", slug: "muhendislik" }, { label: "How It Works", slug: "nasil-calisir" }],
   },
   "nasil-calisir": {
     title: "How It Works", seoTitle: "Project Approach | Skyvan", seoDescription: "From everyday needs through vehicle and technical questions to a clearly defined motorhome project.", eyebrow: "Project approach",
@@ -278,7 +319,7 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "vehicle-question", heading: "Which vehicle do you have in mind?", body: "Note the information you have about your vehicle or the options you are considering. An uncertain variant or dimension can remain an open question." },
       { id: "life-question", heading: "Which parts of the day deserve more space?", body: "Shared meals, rest, work or privacy: identify the uses that matter most. Clear priorities make it easier to understand different layouts." },
       { id: "technical-question", heading: "Which questions would you like to resolve?", body: "Note equipment fit, energy needs or a convertible bed. You do not need to settle them now; the aim is to make your needs clearer." },
-    ], note: "The project-start experience is being prepared.", actions: [{ label: "Explore the Living Spaces", slug: "karavan-deneyimi" }, { label: "Meet Workshop", slug: "sistem" }],
+    ], note: "The project-start experience is being prepared.", actions: [{ label: "Explore the Living Spaces", slug: "karavan-deneyimi" }, { label: "Meet Workshop", slug: "workshop" }],
   },
 };
 

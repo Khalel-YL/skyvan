@@ -11,13 +11,18 @@ import {
   getFallbackPage,
   type PublicBlock,
   type PublicBlockMedia,
+  type PublicEditorialPresentation,
   type PublicPageContent,
+  type PublicSemanticMediaRole,
 } from "./launch-content";
 import { isPublicMediaSlotName } from "./public-media-surface";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  LEGACY_WORKSHOP_SLUG,
   PUBLIC_LOCALES,
+  PUBLIC_WORKSHOP_SLUG,
   type PublicLocale,
+  getCanonicalPublicSlug,
   getLocalizedPath,
   isPublicLocale,
 } from "./public-routing";
@@ -86,6 +91,56 @@ const mediaProviders = new Set<NonNullable<PublicBlockMedia["provider"]>>([
   "vimeo",
   "external",
 ]);
+const semanticMediaRoles = new Set<PublicSemanticMediaRole>([
+  "launch.hero",
+  "launch.engineering",
+  "editorial.about.hero",
+  "editorial.living.hero",
+  "editorial.engineering.hero",
+  "editorial.workshop.hero",
+  "editorial.process.hero",
+  "editorial.production.hero",
+  "editorial.about.section",
+  "editorial.living.section",
+  "editorial.engineering.section",
+  "editorial.workshop.section",
+  "editorial.process.section",
+  "editorial.production.section",
+  "editorial.general.section",
+]);
+const editorialLayouts = new Set<NonNullable<PublicEditorialPresentation["layout"]>>([
+  "text-only",
+  "media-left",
+  "media-right",
+  "wide-media",
+]);
+
+function normalizePercentage(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(100, Math.max(0, value))
+    : null;
+}
+
+function normalizeEditorialPresentation(value: unknown): PublicEditorialPresentation | undefined {
+  const raw = getContentObject(value);
+  const sectionId = asString(raw?.sectionId);
+
+  if (!raw || !sectionId) {
+    return undefined;
+  }
+
+  const rawVisual = asString(raw.visual).toLowerCase();
+  const visual = rawVisual === "none" || rawVisual === "media" ? rawVisual : "inherit";
+  const rawLayout = asString(raw.layout).toLowerCase();
+
+  return {
+    sectionId,
+    visual,
+    layout: editorialLayouts.has(rawLayout as NonNullable<PublicEditorialPresentation["layout"]>)
+      ? rawLayout as NonNullable<PublicEditorialPresentation["layout"]>
+      : undefined,
+  };
+}
 
 function isSafeHttpUrl(value: string) {
   try {
@@ -189,6 +244,11 @@ function normalizeMedia(value: unknown): PublicBlockMedia | undefined {
   const embedUrl = asString(raw.embedUrl);
   const rawProvider = asString(raw.provider).toLowerCase();
   const surfaceSlot = asString(raw.surfaceSlot);
+  const semanticRole = asString(raw.semanticRole);
+  const focalPosition = getContentObject(raw.focalPosition);
+  const focalX = normalizePercentage(focalPosition?.x);
+  const focalY = normalizePercentage(focalPosition?.y);
+  const fit = asString(raw.fit).toLowerCase();
   const provider = mediaProviders.has(rawProvider as NonNullable<PublicBlockMedia["provider"]>)
     ? (rawProvider as NonNullable<PublicBlockMedia["provider"]>)
     : mediaType === "video"
@@ -215,6 +275,11 @@ function normalizeMedia(value: unknown): PublicBlockMedia | undefined {
     provider,
     altText: asString(raw.altText) || undefined,
     surfaceSlot: isPublicMediaSlotName(surfaceSlot) ? surfaceSlot : undefined,
+    semanticRole: semanticMediaRoles.has(semanticRole as PublicSemanticMediaRole)
+      ? semanticRole as PublicSemanticMediaRole
+      : undefined,
+    focalPosition: focalX !== null && focalY !== null ? { x: focalX, y: focalY } : undefined,
+    fit: fit === "contain" || fit === "cover" ? fit : undefined,
   };
 }
 
@@ -242,6 +307,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       ctaLabel: asString(raw.ctaLabel) || undefined,
       ctaHref: asString(raw.ctaHref) || undefined,
       media: normalizeMedia(raw.media),
+      editorial: normalizeEditorialPresentation(raw.editorial),
     };
   }
 
@@ -258,6 +324,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       heading: heading || undefined,
       body: body || undefined,
       media: normalizeMedia(raw.media),
+      editorial: normalizeEditorialPresentation(raw.editorial),
     };
   }
 
@@ -274,6 +341,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       subtext: asString(raw.subtext) || undefined,
       items,
       media: normalizeMedia(raw.media),
+      editorial: normalizeEditorialPresentation(raw.editorial),
     };
   }
 
@@ -289,6 +357,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       heading: asString(raw.heading) || undefined,
       stats,
       media: normalizeMedia(raw.media),
+      editorial: normalizeEditorialPresentation(raw.editorial),
     };
   }
 
@@ -306,6 +375,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       ctaLabel: asString(raw.ctaLabel) || undefined,
       ctaHref: asString(raw.ctaHref) || undefined,
       media: normalizeMedia(raw.media),
+      editorial: normalizeEditorialPresentation(raw.editorial),
     };
   }
 
@@ -405,25 +475,33 @@ export function normalizePublicLocale(locale: string): PublicLocale {
 }
 
 export async function getPublicPage(locale: PublicLocale, slug?: string | null) {
-  const normalizedSlug = asString(slug);
+  const normalizedSlug = getCanonicalPublicSlug(asString(slug));
   const adminPage = normalizedSlug
-    ? await fetchPublishedAdminPage(locale, normalizedSlug)
+    ? await fetchPublishedAdminPage(locale, normalizedSlug) ??
+      (normalizedSlug === PUBLIC_WORKSHOP_SLUG
+        ? await fetchPublishedAdminPage(locale, LEGACY_WORKSHOP_SLUG)
+        : null)
     : await fetchPublishedAdminHome(locale);
 
-  return adminPage ?? getFallbackPage(locale, normalizedSlug);
+  return adminPage
+    ? { ...adminPage, slug: normalizedSlug }
+    : getFallbackPage(locale, normalizedSlug);
 }
 
 export async function getPublicSlugPage(locale: PublicLocale, slug: string) {
-  const normalizedSlug = asString(slug);
+  const normalizedSlug = getCanonicalPublicSlug(asString(slug));
 
   if (!normalizedSlug) {
     return null;
   }
 
-  const adminPage = await fetchPublishedAdminPage(locale, normalizedSlug);
+  const adminPage = await fetchPublishedAdminPage(locale, normalizedSlug) ??
+    (normalizedSlug === PUBLIC_WORKSHOP_SLUG
+      ? await fetchPublishedAdminPage(locale, LEGACY_WORKSHOP_SLUG)
+      : null);
 
   if (adminPage) {
-    return adminPage;
+    return { ...adminPage, slug: normalizedSlug };
   }
 
   if (fallbackSlugs.includes(normalizedSlug)) {
@@ -438,19 +516,26 @@ export function getPublicUrl(locale: PublicLocale, slug?: string | null) {
 }
 
 async function publicRouteExists(locale: PublicLocale, slug: string) {
-  if (!slug) {
+  const canonicalSlug = getCanonicalPublicSlug(slug);
+
+  if (!canonicalSlug) {
     return true;
   }
 
-  if (fallbackSlugs.includes(slug)) {
+  if (fallbackSlugs.includes(canonicalSlug)) {
     return true;
   }
 
-  return Boolean(await fetchPublishedAdminPage(locale, slug));
+  return Boolean(
+    await fetchPublishedAdminPage(locale, canonicalSlug) ??
+    (canonicalSlug === PUBLIC_WORKSHOP_SLUG
+      ? await fetchPublishedAdminPage(locale, LEGACY_WORKSHOP_SLUG)
+      : null),
+  );
 }
 
 export async function buildRouteLanguages(locale: PublicLocale, slug?: string | null) {
-  const normalizedSlug = asString(slug);
+  const normalizedSlug = getCanonicalPublicSlug(asString(slug));
   const languages: Record<string, string> = {
     [locale]: getPublicUrl(locale, normalizedSlug),
   };
@@ -471,7 +556,7 @@ export async function buildRouteLanguages(locale: PublicLocale, slug?: string | 
 }
 
 export async function buildAlternates(locale: PublicLocale, slug?: string | null) {
-  const normalizedSlug = asString(slug);
+  const normalizedSlug = getCanonicalPublicSlug(asString(slug));
   const languages = await buildRouteLanguages(locale, normalizedSlug);
 
   return {
@@ -541,13 +626,13 @@ export async function listPublishedAdminPublicPages() {
           return false;
         }
 
-        const slug = asString(row.slug);
+        const slug = getCanonicalPublicSlug(asString(row.slug));
 
         return Boolean(slug) && !isHomeSlug(row.locale, slug);
       })
       .map((row) => ({
         locale: row.locale as PublicLocale,
-        slug: asString(row.slug),
+        slug: getCanonicalPublicSlug(asString(row.slug)),
       }));
   } catch (error) {
     console.warn("public sitemap admin page read skipped:", error);

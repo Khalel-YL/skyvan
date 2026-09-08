@@ -24,10 +24,10 @@ import {
   resolvePublicMediaSurfaces,
   type PublicMediaSurfaceMap,
 } from "../lib/public-media-surface";
-import { getLocalizedPath } from "../lib/public-routing";
+import { getCanonicalPublicHref, getLocalizedPath } from "../lib/public-routing";
 
 function safeHref(href: string | undefined, locale: PublicPageContent["locale"]) {
-  const value = String(href ?? "").trim();
+  const value = getCanonicalPublicHref(String(href ?? "").trim());
 
   if (!value) {
     return getLocalizedPath(locale);
@@ -1052,7 +1052,12 @@ export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
   if (isCuratedPublicSlug(page.slug)) {
     const surfaces = resolvePublicMediaSurfaces(page);
     const publishedBlocks = page.source === "admin" && page.slug !== "proje-baslat"
-      ? page.blocks.filter((block) => block.type !== "hero" && isCustomerFacingEditorialBlock(block))
+      ? page.blocks.filter(
+          (block) =>
+            block.type !== "hero" &&
+            !("editorial" in block && block.editorial) &&
+            isCustomerFacingEditorialBlock(block),
+        )
       : [];
 
     return (
