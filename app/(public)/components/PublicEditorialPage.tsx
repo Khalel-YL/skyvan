@@ -37,7 +37,7 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
     "water-service": { asset: "engineering-connectors", className: "sv-image-contain" },
   },
   sistem: {
-    "clear-guidance": { asset: "engineering-automation" },
+    "technical-validation": { asset: "engineering-automation" },
   },
   "nasil-calisir": {
     layout: { asset: "ufuk-day", className: "sv-image-contain" },
@@ -97,7 +97,7 @@ function RoofEvaluation({ locale }: { locale: PublicPageContent["locale"] }): Re
 
 function SectionBody({ section, index, slug, locale }: { section: EditorialSection; index: number; slug: CuratedPublicSlug; locale: PublicPageContent["locale"] }) {
   const visual = sectionVisuals[slug]?.[section.id];
-  const isRoofEvaluation = slug === "muhendislik" && section.id === "solar";
+  const isRoofEvaluation = slug === "muhendislik" && section.id === "roof-electrical-compatibility";
   const livingStudies = slug === "karavan-deneyimi" && section.id === "sleep" ? ["alcove"] as const
     : slug === "karavan-deneyimi" && section.id === "personal-space" ? ["toilet", "shower"] as const
       : undefined;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { publicLaunchContent, type PublicPageContent } from "../lib/launch-content";
 import { publicLaunchAssets } from "../lib/public-launch-media";
 import { getDefinitionBlock, getLaunchHero } from "../lib/public-launch-selection";
@@ -25,7 +25,7 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
           <p className="sv-hero-description">{hero.copy?.subtext || copy.hero.subtext}</p>
           {hero.copy?.body ? <p className="sv-hero-body">{hero.copy.body}</p> : null}
           <div className="sv-actions">
-            <a className="sv-button" href="#discover-skyvan">{copy.hero.primaryCta}<ArrowDown size={15} aria-hidden="true" /></a>
+            <Link className="sv-button" href={getLocalizedPath(page.locale, "karavan-deneyimi")}>{copy.hero.primaryCta}<ArrowUpRight size={15} aria-hidden="true" /></Link>
             <PublicProjectAction locale={page.locale} secondary />
           </div>
         </div>
@@ -35,11 +35,25 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
         <div><p className="sv-eyebrow">{copy.definition.eyebrow}</p><h2 id="introduction-title">{definition?.heading || copy.definition.heading}</h2></div>
         <p>{definition?.body || definition?.content || copy.definition.body}</p>
       </section>
+      <section className="sv-container sv-section sv-differentiation" aria-labelledby="differentiation-title">
+        <header className="sv-differentiation-header">
+          <div><p className="sv-eyebrow">{copy.differentiation.eyebrow}</p><h2 id="differentiation-title">{copy.differentiation.heading}</h2></div>
+          <p>{copy.differentiation.body}</p>
+        </header>
+        <div className="sv-differentiation-list">
+          {copy.differentiation.items.map((item, index) => <article id={item.id} className="sv-differentiation-item" key={item.id}>
+            <span className="sv-step-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <h3>{item.title}</h3>
+            <div><p>{item.body}</p><Link href={getLocalizedPath(page.locale, item.slug)} className="sv-text-link">{item.linkLabel}<ArrowUpRight size={17} aria-hidden="true" /></Link></div>
+          </article>)}
+        </div>
+      </section>
       <section id="life-scenarios" className="sv-container sv-section sv-living" aria-labelledby="living-title">
         <div className="sv-section-line"><span>{copy.product.eyebrow}</span><span aria-hidden="true" /></div>
         <div className="sv-section-heading"><h2 id="living-title">{copy.product.heading}</h2><p>{copy.product.body}</p></div>
         <PublicLivingGallery copy={copy.product} concept={copy.concept} locale={page.locale} />
         <p className="sv-disclaimer">{copy.conceptNote}</p>
+        <Link href={getLocalizedPath(page.locale, "karavan-deneyimi")} className="sv-text-link">{copy.product.cta}<ArrowUpRight size={17} aria-hidden="true" /></Link>
       </section>
       <section id="workshop" className="sv-workshop sv-section" aria-labelledby="workshop-title">
         <div className="sv-container">

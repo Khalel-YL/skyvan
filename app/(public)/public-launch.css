@@ -108,6 +108,16 @@
 .sv-introduction { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center; padding-block: 4rem 1rem; }
 .sv-introduction h2 { font-size: clamp(1.8rem, 2.4vw, 2.7rem); }
 .sv-introduction > p { max-width: 38rem; }
+.sv-differentiation { padding-top: 4rem; }
+.sv-differentiation-header { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: end; padding-bottom: 2.5rem; }
+.sv-differentiation-header h2 { max-width: 16em; font-size: clamp(2rem, 3.2vw, 3.7rem); }
+.sv-differentiation-header > p { max-width: 38rem; }
+.sv-differentiation-list { border-bottom: 1px solid var(--public-border); }
+.sv-differentiation-item { display: grid; grid-template-columns: 3rem minmax(14rem, .85fr) minmax(18rem, 1.15fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: start; padding-block: 2rem; border-top: 1px solid var(--public-border); }
+.sv-differentiation-item h3 { max-width: 25rem; font-size: clamp(1.15rem, 1.5vw, 1.5rem); }
+.sv-differentiation-item p { max-width: 42rem; }
+.sv-differentiation-item .sv-text-link { margin-top: 1rem; }
+.sv-living > .sv-text-link { margin-top: 1.25rem; }
 .sv-lounge-frame { aspect-ratio: 1.5; }
 .sv-lounge-frame img { object-fit: contain; object-position: center; }
 .sv-gallery-caption { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1rem; }
@@ -293,12 +303,14 @@
   .sv-hero-content h1 { max-width: 48%; }
   .sv-hero-description, .sv-hero-body { width: 40%; }
   .sv-hero .sv-actions { max-width: 45%; }
-  .sv-introduction, .sv-about-principles { gap: 3rem; }
+  .sv-introduction, .sv-differentiation-header, .sv-about-principles { gap: 3rem; }
   .sv-engineering-split { gap: 2rem; }
   .sv-footer-top { flex-wrap: wrap; }
   .sv-coming-copy { max-width: 46%; }
 }
 @media (max-width: 1023px) {
+  .sv-differentiation-item { grid-template-columns: 2.5rem minmax(0, 1fr); gap: 1rem 2rem; }
+  .sv-differentiation-item > div { grid-column: 2; }
   .sv-editorial-section-text-only .sv-editorial-section-copy { grid-template-columns: 2.5rem minmax(0, 1fr); column-gap: 1rem; }
   .sv-editorial-section-text-only .sv-section-index { grid-column: 1; grid-row: 1 / span 3; }
   .sv-editorial-section-text-only .sv-editorial-section-copy h2 { grid-column: 2; grid-row: 1; }
@@ -322,8 +334,11 @@
   .sv-hero::after { display: none; }
   .sv-hero-bottom { position: static; order: 2; font-size: .75rem; gap: 1rem; margin-block: 1rem .5rem; letter-spacing: .06em; }
   .sv-hero-bottom > span:first-child { max-width: 55%; }
-  .sv-introduction, .sv-section-heading, .sv-engineering-split, .sv-about-principles, .sv-technical-row { grid-template-columns: 1fr; gap: 1.5rem; }
+  .sv-introduction, .sv-differentiation-header, .sv-section-heading, .sv-engineering-split, .sv-about-principles, .sv-technical-row { grid-template-columns: 1fr; gap: 1.5rem; }
   .sv-introduction { padding-top: 3rem; }
+  .sv-differentiation { padding-top: 3rem; }
+  .sv-differentiation-item { grid-template-columns: 2rem minmax(0, 1fr); padding-block: 1.5rem; }
+  .sv-differentiation-item > div { grid-column: 1 / -1; padding-left: 3rem; }
   .sv-section-heading p { justify-self: start; }
   .sv-lounge-frame { aspect-ratio: 1.5; }
   .sv-gallery-caption { flex-wrap: wrap; }

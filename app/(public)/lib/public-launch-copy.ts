@@ -2,14 +2,18 @@ import type { PublicLocale } from "./public-routing";
 
 type Story = { eyebrow: string; heading: string; body: string };
 type Item = { title: string; body: string };
+type DiscoverySlug = "hakkimizda" | "muhendislik" | "sistem" | "nasil-calisir";
+type DiscoveryItem = Item & { id: string; linkLabel: string; slug: DiscoverySlug };
 export type PublicLaunchCopy = {
   nav: { discover: string; workshop: string; engineering: string; about: string };
   project: string; upcoming: string; concept: string; conceptNote: string;
   hero: Story & { subtext: string; primaryCta: string; secondaryCta: string; footnote: string };
   definition: Story;
+  differentiation: Story & { items: DiscoveryItem[] };
   product: Story & {
     model: string; day: string; conversion: string; night: string;
     dayBody: string; conversionBody: string; nightBody: string; galleryLabel: string;
+    cta: string;
     spaces: Array<{ title: string; body: string; image: "alcove" | "toilet" | "shower"; alt: string }>;
   };
   workshop: Story & { steps: Item[]; note: string; cta: string };
@@ -33,13 +37,23 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
       primaryCta: "Skyvan’ı Keşfet", secondaryCta: "Proje Başlat", footnote: "Yolda da evde. Hayatın tam içinde.",
     },
     definition: { eyebrow: "Skyvan yaklaşımı", heading: "Her yolculuk,\nsizi anlamakla başlar.", body: "Nereye gitmek istediğiniz kadar, nasıl yaşamak istediğiniz de önemli. Skyvan; günlük ritminizi, tasarımı ve mühendisliği aynı projenin parçaları olarak düşünür." },
+    differentiation: {
+      eyebrow: "Skyvan farkı", heading: "Her karar, projenin bütünüyle birlikte düşünülür.",
+      body: "Hafiflikten servis erişimine kadar her seçim, yaşam alanını ve çevresindeki teknik kararları etkiler.",
+      items: [
+        { id: "lightweight-decisions", title: "Hafiflik, tek bir malzemeden daha büyük bir karardır.", body: "Karavana eklenen her malzeme kullanılabilir taşıma kapasitesini, aracın davranışını ve diğer seçimler için kalan payı etkiler. Skyvan, malzeme kararlarını görünüş kadar proje bütünü içindeki ağırlık etkisiyle ele alır.", linkLabel: "Deneyimimizi tanıyın", slug: "hakkimizda" },
+        { id: "buildable-design", title: "Görünen şey, üretilebilir olmalı.", body: "Yerleşim, dolaşım, kapı ve pencere açıklıkları, teknik sistemler ve bakım erişimi birbirinden kopmadan çözülmelidir.", linkLabel: "Mühendislik yaklaşımı", slug: "muhendislik" },
+        { id: "service-access", title: "Bugünün düzeni, yarının bakımını engellememeli.", body: "Su, elektrik, depolama ve mobilya kararları; bağlantılara, koruma elemanlarına ve kontrol noktalarına erişimi korumalıdır.", linkLabel: "Proje nasıl ilerler?", slug: "nasil-calisir" },
+        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Workshop’u tanıyın", slug: "sistem" },
+      ],
+    },
     product: {
       eyebrow: "Yaşam alanı", heading: "Hayatınıza göre şekillenen bir alan.",
       body: "Manzaraya açılan bir oturma alanı. Dinlenmeye ayrılan sakin bir köşe. Aynı alanın, günün farklı anlarına uyum sağladığı bir tasarım fikri.",
       model: "Ufuk konsepti", day: "Oturum", conversion: "Dönüşüm", night: "Uyku",
       dayBody: "U oturum, yükseltilmiş masa ve zemine bağlı teleskopik ayakla gündüz kullanım fikri.",
       conversionBody: "Masanın kısmen alçaldığı, ayağın ve açılan yatak desteklerinin görünür kaldığı ara düzen.",
-      nightBody: "Aynı U oturumun, masa ayağı yatak altında bağlı kalacak şekilde uyku düzenine dönüşmüş hali.", galleryLabel: "Ufuk yaşam alanı durumu",
+      nightBody: "Aynı U oturumun, masa ayağı yatak altında bağlı kalacak şekilde uyku düzenine dönüşmüş hali.", galleryLabel: "Ufuk yaşam alanı durumu", cta: "Karavan deneyimini keşfedin",
       spaces: [
         { title: "Alkoven yatak", body: "Yaşam alanının üzerinde, dinlenmek için ayrılmış bir köşe.", image: "alcove", alt: "Alkovenli karavanın kabin üstü yatak bölümünün Skyvan konsept tasarımı" },
         { title: "Karavan tipi tuvalet", body: "Kompakt bir hacimde, günlük kullanımın ihtiyaçlarını düşünmek.", image: "toilet", alt: "Kompakt lavabo ve karavan tipi tuvalet içeren Skyvan konsept WC bölümü" },
@@ -97,12 +111,22 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
     conceptNote: "These images express Skyvan’s design vision. Layouts and equipment depend on vehicle-specific technical review and approval.",
     hero: { eyebrow: "More room. More life.", heading: "Freedom,\nengineered.", subtext: "Your route. Your way of living. A motorhome project considered as a whole.", body: "", primaryCta: "Discover Skyvan", secondaryCta: "Start a Project", footnote: "At home on the road. In the heart of life." },
     definition: { eyebrow: "The Skyvan approach", heading: "Every journey begins\nwith understanding you.", body: "How you want to live matters as much as where you want to go. Skyvan considers your daily rhythm, design and engineering as parts of the same project." },
+    differentiation: {
+      eyebrow: "What sets Skyvan apart", heading: "Every decision belongs to the whole project.",
+      body: "From lightness to service access, each choice shapes the living space and the technical decisions around it.",
+      items: [
+        { id: "lightweight-decisions", title: "Lightness is bigger than a single material choice.", body: "Every material added to a motorhome affects usable payload, vehicle behaviour and the margin left for other decisions. Skyvan considers materials for their place in the whole project, not appearance alone.", linkLabel: "Meet our experience", slug: "hakkimizda" },
+        { id: "buildable-design", title: "What you see must be buildable.", body: "Layout, circulation, doors and windows, technical systems and maintenance access need to remain connected from design onward.", linkLabel: "Our engineering approach", slug: "muhendislik" },
+        { id: "service-access", title: "Today’s layout should not obstruct tomorrow’s maintenance.", body: "Water, electrical, storage and furniture decisions should preserve access to connections, protection devices and inspection points.", linkLabel: "See how a project develops", slug: "nasil-calisir" },
+        { id: "connected-choices", title: "Components are not isolated purchases.", body: "Solar panels, controllers, batteries, inverters, loads, usable area and protection requirements need to be evaluated in the same context.", linkLabel: "Meet Workshop", slug: "sistem" },
+      ],
+    },
     product: {
       eyebrow: "Living space", heading: "Space that follows your way of life.", body: "A lounge open to the view. A quiet place to rest. A design concept that lets the same space adapt to different moments of your day.",
       model: "Ufuk concept", day: "Lounge", conversion: "Conversion", night: "Sleep",
       dayBody: "The daytime idea with a U lounge, raised table and floor-mounted telescopic pedestal.",
       conversionBody: "An intermediate state with the table partly lowered and the pedestal and extending bed supports kept visible.",
-      nightBody: "The same U lounge arranged for sleep, with the table pedestal retained beneath the bed.", galleryLabel: "Ufuk living-space state",
+      nightBody: "The same U lounge arranged for sleep, with the table pedestal retained beneath the bed.", galleryLabel: "Ufuk living-space state", cta: "Explore motorhome living",
       spaces: [
         { title: "Overcab bed", body: "A place to rest, set above the living space.", image: "alcove", alt: "Skyvan concept sleeping area above the motorhome cab" },
         { title: "Motorhome toilet", body: "Everyday needs considered within a compact space.", image: "toilet", alt: "Skyvan concept compact motorhome toilet room with a small basin" },

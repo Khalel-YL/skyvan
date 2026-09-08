@@ -19,8 +19,8 @@ export function Header(): React.JSX.Element {
   const toggle = useRef<HTMLButtonElement>(null);
   const home = getLocalizedPath(locale);
   const items = [
-    { label: copy.nav.discover, href: `${home}#discover-skyvan` },
-    { label: copy.nav.workshop, href: `${home}#workshop` },
+    { label: copy.nav.discover, href: getLocalizedPath(locale, "karavan-deneyimi") },
+    { label: copy.nav.workshop, href: getLocalizedPath(locale, "sistem") },
     { label: copy.nav.engineering, href: getLocalizedPath(locale, "muhendislik") },
     { label: copy.nav.about, href: getLocalizedPath(locale, "hakkimizda") },
   ];
