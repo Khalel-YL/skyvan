@@ -1,3 +1,13 @@
+import {
+  ABOUT_EDITORIAL_SECTION_IDS,
+  type AboutEditorialPageOverride,
+  type AboutEditorialSectionPresentation,
+  normalizeAboutEditorialPageOverride,
+  normalizeAboutEditorialPresentation,
+  validateAboutEditorialContract,
+  isAboutEditorialPage,
+} from "@/app/lib/public-editorial-cms";
+
 export type PageBlockMedia = {
   mediaId: string;
   mediaType: "image" | "video" | "model3d";
@@ -38,6 +48,7 @@ export type PageContentBlock =
       body?: string;
       content?: string;
       media?: PageBlockMedia;
+      editorial?: AboutEditorialSectionPresentation;
     }
   | {
       type: "feature-list";
@@ -61,6 +72,7 @@ export type PageContentBlock =
 export type PageContentJson = {
   isPublished: boolean;
   blocks: PageContentBlock[];
+  editorialPage?: AboutEditorialPageOverride;
 };
 
 export type PageBlockValidationInput = {
@@ -69,6 +81,8 @@ export type PageBlockValidationInput = {
   seoTitle: string;
   seoDescription: string;
   blocks: PageContentBlock[];
+  locale?: string;
+  editorialPage?: AboutEditorialPageOverride;
 };
 
 export type PageBlockValidationResult = {
@@ -182,7 +196,7 @@ function normalizeItems(value: unknown) {
     return [] as string[];
   }
 
-  return value.map((item) => cleanString(item)).filter(Boolean).slice(0, 12);
+  return value.map((item) => cleanString(item)).filter(Boolean).slice(0, 8);
 }
 
 function normalizeStats(value: unknown) {
@@ -203,7 +217,7 @@ function normalizeStats(value: unknown) {
       return label && statValue ? { label, value: statValue } : null;
     })
     .filter((item): item is { label: string; value: string } => item !== null)
-    .slice(0, 8);
+    .slice(0, 6);
 }
 
 function normalizeBlock(value: unknown): PageContentBlock | null {
@@ -262,6 +276,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
     body: optionalString(raw.body),
     content: optionalString(raw.content),
     media: normalizeMedia(raw.media),
+    editorial: normalizeAboutEditorialPresentation(raw.editorial),
   };
 }
 
@@ -293,6 +308,38 @@ export function createDefaultPageBlocks(params?: {
   ];
 }
 
+export function prepareAboutEditorialBlocks(
+  blocks: PageContentBlock[],
+  locale: string,
+  slug: string,
+) {
+  if (!isAboutEditorialPage(locale, slug)) {
+    return blocks;
+  }
+
+  const hero = blocks.find((block) => block.type === "hero");
+  const existing = blocks.filter(
+    (block): block is Extract<PageContentBlock, { type: "text" }> =>
+      block.type === "text" && Boolean(block.editorial),
+  );
+  const seen = new Set(existing.map((block) => block.editorial?.sectionId));
+  const sections: PageContentBlock[] = [
+    ...existing,
+    ...ABOUT_EDITORIAL_SECTION_IDS.filter((sectionId) => !seen.has(sectionId)).map(
+      (sectionId): PageContentBlock => ({
+        type: "text",
+        editorial: {
+          sectionId,
+          visible: true,
+          visual: "inherit",
+        },
+      }),
+    ),
+  ];
+
+  return hero ? [hero, ...sections] : sections;
+}
+
 export function normalizePageContentJson(
   value: unknown,
   fallback?: {
@@ -319,12 +366,21 @@ export function normalizePageContentJson(
   return {
     isPublished: published,
     blocks: blocks.length > 0 ? blocks : createDefaultPageBlocks(fallback),
+    editorialPage: normalizeAboutEditorialPageOverride(raw.editorialPage),
   };
 }
 
 export function validatePageBlocks(input: PageBlockValidationInput): PageBlockValidationResult {
   const blockers: string[] = [];
   const warnings: string[] = [];
+
+  const editorialErrors = validateAboutEditorialContract({
+    locale: input.locale ?? "",
+    slug: input.slug.trim(),
+    editorialPage: input.editorialPage,
+    blocks: input.blocks,
+  });
+  blockers.push(...editorialErrors);
 
   if (!input.title.trim()) {
     blockers.push("Sayfa başlığı zorunludur.");
@@ -365,7 +421,7 @@ export function validatePageBlocks(input: PageBlockValidationInput): PageBlockVa
       blockers.push(`${label}: Seçili medya bağlantısı geçerli değil.`);
     }
 
-    if (block.type === "text" && !block.heading?.trim() && !block.body?.trim() && !block.content?.trim()) {
+    if (block.type === "text" && !block.editorial && !block.heading?.trim() && !block.body?.trim() && !block.content?.trim()) {
       blockers.push(`${label}: Başlık veya açıklama/içerik gerekir.`);
     }
 
@@ -392,6 +448,7 @@ export function serializePageContentJson(input: PageContentJson) {
   const normalized = {
     isPublished: input.isPublished,
     blocks: normalizedBlocks,
+    editorialPage: normalizeAboutEditorialPageOverride(input.editorialPage),
   };
 
   return JSON.stringify(normalized);

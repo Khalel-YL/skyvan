@@ -4,6 +4,12 @@ import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 
+import {
+  type AboutEditorialPageOverride,
+  isAboutEditorialPage,
+} from "@/app/lib/public-editorial-cms";
+import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
+
 import { savePage, type PageFormState } from "./actions";
 import { PageAiCopilot } from "./_components/PageAiCopilot";
 import { PageBlockEditor } from "./_components/PageBlockEditor";
@@ -15,6 +21,7 @@ import {
   type PageContentBlock,
   createDefaultPageBlocks,
   normalizePageContentJson,
+  prepareAboutEditorialBlocks,
   serializePageContentJson,
   validatePageBlocks,
 } from "./_lib/page-blocks";
@@ -116,9 +123,16 @@ export default function AddPageDrawer({
   const [description, setDescription] = useState(defaultDescription);
   const [seoTitle, setSeoTitle] = useState(defaultSeoTitle);
   const [seoDescription, setSeoDescription] = useState(defaultSeoDescription);
-  const [blocks, setBlocks] = useState<PageContentBlock[]>(defaultContent.blocks);
+  const [blocks, setBlocks] = useState<PageContentBlock[]>(() =>
+    prepareAboutEditorialBlocks(defaultContent.blocks, defaultLocale, defaultSlug),
+  );
+  const [editorialPage, setEditorialPage] = useState<AboutEditorialPageOverride | undefined>(
+    defaultContent.editorialPage,
+  );
   const [isPublished] = useState(defaultContent.isPublished);
   const [submitIntent, setSubmitIntent] = useState<PageSubmitIntent>("draft");
+  const isAboutEditorial = isAboutEditorialPage(locale, slug);
+  const aboutFallback = publicEditorialContent[locale === "en" ? "en" : "tr"].hakkimizda;
 
   const validation = validatePageBlocks({
     title,
@@ -126,10 +140,13 @@ export default function AddPageDrawer({
     seoTitle,
     seoDescription,
     blocks,
+    locale,
+    editorialPage,
   });
   const serializedContent = serializePageContentJson({
     isPublished,
     blocks,
+    editorialPage,
   });
 
   const closeDrawer = useCallback(() => {
@@ -251,6 +268,7 @@ export default function AddPageDrawer({
                     <input
                       name="locale"
                       value={locale}
+                      readOnly={isAboutEditorial}
                       onChange={(event) => setLocale(normalizeLocale(event.target.value))}
                       placeholder="tr"
                       className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none transition focus:border-zinc-600"
@@ -282,6 +300,7 @@ export default function AddPageDrawer({
                     <input
                       name="slug"
                       value={slug}
+                      readOnly={isAboutEditorial}
                       onChange={(event) => setSlug(normalizeSlug(event.target.value))}
                       placeholder="premium-karavan-donusumu"
                       className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 font-mono text-sm outline-none transition focus:border-zinc-600"
@@ -316,10 +335,34 @@ export default function AddPageDrawer({
               {state.errors?.seoTitle ? <p className="text-xs text-rose-400">{state.errors.seoTitle}</p> : null}
               {state.errors?.seoDescription ? <p className="text-xs text-rose-400">{state.errors.seoDescription}</p> : null}
 
+              {isAboutEditorial ? (
+                <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Public Hakkımızda girişi</h3>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">Boş bırakılan alanlar güvenli küratörlü içeriğe döner. Slug ve locale bu sayfa çifti için kilitlidir.</p>
+                  </div>
+                  <div className="mt-4 grid gap-4">
+                    {([
+                      ["title", "Public başlık (H1)", aboutFallback.heading, false],
+                      ["eyebrow", "Eyebrow", aboutFallback.eyebrow, false],
+                      ["introduction", "Giriş metni", aboutFallback.body, true],
+                    ] as const).map(([key, label, fallback, multiline]) => (
+                      <label key={key} className="grid gap-2">
+                        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</span>
+                        {multiline ? <textarea value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} rows={4} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" /> : <input value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" />}
+                        <button type="button" onClick={() => setEditorialPage((current) => ({ ...current, [key]: undefined }))} className="w-max text-xs text-zinc-400 underline-offset-4 hover:text-white hover:underline">Küratörlü değere dön</button>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               <PageBlockEditor
                 blocks={blocks}
                 onChange={setBlocks}
                 mediaAssets={mediaAssets}
+                locale={locale}
+                slug={slug}
               />
               {state.errors?.content ? <p className="text-xs text-rose-400">{state.errors.content}</p> : null}
             </div>
@@ -365,11 +408,13 @@ export default function AddPageDrawer({
               ) : null}
 
               <PageLivePreview
+                pageId={initialData?.id}
                 title={title}
                 description={description}
                 locale={locale}
                 slug={slug}
                 blocks={blocks}
+                isAboutEditorial={isAboutEditorial}
               />
 
               <PageAiCopilot

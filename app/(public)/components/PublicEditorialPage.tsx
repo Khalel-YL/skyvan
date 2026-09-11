@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import type {
+  PublicBlock,
   PublicBlockMedia,
   PublicEditorialPresentation,
   PublicPageContent,
@@ -21,6 +22,10 @@ import {
 } from "../lib/public-launch-media";
 import { getLaunchHero } from "../lib/public-launch-selection";
 import { resolveEditorialVisual } from "../lib/public-media-surface";
+import {
+  isAboutEditorialSectionId,
+  mergeAboutEditorialSections,
+} from "@/app/lib/public-editorial-cms";
 import { getLocalizedPath } from "../lib/public-routing";
 import { PublicConceptMedia } from "./PublicConceptMedia";
 import { PublicLivingConceptStudies, PublicLivingGallery } from "./PublicLivingGallery";
@@ -94,6 +99,31 @@ function getSectionPresentation(page: PublicPageContent, sectionId: string) {
   return {
     presentation: block.editorial,
     media: "media" in block ? block.media : undefined,
+  };
+}
+
+function getResolvedEditorialCopy(
+  page: PublicPageContent,
+  slug: CuratedPublicSlug,
+  fallback: (typeof publicEditorialContent)["tr"][CuratedPublicSlug],
+) {
+  if (slug !== "hakkimizda") {
+    return fallback;
+  }
+
+  type EditorialTextBlock = Extract<PublicBlock, { type: "text" }>;
+  const blocks = page.blocks.filter(
+    (block): block is EditorialTextBlock => block.type === "text" && Boolean(block.editorial) &&
+      isAboutEditorialSectionId(block.editorial!.sectionId),
+  );
+  const sections = mergeAboutEditorialSections(fallback.sections, blocks);
+
+  return {
+    ...fallback,
+    heading: page.editorialPage?.title || fallback.heading,
+    eyebrow: page.editorialPage?.eyebrow || fallback.eyebrow,
+    body: page.editorialPage?.introduction || fallback.body,
+    sections,
   };
 }
 
@@ -207,7 +237,8 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
   }
 
   const slug = page.slug;
-  const copy = publicEditorialContent[page.locale][slug];
+  const baselineCopy = publicEditorialContent[page.locale][slug];
+  const copy = getResolvedEditorialCopy(page, slug, baselineCopy);
   const launchCopy = publicLaunchContent[page.locale];
   const launchHero = getLaunchHero(page);
   const cmsHero = page.source === "admin" ? launchHero.copy : undefined;
@@ -222,9 +253,9 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
       <div className="sv-container sv-editorial-page-hero-grid">
         <div className="sv-editorial-copy">
           <div className="sv-editorial-kicker"><p className="sv-eyebrow">{copy.eyebrow}</p>{copy.status ? <span className="sv-status">{copy.status}</span> : null}</div>
-          <h1 id="editorial-title">{cmsHero?.heading || copy.heading}</h1>
-          <p>{cmsHero?.subtext || copy.body}</p>
-          {cmsHero?.body ? <p>{cmsHero.body}</p> : null}
+          <h1 id="editorial-title">{slug === "hakkimizda" ? copy.heading : cmsHero?.heading || copy.heading}</h1>
+          <p>{slug === "hakkimizda" ? copy.body : cmsHero?.subtext || copy.body}</p>
+          {slug !== "hakkimizda" && cmsHero?.body ? <p>{cmsHero.body}</p> : null}
         </div>
         {heroAsset && !isCompact ? <figure className="sv-editorial-hero-figure">
           <PublicConceptMedia

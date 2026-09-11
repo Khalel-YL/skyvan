@@ -1,6 +1,9 @@
 "use client";
 
-import { Copy, GripVertical, Plus, Trash2, ArrowDown, ArrowUp } from "lucide-react";
+import { Copy, GripVertical, Plus, Trash2, ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw } from "lucide-react";
+
+import { isAboutEditorialPage } from "@/app/lib/public-editorial-cms";
+import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 
 import {
   type PageContentBlock,
@@ -19,6 +22,8 @@ type PageBlockEditorProps = {
   blocks: PageContentBlock[];
   onChange: (blocks: PageContentBlock[]) => void;
   mediaAssets: PageMediaPickerAsset[];
+  locale: string;
+  slug: string;
 };
 
 const blockActions: Array<{
@@ -160,7 +165,116 @@ function Field({
   );
 }
 
-export function PageBlockEditor({ blocks, onChange, mediaAssets }: PageBlockEditorProps) {
+function AboutEditorialBlockEditor({
+  blocks,
+  onChange,
+  locale,
+}: Pick<PageBlockEditorProps, "blocks" | "onChange" | "locale">) {
+  const safeLocale = locale === "en" ? "en" : "tr";
+  const fallback = publicEditorialContent[safeLocale].hakkimizda;
+  const editorialBlocks = blocks.filter(
+    (block): block is Extract<PageContentBlock, { type: "text" }> =>
+      block.type === "text" && Boolean(block.editorial),
+  );
+
+  function setEditorialBlock(sectionId: string, nextBlock: Extract<PageContentBlock, { type: "text" }>) {
+    onChange(blocks.map((block) =>
+      block.type === "text" && block.editorial?.sectionId === sectionId ? nextBlock : block,
+    ));
+  }
+
+  function moveSection(sectionId: string, direction: -1 | 1) {
+    const currentIndex = blocks.findIndex(
+      (block) => block.type === "text" && block.editorial?.sectionId === sectionId,
+    );
+    if (currentIndex < 0) return;
+
+    const candidateIndexes = blocks
+      .map((block, index) => block.type === "text" && block.editorial ? index : -1)
+      .filter((index) => index >= 0);
+    const position = candidateIndexes.indexOf(currentIndex);
+    const targetIndex = candidateIndexes[position + direction];
+    if (targetIndex === undefined) return;
+
+    const next = [...blocks];
+    [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+    onChange(next);
+  }
+
+  return (
+    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <div>
+        <h3 className="text-sm font-semibold text-white">Hakkımızda editoryal bölümleri</h3>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-500">
+          Bu sekiz bölüm mevcut küratörlü içeriğin üzerine güvenli bir katman uygular. Boş alanlar küratörlü değeri kullanır; yönetilen medya değişimi henüz kullanıma açık değildir.
+        </p>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {editorialBlocks.map((block, index) => {
+          const editorial = block.editorial!;
+          const fallbackSection = fallback.sections.find((section) => section.id === editorial.sectionId)!;
+          const headingId = `about-${editorial.sectionId}-heading`;
+          const bodyId = `about-${editorial.sectionId}-body`;
+
+          return (
+            <article key={editorial.sectionId} className="rounded-[1.35rem] border border-zinc-800 bg-black/35 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">
+                    {String(index + 1).padStart(2, "0")} · {fallbackSection.heading}
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-zinc-500">{editorial.sectionId}</div>
+                </div>
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => moveSection(editorial.sectionId, -1)} disabled={index === 0} className="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white disabled:opacity-35" aria-label={`${fallbackSection.heading} bölümünü yukarı taşı`}><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => moveSection(editorial.sectionId, 1)} disabled={index === editorialBlocks.length - 1} className="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white disabled:opacity-35" aria-label={`${fallbackSection.heading} bölümünü aşağı taşı`}><ArrowDown className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => setEditorialBlock(editorial.sectionId, { ...block, editorial: { ...editorial, visible: !editorial.visible } })} className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white" aria-pressed={!editorial.visible}>
+                    {editorial.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {editorial.visible ? "Görünür" : "Gizli"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                <label className="grid gap-2" htmlFor={headingId}>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Yerel başlık</span>
+                  <input id={headingId} value={block.heading ?? ""} onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, heading: event.target.value || undefined })} placeholder={fallbackSection.heading} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" />
+                </label>
+                <label className="grid gap-2" htmlFor={bodyId}>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Yerel gövde</span>
+                  <textarea id={bodyId} value={block.body ?? ""} onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, body: event.target.value || undefined })} placeholder={fallbackSection.body} rows={4} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" />
+                </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="grid gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Sunum</span>
+                    <select value={editorial.layout ?? "inherit"} onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, editorial: { ...editorial, layout: event.target.value === "inherit" ? undefined : event.target.value as NonNullable<typeof editorial.layout> } })} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600">
+                      <option value="inherit">Küratörlü sunumu koru</option><option value="text-only">Yalnızca metin</option><option value="media-left">Medya solda</option><option value="media-right">Medya sağda</option><option value="wide-media">Geniş medya</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Medya</span>
+                    <select value={editorial.visual} onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, editorial: { ...editorial, visual: event.target.value as "inherit" | "none" } })} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600">
+                      <option value="inherit">Küratörlü medyayı koru</option><option value="none">Medya gösterme</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="button" onClick={() => setEditorialBlock(editorial.sectionId, { type: "text", editorial: { sectionId: editorial.sectionId, visible: true, visual: "inherit" } })} className="inline-flex w-max items-center gap-2 rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white">
+                  <RotateCcw className="h-3.5 w-3.5" /> Küratörlü değere dön
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function PageBlockEditor({ blocks, onChange, mediaAssets, locale, slug }: PageBlockEditorProps) {
+  if (isAboutEditorialPage(locale, slug)) {
+    return <AboutEditorialBlockEditor blocks={blocks} onChange={onChange} locale={locale} />;
+  }
   function setBlock(index: number, nextBlock: PageContentBlock) {
     onChange(blocks.map((block, blockIndex) => (blockIndex === index ? nextBlock : block)));
   }

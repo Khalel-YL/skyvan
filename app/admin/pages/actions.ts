@@ -24,6 +24,14 @@ import {
   type PageContentBlock,
   validatePageBlocks,
 } from "./_lib/page-blocks";
+import {
+  ABOUT_EDITORIAL_SLUG,
+  type AboutEditorialPageOverride,
+  type AboutEditorialSectionPresentation,
+  normalizeAboutEditorialPageOverride,
+  normalizeAboutEditorialPresentation,
+  validateAboutEditorialContract,
+} from "@/app/lib/public-editorial-cms";
 
 export type PageFormState = {
   ok: boolean;
@@ -77,6 +85,7 @@ type PageBlock = {
     altText?: string;
     surfaceSlot?: PageMediaSurfaceSlot;
   };
+  editorial?: AboutEditorialSectionPresentation;
 };
 
 type PageMediaSurfaceSlot =
@@ -94,6 +103,7 @@ type PageMediaSurfaceSlot =
 type PageContentJson = {
   isPublished: boolean;
   blocks: PageBlock[];
+  editorialPage?: AboutEditorialPageOverride;
 };
 
 type PageRecord = {
@@ -410,6 +420,11 @@ function sanitizeBlock(value: unknown): PageBlock | null {
     block.media = media;
   }
 
+  const editorial = normalizeAboutEditorialPresentation(raw.editorial);
+  if (editorial && type === "text") {
+    block.editorial = editorial;
+  }
+
   return block;
 }
 
@@ -475,6 +490,7 @@ function normalizeContentJson(params: {
   title: string;
   description: string;
   locale: string;
+  slug: string;
   isPublished: boolean;
 }): { contentJson: PageContentJson; hasUserBlocks: boolean; error?: string } {
   const parsed = safeJsonParse(params.rawValue);
@@ -496,6 +512,24 @@ function normalizeContentJson(params: {
       : {};
 
   const rawBlocks = Array.isArray(rawObject.blocks) ? rawObject.blocks : [];
+  const editorialErrors = validateAboutEditorialContract({
+    locale: params.locale,
+    slug: params.slug,
+    editorialPage: rawObject.editorialPage,
+    blocks: rawBlocks,
+  });
+
+  if (editorialErrors.length > 0) {
+    return {
+      contentJson: {
+        isPublished: params.isPublished,
+        blocks: [],
+      },
+      hasUserBlocks: false,
+      error: editorialErrors.join(" "),
+    };
+  }
+
   const blocks = rawBlocks.map(sanitizeBlock).filter(Boolean) as PageBlock[];
   const hasUserBlocks = blocks.length > 0;
 
@@ -503,6 +537,7 @@ function normalizeContentJson(params: {
     contentJson: {
       isPublished: params.isPublished,
       blocks,
+      editorialPage: normalizeAboutEditorialPageOverride(rawObject.editorialPage),
     },
     hasUserBlocks,
   };
@@ -751,9 +786,15 @@ export async function savePage(
     title,
     description,
     locale,
+    slug,
     isPublished,
   });
   normalizedContent.contentJson.isPublished = isPublished;
+
+  if (previousPage?.slug === ABOUT_EDITORIAL_SLUG && slug !== ABOUT_EDITORIAL_SLUG) {
+    errors.slug = "Hakkımızda sayfasının canonical slug değeri değiştirilemez.";
+  }
+
 
   if (normalizedContent.error) {
     errors.content = normalizedContent.error;
@@ -770,6 +811,8 @@ export async function savePage(
       seoTitle,
       seoDescription,
       blocks: normalizedContent.contentJson.blocks as PageContentBlock[],
+      locale,
+      editorialPage: normalizedContent.contentJson.editorialPage,
     });
     const publishBlockers = getPagePublishBlockers({
       title,

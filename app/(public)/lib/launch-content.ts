@@ -1,5 +1,6 @@
 import { getCanonicalPublicSlug, type PublicLocale } from "./public-routing";
 import type { PublicMediaSlotName } from "./public-media-surface";
+import type { AboutEditorialPageOverride } from "@/app/lib/public-editorial-cms";
 
 import { publicLaunchContent } from "./public-launch-copy";
 import { curatedPublicSlugs, publicEditorialContent } from "./public-editorial-content";
@@ -26,6 +27,7 @@ export type PublicEditorialPresentation = {
   sectionId: string;
   visual: "inherit" | "none" | "media";
   layout?: "text-only" | "media-left" | "media-right" | "wide-media";
+  visible?: boolean;
 };
 
 export type PublicBlockMedia = {
@@ -99,6 +101,7 @@ export type PublicPageContent = {
   seoDescription: string;
   source: "admin" | "fallback";
   blocks: PublicBlock[];
+  editorialPage?: AboutEditorialPageOverride;
 };
 
 type FallbackInput = Omit<PublicPageContent, "locale" | "source">;

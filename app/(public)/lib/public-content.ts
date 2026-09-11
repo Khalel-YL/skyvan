@@ -5,6 +5,10 @@ import { and, eq, or } from "drizzle-orm";
 
 import { db, hasDatabaseUrl } from "@/db/db";
 import { localizedContent } from "@/db/schema";
+import {
+  isAboutEditorialPage,
+  normalizeAboutEditorialPageOverride,
+} from "@/app/lib/public-editorial-cms";
 
 import {
   fallbackSlugs,
@@ -139,6 +143,7 @@ function normalizeEditorialPresentation(value: unknown): PublicEditorialPresenta
     layout: editorialLayouts.has(rawLayout as NonNullable<PublicEditorialPresentation["layout"]>)
       ? rawLayout as NonNullable<PublicEditorialPresentation["layout"]>
       : undefined,
+    visible: typeof raw.visible === "boolean" ? raw.visible : undefined,
   };
 }
 
@@ -382,8 +387,13 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
   return null;
 }
 
-function pageFromAdminRow(row: LocalizedPageRow, locale: PublicLocale, slug: string): PublicPageContent | null {
-  if (!isPublishedContent(row.contentJson)) {
+function pageFromAdminRow(
+  row: LocalizedPageRow,
+  locale: PublicLocale,
+  slug: string,
+  options?: { includeDraft?: boolean },
+): PublicPageContent | null {
+  if (!options?.includeDraft && !isPublishedContent(row.contentJson)) {
     return null;
   }
 
@@ -391,7 +401,7 @@ function pageFromAdminRow(row: LocalizedPageRow, locale: PublicLocale, slug: str
   const rawBlocks = Array.isArray(content?.blocks) ? content.blocks : [];
   const blocks = rawBlocks.map(sanitizeBlock).filter(Boolean) as PublicBlock[];
 
-  if (blocks.length === 0) {
+  if (blocks.length === 0 && !options?.includeDraft) {
     return null;
   }
 
@@ -407,7 +417,23 @@ function pageFromAdminRow(row: LocalizedPageRow, locale: PublicLocale, slug: str
     seoTitle: asString(row.seoTitle) || title,
     seoDescription: asString(row.seoDescription) || description || getFallbackPage(locale, slug).seoDescription,
     blocks,
+    editorialPage: isAboutEditorialPage(locale, slug)
+      ? normalizeAboutEditorialPageOverride(content?.editorialPage)
+      : undefined,
   };
+}
+
+export function getAdminPagePreviewContent(row: LocalizedPageRow) {
+  if (!isPublicLocale(row.locale)) {
+    return null;
+  }
+
+  const slug = getCanonicalPublicSlug(asString(row.slug));
+  if (!slug) {
+    return null;
+  }
+
+  return pageFromAdminRow(row, row.locale, slug, { includeDraft: true });
 }
 
 async function fetchPublishedAdminPage(locale: PublicLocale, slug: string) {

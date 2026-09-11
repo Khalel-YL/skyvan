@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
+
 import type { PageContentBlock } from "../_lib/page-blocks";
 import { getBlockLabel } from "../_lib/page-blocks";
 
 type PageLivePreviewProps = {
+  pageId?: string;
   title: string;
   description: string;
   locale: string;
   slug: string;
   blocks: PageContentBlock[];
+  isAboutEditorial?: boolean;
 };
 
 function PreviewMediaShell({
@@ -90,12 +94,28 @@ function MediaPreview({ block }: { block: PageContentBlock }) {
 }
 
 export function PageLivePreview({
+  pageId,
   title,
   description,
   locale,
   slug,
   blocks,
+  isAboutEditorial,
 }: PageLivePreviewProps) {
+  if (isAboutEditorial) {
+    return (
+      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+        <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">Küratörlü fallback, sıralama, görünürlük ve medya davranışı yalnızca korumalı kayıt önizlemesinde gerçek public bileşenleriyle gösterilir. Önce taslağı kaydedin.</p>
+        {pageId ? (
+          <Link href={`/admin/pages/preview/${pageId}`} className="mt-4 inline-flex rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200 hover:border-zinc-500 hover:text-white">
+            Korumalı önizlemeyi aç
+          </Link>
+        ) : <p className="mt-4 text-xs text-amber-300" role="status">Önizleme bağlantısı kayıt ilk kez kaydedildikten sonra açılır.</p>}
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
