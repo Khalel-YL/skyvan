@@ -116,7 +116,7 @@ function getResolvedEditorialCopy(
     (block): block is EditorialTextBlock => block.type === "text" && Boolean(block.editorial) &&
       isAboutEditorialSectionId(block.editorial!.sectionId),
   );
-  const sections = mergeAboutEditorialSections(fallback.sections, blocks);
+  const sections = mergeAboutEditorialSections(fallback.sections, blocks, page.locale);
 
   return {
     ...fallback,
@@ -203,6 +203,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
       <h2>{section.heading}</h2>
       <p>{section.body}</p>
       {section.bullets ? <ul>{section.bullets.map((item) => <li key={item}>{item}</li>)}</ul> : null}
+      {section.cta ? <Link className="sv-text-link" href={section.cta.href}>{section.cta.label}<ArrowUpRight size={17} aria-hidden="true" /></Link> : null}
     </div>
     {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
   </section>;

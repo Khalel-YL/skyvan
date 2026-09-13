@@ -13,7 +13,13 @@ export const curatedPublicSlugs = [
 ] as const;
 
 export type CuratedPublicSlug = (typeof curatedPublicSlugs)[number];
-export type EditorialSection = { id: string; heading: string; body: string; bullets?: string[] };
+export type EditorialSection = {
+  id: string;
+  heading: string;
+  body: string;
+  bullets?: string[];
+  cta?: { label: string; href: string };
+};
 export type EditorialAction = { label: string; slug: CuratedPublicSlug };
 export type EditorialFaqGroup = { heading: string; items: Array<{ question: string; answer: string }> };
 

@@ -319,8 +319,9 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
   if (type === "text") {
     const body = asString(raw.body) || asString(raw.content);
     const heading = asString(raw.heading);
+    const editorial = normalizeEditorialPresentation(raw.editorial);
 
-    if (!body && !heading) {
+    if (!body && !heading && !editorial) {
       return null;
     }
 
@@ -328,8 +329,10 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       type,
       heading: heading || undefined,
       body: body || undefined,
+      ctaLabel: asString(raw.ctaLabel) || undefined,
+      ctaHref: asString(raw.ctaHref) || undefined,
       media: normalizeMedia(raw.media),
-      editorial: normalizeEditorialPresentation(raw.editorial),
+      editorial,
     };
   }
 

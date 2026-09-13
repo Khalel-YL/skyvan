@@ -11,9 +11,22 @@ export const ABOUT_EDITORIAL_SECTION_IDS = [
   "human-responsibility",
 ] as const;
 
+export const ABOUT_EDITORIAL_CTA_SLUGS = [
+  "karavan-deneyimi",
+  "muhendislik",
+  "workshop",
+  "nasil-calisir",
+  "uretim-sureci",
+  "sss",
+  "iletisim",
+  "proje-baslat",
+] as const;
+
 export type AboutEditorialSectionId =
   (typeof ABOUT_EDITORIAL_SECTION_IDS)[number];
 export type AboutEditorialLocale = "tr" | "en";
+export type AboutEditorialCtaSlug =
+  (typeof ABOUT_EDITORIAL_CTA_SLUGS)[number];
 export type AboutEditorialLayout =
   | "text-only"
   | "media-left"
@@ -27,6 +40,11 @@ export type AboutEditorialPageOverride = {
   introduction?: string;
 };
 
+export type AboutEditorialSectionCta = {
+  label: string;
+  href: string;
+};
+
 export type AboutEditorialSectionPresentation = {
   sectionId: AboutEditorialSectionId;
   visible: boolean;
@@ -38,6 +56,8 @@ export type AboutEditorialSectionOverride = {
   heading?: string;
   body?: string;
   content?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
   editorial?: {
     sectionId: string;
     visible?: boolean;
@@ -45,6 +65,7 @@ export type AboutEditorialSectionOverride = {
 };
 
 const sectionIds = new Set<string>(ABOUT_EDITORIAL_SECTION_IDS);
+const ctaSlugs = new Set<string>(ABOUT_EDITORIAL_CTA_SLUGS);
 const layouts = new Set<string>([
   "text-only",
   "media-left",
@@ -68,6 +89,44 @@ export function isAboutEditorialSectionId(
 
 export function isAboutEditorialPage(locale: string, slug: string) {
   return isAboutEditorialLocale(locale) && slug === ABOUT_EDITORIAL_SLUG;
+}
+
+export function getAboutEditorialCtaHref(
+  locale: AboutEditorialLocale,
+  slug: AboutEditorialCtaSlug,
+) {
+  return `/${locale}/${slug}`;
+}
+
+export function getAboutEditorialCtaSlug(
+  locale: string,
+  href: string,
+): AboutEditorialCtaSlug | undefined {
+  if (!isAboutEditorialLocale(locale)) {
+    return undefined;
+  }
+
+  const prefix = `/${locale}/`;
+  if (!href.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const slug = href.slice(prefix.length);
+  return ctaSlugs.has(slug) ? slug as AboutEditorialCtaSlug : undefined;
+}
+
+export function normalizeAboutEditorialSectionCta(
+  locale: string,
+  labelValue: unknown,
+  hrefValue: unknown,
+): AboutEditorialSectionCta | undefined {
+  const label = optionalString(labelValue);
+  const href = optionalString(hrefValue);
+  if (!label || !href || !getAboutEditorialCtaSlug(locale, href)) {
+    return undefined;
+  }
+
+  return { label, href };
 }
 
 export function normalizeAboutEditorialPageOverride(
@@ -205,14 +264,37 @@ export function validateAboutEditorialContract(input: {
     if (raw.media !== undefined) {
       errors.push(`${sectionId}: yönetilen medya değişimi bu batch içinde desteklenmiyor.`);
     }
+
+    if (raw.ctaLabel !== undefined && typeof raw.ctaLabel !== "string") {
+      errors.push(`${sectionId}: CTA etiketi metin olmalıdır.`);
+    }
+    if (raw.ctaHref !== undefined && typeof raw.ctaHref !== "string") {
+      errors.push(`${sectionId}: CTA hedefi metin olmalıdır.`);
+    }
+
+    const ctaLabel = optionalString(raw.ctaLabel);
+    const ctaHref = optionalString(raw.ctaHref);
+    if ((ctaLabel && !ctaHref) || (!ctaLabel && ctaHref)) {
+      errors.push(`${sectionId}: CTA etiketi ve hedefi birlikte tanımlanmalıdır.`);
+    }
+    if (ctaLabel && ctaLabel.length > 80) {
+      errors.push(`${sectionId}: CTA etiketi 80 karakterden uzun olamaz.`);
+    }
+    if (ctaHref && !getAboutEditorialCtaSlug(input.locale, ctaHref)) {
+      errors.push(`${sectionId}: CTA hedefi yalnızca aynı dildeki onaylı public rotalardan biri olabilir.`);
+    }
   }
 
   return errors;
 }
 
 export function mergeAboutEditorialSections<
-  T extends { id: string; heading: string; body: string },
->(fallbackSections: readonly T[], overrides: readonly AboutEditorialSectionOverride[]) {
+  T extends { id: string; heading: string; body: string; cta?: AboutEditorialSectionCta },
+>(
+  fallbackSections: readonly T[],
+  overrides: readonly AboutEditorialSectionOverride[],
+  locale?: AboutEditorialLocale,
+) {
   const firstById = new Map<AboutEditorialSectionId, AboutEditorialSectionOverride>();
   for (const override of overrides) {
     const sectionId = override.editorial?.sectionId;
@@ -234,10 +316,15 @@ export function mergeAboutEditorialSections<
       return [];
     }
 
+    const cta = locale
+      ? normalizeAboutEditorialSectionCta(locale, override?.ctaLabel, override?.ctaHref)
+      : undefined;
+
     return [{
       ...baseline,
       heading: override?.heading?.trim() || baseline.heading,
       body: override?.body?.trim() || override?.content?.trim() || baseline.body,
+      cta: cta ?? baseline.cta,
     } as T];
   });
 }

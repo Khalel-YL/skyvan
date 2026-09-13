@@ -61,6 +61,8 @@ export type PublicBlock =
       heading?: string;
       body?: string;
       content?: string;
+      ctaLabel?: string;
+      ctaHref?: string;
       media?: PublicBlockMedia;
       editorial?: PublicEditorialPresentation;
     }

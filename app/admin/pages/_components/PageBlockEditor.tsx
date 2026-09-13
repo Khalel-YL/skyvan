@@ -2,7 +2,12 @@
 
 import { Copy, GripVertical, Plus, Trash2, ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw } from "lucide-react";
 
-import { isAboutEditorialPage } from "@/app/lib/public-editorial-cms";
+import {
+  ABOUT_EDITORIAL_CTA_SLUGS,
+  getAboutEditorialCtaHref,
+  getAboutEditorialCtaSlug,
+  isAboutEditorialPage,
+} from "@/app/lib/public-editorial-cms";
 import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 
 import {
@@ -216,6 +221,7 @@ function AboutEditorialBlockEditor({
           const fallbackSection = fallback.sections.find((section) => section.id === editorial.sectionId)!;
           const headingId = `about-${editorial.sectionId}-heading`;
           const bodyId = `about-${editorial.sectionId}-body`;
+          const ctaLabelId = `about-${editorial.sectionId}-cta-label`;
 
           return (
             <article key={editorial.sectionId} className="rounded-[1.35rem] border border-zinc-800 bg-black/35 p-4">
@@ -256,6 +262,56 @@ function AboutEditorialBlockEditor({
                     <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Medya</span>
                     <select value={editorial.visual} onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, editorial: { ...editorial, visual: event.target.value as "inherit" | "none" } })} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600">
                       <option value="inherit">Küratörlü medyayı koru</option><option value="none">Medya gösterme</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="grid gap-2" htmlFor={ctaLabelId}>
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Bölüm CTA etiketi</span>
+                    <input
+                      id={ctaLabelId}
+                      value={block.ctaLabel ?? ""}
+                      onChange={(event) => setEditorialBlock(editorial.sectionId, { ...block, ctaLabel: event.target.value || undefined })}
+                      placeholder={safeLocale === "tr" ? "İsteğe bağlı" : "Optional"}
+                      maxLength={80}
+                      className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Bölüm CTA hedefi</span>
+                    <select
+                      value={block.ctaHref ?? ""}
+                      onChange={(event) => {
+                        const href = event.target.value;
+                        const previousDestination = block.ctaHref
+                          ? getAboutEditorialCtaSlug(safeLocale, block.ctaHref)
+                          : undefined;
+                        const destination = ABOUT_EDITORIAL_CTA_SLUGS.find(
+                          (candidate) => getAboutEditorialCtaHref(safeLocale, candidate) === href,
+                        );
+                        const previousDefaultLabel = previousDestination
+                          ? publicEditorialContent[safeLocale][previousDestination].title
+                          : undefined;
+                        const nextDefaultLabel = destination
+                          ? publicEditorialContent[safeLocale][destination].title
+                          : undefined;
+                        const shouldRefreshDefaultLabel = !block.ctaLabel || block.ctaLabel === previousDefaultLabel;
+                        setEditorialBlock(editorial.sectionId, {
+                          ...block,
+                          ctaHref: href || undefined,
+                          ctaLabel: href
+                            ? shouldRefreshDefaultLabel ? nextDefaultLabel : block.ctaLabel
+                            : undefined,
+                        });
+                      }}
+                      className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"
+                    >
+                      <option value="">CTA gösterme</option>
+                      {ABOUT_EDITORIAL_CTA_SLUGS.map((destination) => (
+                        <option key={destination} value={getAboutEditorialCtaHref(safeLocale, destination)}>
+                          {publicEditorialContent[safeLocale][destination].title}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>

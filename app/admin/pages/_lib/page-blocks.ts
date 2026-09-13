@@ -47,6 +47,8 @@ export type PageContentBlock =
       heading?: string;
       body?: string;
       content?: string;
+      ctaLabel?: string;
+      ctaHref?: string;
       media?: PageBlockMedia;
       editorial?: AboutEditorialSectionPresentation;
     }
@@ -275,6 +277,8 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
     heading: optionalString(raw.heading),
     body: optionalString(raw.body),
     content: optionalString(raw.content),
+    ctaLabel: optionalString(raw.ctaLabel),
+    ctaHref: optionalString(raw.ctaHref),
     media: normalizeMedia(raw.media),
     editorial: normalizeAboutEditorialPresentation(raw.editorial),
   };
