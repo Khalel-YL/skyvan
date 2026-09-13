@@ -85,22 +85,23 @@
 .sv-text-link { display: inline-flex; gap: 1rem; align-items: center; min-height: 44px; padding-block: .5rem; border-bottom: 1px solid var(--public-border-strong); font-size: .875rem; line-height: 1.5; color: var(--public-text); }
 .sv-text-link:hover { border-color: currentColor; }
 .sv-header { position: sticky; top: 0; z-index: 40; background: var(--public-bg); border-bottom: 1px solid var(--public-border); }
-.sv-header-row { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: 88px; }
-.sv-brand { display: inline-flex; align-items: center; gap: .65rem; flex: none; min-height: 44px; color: var(--public-text); }
+.sv-header-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 1.5rem; min-height: 72px; }
+.sv-brand { display: inline-flex; align-items: center; justify-self: start; gap: .65rem; min-height: 44px; color: var(--public-text); }
 .sv-brand > span { font-family: var(--font-skyvan), Arial, sans-serif; font-size: 1rem; letter-spacing: .18em; font-weight: 600; }
-.sv-desktop-nav { display: flex; gap: 1.8rem; font-size: .875rem; }
+.sv-desktop-nav { display: flex; justify-self: center; gap: 1.8rem; font-size: .8125rem; }
 .sv-desktop-nav a { display: inline-flex; align-items: center; min-height: 44px; border-bottom: 1px solid transparent; }
 .sv-desktop-nav a:hover, .sv-desktop-nav a[aria-current] { border-color: currentColor; }
-.sv-header-tools { display: flex; align-items: center; gap: .65rem; }
-.sv-theme-control { position: relative; }
-.sv-theme-trigger { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 44px; border: 1px solid var(--public-border); border-radius: 99px; padding: .45rem .75rem; background: var(--public-surface); color: var(--public-text); font-size: .75rem; }
-.sv-theme-trigger svg:last-child { color: var(--public-muted); }
-.sv-theme-menu { position: absolute; z-index: 60; top: calc(100% + .5rem); right: 0; min-width: 9.5rem; padding: .35rem; border: 1px solid var(--public-border); border-radius: 14px; background: var(--public-surface-strong); box-shadow: 0 18px 45px color-mix(in srgb, #000 20%, transparent); }
-.sv-theme-menu button { display: flex; align-items: center; gap: .65rem; width: 100%; min-height: 44px; border-radius: 10px; padding: .55rem .7rem; color: var(--public-muted); font-size: .8125rem; text-align: left; }
-.sv-theme-menu button:hover, .sv-theme-menu button:focus-visible { background: var(--public-subtle); color: var(--public-text); }
-.sv-theme-menu button.is-active { background: var(--public-accent); color: var(--public-accent-text); }
+.sv-header-tools { display: flex; align-items: center; justify-self: end; gap: .5rem; }
+.sv-theme-control { display: inline-flex; align-items: center; padding: 2px; border: 1px solid var(--public-border); border-radius: 99px; background: var(--public-surface); }
+.sv-theme-control button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; color: var(--public-muted); transition: background-color .2s, color .2s; }
+.sv-theme-control button:hover, .sv-theme-control button:focus-visible { color: var(--public-text); }
+.sv-theme-control button.is-active { background: var(--public-accent); color: var(--public-accent-text); }
 .sv-language-switcher { display: inline-flex; padding: 2px; border: 1px solid var(--public-border); border-radius: 99px; background: var(--public-surface); font-size: .6875rem; font-weight: 500; }
-.sv-language-switcher a { display: inline-flex; align-items: center; justify-content: center; min-width: 2.15rem; min-height: 44px; border-radius: 99px; padding-inline: .45rem; }
+.sv-language-switcher a { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; border-radius: 99px; padding-inline: .4rem; color: var(--public-muted); transition: background-color .2s, color .2s; }
+.sv-language-switcher a:hover, .sv-language-switcher a:focus-visible { color: var(--public-text); }
+.sv-language-switcher a.is-active { background: var(--public-accent); color: var(--public-accent-text); }
+.sv-header-project .sv-button { min-height: 38px; padding: .55rem .95rem; }
+.sv-header-project .sv-status { display: none; }
 .sv-menu-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--public-border); border-radius: 50%; }
 .sv-mobile-menu, .sv-mobile-menu[hidden] { display: none; }
 .sv-skip { position: fixed; top: .5rem; left: 1rem; transform: translateY(-150%); background: var(--public-accent); color: var(--public-accent-text); padding: .8rem 1rem; z-index: 100; }
@@ -330,10 +331,6 @@
 @media (min-width: 1600px) {
   .sv-hero-bottom { left: calc((100% - 1440px) / 2); }
 }
-@media (min-width: 1280px) {
-  .sv-theme-trigger { width: 44px; padding: 0; }
-  .sv-theme-trigger > span, .sv-theme-trigger > svg:last-child { display: none; }
-}
 @media (min-width: 768px) {
   .sv-hero-bottom { right: 1.5rem; width: auto; }
   .sv-hero-bottom > span:last-child { box-shadow: .75rem 0 0 var(--public-bg); }
@@ -341,12 +338,12 @@
 @media (max-width: 1279px) {
   .sv-desktop-nav, .sv-desktop-tool { display: none; }
   .sv-menu-toggle { display: inline-flex; }
-  .sv-header-row { min-height: 76px; }
+  .sv-header-row { display: flex; justify-content: space-between; min-height: 76px; }
   .sv-mobile-menu { display: block; border-top: 1px solid var(--public-border); }
   .sv-mobile-menu nav { display: grid; padding-block: 1rem; }
   .sv-mobile-menu nav a { padding-block: .8rem; font-size: 1rem; }
   .sv-mobile-tools { display: flex; gap: 1rem; justify-content: space-between; flex-wrap: wrap; padding-block: 1rem 1.5rem; border-top: 1px solid var(--public-border); }
-  .sv-mobile-tools .sv-theme-menu { right: auto; left: 0; }
+  .sv-mobile-tools .sv-theme-control button { width: 44px; height: 44px; }
   .sv-section-heading { gap: 2rem; }
   .sv-hero { min-height: 36rem; }
   .sv-hero-content h1 { max-width: 48%; }
@@ -376,7 +373,7 @@
   .sv-brand { gap: .4rem; }
   .sv-brand > span { font-size: .8125rem; }
   .sv-header-tools { gap: .5rem; }
-  .sv-language-switcher a { min-width: 2rem; padding-inline: .35rem; }
+  .sv-language-switcher a { min-width: 36px; min-height: 36px; padding-inline: .35rem; }
   .sv-hero { display: flex; flex-direction: column; aspect-ratio: auto; min-height: 0; padding-bottom: 0; }
   .sv-hero-content { order: 0; padding-top: 3rem; }
   .sv-hero-content h1 { max-width: none; font-size: clamp(2.65rem, 9vw, 4.2rem); }

@@ -33,7 +33,7 @@ export function Header(): React.JSX.Element {
         <div className="sv-header-tools">
           <div className="sv-desktop-tool"><ThemeToggle locale={locale} /></div>
           <span onClick={() => setMenuOpen(false)}><LanguageSwitcher /></span>
-          <div className="sv-desktop-tool"><PublicProjectAction locale={locale} /></div>
+          <div className="sv-desktop-tool sv-header-project"><PublicProjectAction locale={locale} /></div>
           <button ref={toggle} type="button" className="sv-menu-toggle" aria-label={menuOpen ? (locale === "tr" ? "Menüyü kapat" : "Close menu") : (locale === "tr" ? "Menüyü aç" : "Open menu")} aria-expanded={menuOpen} aria-controls="public-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
         </div>
       </div>
