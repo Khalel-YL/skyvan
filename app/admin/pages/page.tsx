@@ -227,6 +227,7 @@ export default async function PagesPage({ searchParams }: Props) {
       entityId: string;
       baseTitle: string;
       locales: typeof filteredRows;
+      allLocales: typeof rows;
     }>
   >((acc, row) => {
     const found = acc.find((item) => item.entityId === row.entityId);
@@ -240,6 +241,7 @@ export default async function PagesPage({ searchParams }: Props) {
       entityId: row.entityId,
       baseTitle: row.title,
       locales: [row],
+      allLocales: rows.filter((candidate) => candidate.entityId === row.entityId),
     });
 
     return acc;
@@ -453,9 +455,9 @@ export default async function PagesPage({ searchParams }: Props) {
                   <div className="flex items-center gap-2">
                     <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
                       <Globe className="h-3.5 w-3.5" />
-                      {group.locales.length} locale
+                      {group.allLocales.length} locale
                     </div>
-                    {getMissingPageLocales(group.locales).map((missingLocale) => (
+                    {getMissingPageLocales(group.allLocales).map((missingLocale) => (
                         <span
                           key={missingLocale}
                           className="inline-flex items-center rounded-full border border-amber-900/60 bg-amber-950/40 px-3 py-1 text-xs text-amber-200"
@@ -464,12 +466,12 @@ export default async function PagesPage({ searchParams }: Props) {
                         </span>
                       ))}
 
-                    {getMissingPageLocales(group.locales).length > 0 ? (
+                    {getMissingPageLocales(group.allLocales).length > 0 ? (
                       <Link
                         href={`/admin/pages?edit=new&entityId=${encodeURIComponent(
                           group.entityId,
-                        )}&seedLocale=${getFirstMissingPageLocale(group.locales)}&seedTitle=${encodeURIComponent(group.baseTitle)}&seedSlug=${encodeURIComponent(
-                          getSafeSlug(group.locales[0]?.slug ?? null, group.baseTitle),
+                        )}&seedLocale=${getFirstMissingPageLocale(group.allLocales)}&seedTitle=${encodeURIComponent(group.baseTitle)}&seedSlug=${encodeURIComponent(
+                          getSafeSlug(group.allLocales[0]?.slug ?? null, group.baseTitle),
                         )}`}
                         className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
                       >
