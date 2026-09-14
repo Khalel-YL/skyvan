@@ -160,6 +160,7 @@ export default function AddPageDrawer({
     nextParams.delete("entityId");
     nextParams.delete("seedLocale");
     nextParams.delete("seedTitle");
+    nextParams.delete("seedSlug");
 
     const nextQuery = nextParams.toString();
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
