@@ -70,6 +70,18 @@ type MediaPickerRow = {
   contentJson: unknown;
 };
 
+const SUPPORTED_PAGE_LOCALES = ["tr", "en"] as const;
+
+function getMissingPageLocales(rows: Array<{ locale: string }>) {
+  return SUPPORTED_PAGE_LOCALES.filter(
+    (supportedLocale) => !rows.some((row) => row.locale === supportedLocale),
+  );
+}
+
+function getFirstMissingPageLocale(rows: Array<{ locale: string }>) {
+  return getMissingPageLocales(rows)[0] ?? "en";
+}
+
 function normalizePublishFilter(value: string) {
   if (value === "published" || value === "draft") {
     return value;
@@ -443,12 +455,7 @@ export default async function PagesPage({ searchParams }: Props) {
                       <Globe className="h-3.5 w-3.5" />
                       {group.locales.length} locale
                     </div>
-                    {(["tr", "en"] as const)
-                      .filter(
-                        (supportedLocale) =>
-                          !group.locales.some((row) => row.locale === supportedLocale),
-                      )
-                      .map((missingLocale) => (
+                    {getMissingPageLocales(group.locales).map((missingLocale) => (
                         <span
                           key={missingLocale}
                           className="inline-flex items-center rounded-full border border-amber-900/60 bg-amber-950/40 px-3 py-1 text-xs text-amber-200"
@@ -457,14 +464,11 @@ export default async function PagesPage({ searchParams }: Props) {
                         </span>
                       ))}
 
-                    {(["tr", "en"] as const).some(
-                      (supportedLocale) =>
-                        !group.locales.some((row) => row.locale === supportedLocale),
-                    ) ? (
+                    {getMissingPageLocales(group.locales).length > 0 ? (
                       <Link
                         href={`/admin/pages?edit=new&entityId=${encodeURIComponent(
                           group.entityId,
-                        )}&seedLocale=en&seedTitle=${encodeURIComponent(group.baseTitle)}&seedSlug=${encodeURIComponent(
+                        )}&seedLocale=${getFirstMissingPageLocale(group.locales)}&seedTitle=${encodeURIComponent(group.baseTitle)}&seedSlug=${encodeURIComponent(
                           getSafeSlug(group.locales[0]?.slug ?? null, group.baseTitle),
                         )}`}
                         className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
