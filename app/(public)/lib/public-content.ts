@@ -9,6 +9,7 @@ import {
   isAboutEditorialPage,
   normalizeAboutEditorialPageOverride,
   normalizePublicSupplementaryBlockPresentation,
+  validateAboutEditorialContract,
 } from "@/app/lib/public-editorial-cms";
 
 import {
@@ -407,6 +408,19 @@ function pageFromAdminRow(
 
   const content = getContentObject(row.contentJson);
   const rawBlocks = Array.isArray(content?.blocks) ? content.blocks : [];
+
+  if (
+    isAboutEditorialPage(locale, slug) &&
+    validateAboutEditorialContract({
+      locale,
+      slug,
+      editorialPage: content?.editorialPage,
+      blocks: rawBlocks,
+    }).length > 0
+  ) {
+    return null;
+  }
+
   const blocks = rawBlocks.map(sanitizeBlock).filter(Boolean) as PublicBlock[];
 
   if (blocks.length === 0 && !options?.includeDraft) {

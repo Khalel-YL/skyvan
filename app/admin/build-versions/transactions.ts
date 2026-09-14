@@ -303,8 +303,8 @@ export async function persistBuildVersionMutation(input: PersistBuildVersionInpu
     const updatedBuild = updatedBuildRows[0] ?? null;
 
     if (!updatedBuild || !previousBuildState) {
-      throw new BuildVersionMutationError("Current version bağı güncellenemedi.", {
-        form: "Current version bağı kaydedilemedi.",
+      throw new BuildVersionMutationError("Güncel versiyon bağı güncellenemedi.", {
+        form: "Güncel versiyon bağı kaydedilemedi.",
       });
     }
 
@@ -378,8 +378,8 @@ export async function persistCurrentVersionMutation(input: {
     }
 
     if (versionRow.buildId !== input.buildId) {
-      throw new BuildCurrentVersionMutationError("Seçilen version bu build’e ait değil.", {
-        form: "Build ve version bağı uyuşmuyor.",
+      throw new BuildCurrentVersionMutationError("Seçilen versiyon bu build’e ait değil.", {
+        form: "Build ve versiyon bağı uyuşmuyor.",
       });
     }
 
@@ -403,8 +403,8 @@ export async function persistCurrentVersionMutation(input: {
     const updatedBuild = updatedBuildRows[0] ?? null;
 
     if (!updatedBuild) {
-      throw new BuildCurrentVersionMutationError("Current version güncellenemedi.", {
-        form: "Current version bağı kaydedilemedi.",
+      throw new BuildCurrentVersionMutationError("Güncel versiyon güncellenemedi.", {
+        form: "Güncel versiyon bağı kaydedilemedi.",
       });
     }
 

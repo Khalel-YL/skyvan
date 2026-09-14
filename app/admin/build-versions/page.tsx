@@ -225,8 +225,8 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
     label: `${row.shortCode} · ${row.modelSlug ?? "model yok"}`,
     meta: [
       row.currentVersionNumber
-        ? `Current: v${row.currentVersionNumber}`
-        : "Current version bağlı değil",
+        ? `Güncel: v${row.currentVersionNumber}`
+        : "Güncel version bağlı değil",
       `Toplam version: ${(versionsByBuildId.get(row.id) ?? []).length}`,
       row.updatedAt ? `Güncelleme: ${formatDate(row.updatedAt)}` : null,
     ]
@@ -392,7 +392,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                   <th className="px-5 py-4 font-medium">Build</th>
                   <th className="px-5 py-4 font-medium">Model</th>
                   <th className="px-5 py-4 font-medium">Toplam version</th>
-                  <th className="px-5 py-4 font-medium">Current version</th>
+                  <th className="px-5 py-4 font-medium">Güncel version</th>
                   <th className="px-5 py-4 font-medium">Durum</th>
                   <th className="px-5 py-4 font-medium">İşlem</th>
                 </tr>
@@ -488,7 +488,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                   <th className="px-5 py-4 font-medium">Build</th>
                   <th className="px-5 py-4 font-medium">Versiyon</th>
                   <th className="px-5 py-4 font-medium">Paket</th>
-                  <th className="px-5 py-4 font-medium">Current bağ</th>
+                  <th className="px-5 py-4 font-medium">Güncel bağ</th>
                   <th className="px-5 py-4 font-medium">Tarih</th>
                   <th className="px-5 py-4 font-medium">İşlem</th>
                 </tr>
@@ -535,7 +535,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
                               : "border-zinc-800 bg-zinc-900 text-zinc-400"
                           }`}
                         >
-                          {isCurrent ? "Current version" : "Pasif version"}
+                          {isCurrent ? "Güncel versiyon" : "Pasif versiyon"}
                         </span>
                       </td>
 

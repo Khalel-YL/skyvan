@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, CheckCircle2, Layers3, Waypoints, X } from "lucide-react";
 
@@ -8,7 +8,6 @@ import { saveBuildVersion } from "./actions";
 import {
   initialBuildVersionFormState,
   type BuildVersionFormMode,
-  type BuildVersionFormState,
 } from "./types";
 
 type BuildOption = {
@@ -37,19 +36,6 @@ type AddBuildVersionDrawerProps = {
   initialBuildId?: string;
 };
 
-function getFieldValue(
-  state: BuildVersionFormState,
-  key:
-    | "mode"
-    | "buildId"
-    | "shortCode"
-    | "modelId"
-    | "packageId"
-    | "stateSnapshot",
-) {
-  return state.values?.[key] ?? initialBuildVersionFormState.values?.[key] ?? "";
-}
-
 export function AddBuildVersionDrawer({
   buildOptions,
   modelOptions,
@@ -57,17 +43,31 @@ export function AddBuildVersionDrawer({
   initialBuildId = "",
 }: AddBuildVersionDrawerProps) {
   const router = useRouter();
+  const initialMode: BuildVersionFormMode =
+    initialBuildId && buildOptions.some((option) => option.id === initialBuildId)
+      ? "existing_build"
+      : "new_build";
+
   const [state, formAction, isPending] = useActionState(
     saveBuildVersion,
     {
       ...initialBuildVersionFormState,
       values: {
         ...initialBuildVersionFormState.values,
-        mode: initialBuildId ? "existing_build" : "new_build",
-        buildId: initialBuildId,
+        mode: initialMode,
+        buildId: initialMode === "existing_build" ? initialBuildId : "",
       },
     },
   );
+
+  const [selectedMode, setSelectedMode] = useState<BuildVersionFormMode>(initialMode);
+  const [selectedBuildId, setSelectedBuildId] = useState(
+    initialMode === "existing_build" ? initialBuildId : "",
+  );
+  const [selectedShortCode, setSelectedShortCode] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [selectedPackageId, setSelectedPackageId] = useState("");
+  const [selectedSnapshot, setSelectedSnapshot] = useState("");
 
   useEffect(() => {
     if (state.ok) {
@@ -75,16 +75,6 @@ export function AddBuildVersionDrawer({
       router.refresh();
     }
   }, [router, state.ok]);
-
-  const selectedMode = String(
-    getFieldValue(state, "mode") || (initialBuildId ? "existing_build" : "new_build"),
-  ) as BuildVersionFormMode;
-
-  const selectedModelId = String(getFieldValue(state, "modelId") ?? "");
-  const selectedBuildId = String(getFieldValue(state, "buildId") ?? initialBuildId);
-  const selectedPackageId = String(getFieldValue(state, "packageId") ?? "");
-  const selectedShortCode = String(getFieldValue(state, "shortCode") ?? "");
-  const selectedSnapshot = String(getFieldValue(state, "stateSnapshot") ?? "");
 
   const selectedBuild = buildOptions.find((item) => item.id === selectedBuildId) ?? null;
 
@@ -100,6 +90,50 @@ export function AddBuildVersionDrawer({
       (item) => item.modelId === null || item.modelId === resolvedModelId,
     );
   }, [packageOptions, resolvedModelId]);
+
+  function selectMode(nextMode: BuildVersionFormMode) {
+    setSelectedMode(nextMode);
+    setSelectedPackageId("");
+
+    if (nextMode === "new_build") {
+      setSelectedBuildId("");
+      return;
+    }
+
+    setSelectedShortCode("");
+    setSelectedModelId("");
+  }
+
+  function selectModel(nextModelId: string) {
+    setSelectedModelId(nextModelId);
+
+    if (
+      selectedPackageId &&
+      !packageOptions.some(
+        (option) =>
+          option.id === selectedPackageId &&
+          (option.modelId === null || option.modelId === nextModelId),
+      )
+    ) {
+      setSelectedPackageId("");
+    }
+  }
+
+  function selectBuild(nextBuildId: string) {
+    setSelectedBuildId(nextBuildId);
+    const nextBuild = buildOptions.find((option) => option.id === nextBuildId);
+
+    if (
+      selectedPackageId &&
+      !packageOptions.some(
+        (option) =>
+          option.id === selectedPackageId &&
+          (option.modelId === null || option.modelId === nextBuild?.modelId),
+      )
+    ) {
+      setSelectedPackageId("");
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -148,7 +182,8 @@ export function AddBuildVersionDrawer({
                     type="radio"
                     name="mode"
                     value="new_build"
-                    defaultChecked={selectedMode === "new_build"}
+                    checked={selectedMode === "new_build"}
+                    onChange={() => selectMode("new_build")}
                     className="sr-only"
                   />
                   <div className="text-sm font-medium text-white">Yeni build</div>
@@ -168,7 +203,8 @@ export function AddBuildVersionDrawer({
                     type="radio"
                     name="mode"
                     value="existing_build"
-                    defaultChecked={selectedMode === "existing_build"}
+                    checked={selectedMode === "existing_build"}
+                    onChange={() => selectMode("existing_build")}
                     disabled={buildOptions.length === 0}
                     className="sr-only"
                   />
@@ -200,7 +236,8 @@ export function AddBuildVersionDrawer({
                     </label>
                     <input
                       name="shortCode"
-                      defaultValue={selectedShortCode}
+                      value={selectedShortCode}
+                      onChange={(event) => setSelectedShortCode(event.target.value)}
                       placeholder="PSA-L2-1"
                       className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"
                     />
@@ -217,7 +254,8 @@ export function AddBuildVersionDrawer({
                     </label>
                     <select
                       name="modelId"
-                      defaultValue={selectedModelId}
+                      value={selectedModelId}
+                      onChange={(event) => selectModel(event.target.value)}
                       className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
                     >
                       <option value="">Model seç</option>
@@ -248,7 +286,8 @@ export function AddBuildVersionDrawer({
                   </label>
                   <select
                     name="buildId"
-                    defaultValue={selectedBuildId}
+                    value={selectedBuildId}
+                    onChange={(event) => selectBuild(event.target.value)}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
                   >
                     <option value="">Build seç</option>
@@ -287,7 +326,8 @@ export function AddBuildVersionDrawer({
                   </label>
                   <select
                     name="packageId"
-                    defaultValue={selectedPackageId}
+                    value={selectedPackageId}
+                    onChange={(event) => setSelectedPackageId(event.target.value)}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition focus:border-zinc-700"
                   >
                     <option value="">Paket yok</option>
@@ -325,7 +365,8 @@ export function AddBuildVersionDrawer({
                   </label>
                   <textarea
                     name="stateSnapshot"
-                    defaultValue={selectedSnapshot}
+                    value={selectedSnapshot}
+                    onChange={(event) => setSelectedSnapshot(event.target.value)}
                     rows={8}
                     placeholder={'{"note":"ikinci versiyon denemesi"} veya kısa düz not'}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-700"

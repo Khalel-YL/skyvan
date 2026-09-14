@@ -94,7 +94,7 @@ export async function saveBuildVersion(
 
     return {
       ok: true,
-      message: `${result.shortCode} · v${result.versionNumber} oluşturuldu ve current version bağı güncellendi.`,
+      message: `${result.shortCode} · v${result.versionNumber} oluşturuldu ve güncel versiyon bağı güncellendi.`,
       values: {
         mode: "new_build",
         buildId: "",
@@ -121,7 +121,7 @@ export async function saveBuildVersion(
       message: getActionErrorMessage(error),
       values: parsed.input.values,
       errors: {
-        form: "Build, version, current bağ ve audit kaydı tek işlemde tamamlanamadı.",
+        form: "Build, versiyon, güncel bağ ve audit kaydı tek işlemde tamamlanamadı.",
       },
     };
   }
@@ -150,7 +150,7 @@ export async function setBuildCurrentVersion(
       ok: false,
       message: getActionErrorMessage(error),
       errors: {
-        form: "Current version yazımı için geçerli admin audit oturumu gerekir.",
+        form: "Güncel versiyon yazımı için geçerli admin audit oturumu gerekir.",
       },
     };
   }
@@ -166,7 +166,7 @@ export async function setBuildCurrentVersion(
 
     return {
       ok: true,
-      message: `Current version v${result.versionNumber} olarak güncellendi.`,
+      message: `Güncel versiyon v${result.versionNumber} olarak güncellendi.`,
     };
   } catch (error) {
     console.error("setBuildCurrentVersion error:", error);
@@ -181,9 +181,9 @@ export async function setBuildCurrentVersion(
 
     return {
       ok: false,
-      message: "Current version güncellenemedi.",
+      message: "Güncel versiyon güncellenemedi.",
       errors: {
-        form: "Current version ve audit kaydı tek işlemde tamamlanamadı.",
+        form: "Güncel versiyon ve audit kaydı tek işlemde tamamlanamadı.",
       },
     };
   }

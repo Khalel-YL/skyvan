@@ -83,7 +83,7 @@ function parseContentJson(value: unknown): PageContentJson {
 
 function isPublished(contentJson: unknown) {
   const parsed = parseContentJson(contentJson);
-  return parsed.isPublished !== false;
+  return parsed.isPublished === true;
 }
 
 function countBlocks(contentJson: unknown) {

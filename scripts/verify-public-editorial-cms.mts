@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  ABOUT_EDITORIAL_SECTION_IDS,
   getAboutEditorialCtaHref,
   getAboutEditorialCtaSlug,
   mergeAboutEditorialSections,
@@ -55,6 +56,17 @@ assert.ok(
 );
 assert.ok(
   validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [
+      { type: "text", editorial },
+      { type: "text", editorial },
+    ],
+  }).some((error) => error.includes("birden fazla")),
+);
+assert.ok(
+  validateAboutEditorialContract({
     locale: "de",
     slug: "hakkimizda",
     editorialPage: undefined,
@@ -103,6 +115,20 @@ assert.equal(
   ).length,
   0,
 );
+
+const completeFallback = ABOUT_EDITORIAL_SECTION_IDS.map((id) => ({
+  id,
+  heading: `${id} başlık`,
+  body: `${id} gövde`,
+}));
+const thinMerge = mergeAboutEditorialSections(
+  completeFallback,
+  [{ editorial: { ...editorial, sectionId: "why-skyvan-exists" }, heading: "Yeni başlık" }],
+  "tr",
+);
+assert.equal(thinMerge.length, ABOUT_EDITORIAL_SECTION_IDS.length);
+assert.equal(thinMerge[0]?.heading, "Yeni başlık");
+assert.equal(thinMerge[1]?.id, "hands-on-build-experience");
 
 const cms = {
   id: "supplemental-12345678",
@@ -155,4 +181,4 @@ assert.ok(
   }).some((error) => error.includes("yönetilen medya")),
 );
 
-console.log("20 editorial CMS contract assertions passed");
+console.log("24 editorial CMS contract assertions passed");
