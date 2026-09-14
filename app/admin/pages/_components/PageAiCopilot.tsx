@@ -7,6 +7,7 @@ import type { PageContentBlock } from "../_lib/page-blocks";
 type PageAiCopilotProps = {
   title: string;
   description: string;
+  locale: string;
   seoTitle: string;
   seoDescription: string;
   onInsertHero: (block: PageContentBlock) => void;
@@ -17,47 +18,59 @@ type PageAiCopilotProps = {
 export function PageAiCopilot({
   title,
   description,
+  locale,
   seoTitle,
   seoDescription,
   onInsertHero,
   onApplySeo,
   onApplyStructure,
 }: PageAiCopilotProps) {
-  const safeTitle = title.trim() || "Skyvan sayfası";
+  const isEnglish = locale.trim().toLowerCase().startsWith("en");
+  const publicLocale = isEnglish ? "en" : "tr";
+  const safeTitle = title.trim() || (isEnglish ? "Skyvan page" : "Skyvan sayfası");
   const safeDescription =
-    description.trim() || "Skyvan yönetim panelinden hazırlanan kontrollü public içerik.";
+    description.trim() ||
+    (isEnglish
+      ? "Controlled public content prepared in the Skyvan admin panel."
+      : "Skyvan yönetim panelinden hazırlanan kontrollü public içerik.");
   const heroSuggestion: PageContentBlock = {
     type: "hero",
     heading: safeTitle,
-    subtext: "Skyvan karar sistemi",
+    subtext: isEnglish ? "Skyvan decision system" : "Skyvan karar sistemi",
     body: safeDescription,
-    ctaLabel: "İletişime geç",
-    ctaHref: "/tr/proje-baslat",
+    ctaLabel: isEnglish ? "Contact us" : "İletişime geç",
+    ctaHref: `/${publicLocale}/iletisim`,
   };
   const seoSuggestion = {
     seoTitle: (seoTitle.trim() || `${safeTitle} | Skyvan`).slice(0, 90),
     seoDescription: (
       seoDescription.trim() ||
-      `${safeTitle} hakkında Skyvan yaklaşımı, karar bağlamı ve üretim hazırlığı bilgilerini keşfedin.`
+      (isEnglish
+        ? `${safeTitle}: Skyvan's approach, decision context and production-readiness notes.`
+        : `${safeTitle} hakkında Skyvan yaklaşımı, karar bağlamı ve üretim hazırlığı bilgilerini keşfedin.`)
     ).slice(0, 170),
   };
   const structureSuggestion: PageContentBlock[] = [
     heroSuggestion,
     {
       type: "text",
-      heading: "Karar bağlamı",
-      body: "Bu bölüm sayfanın ana anlatımını, hedef kullanıcıyı ve Skyvan'ın nasıl değer ürettiğini açıklar.",
+      heading: isEnglish ? "Decision context" : "Karar bağlamı",
+      body: isEnglish
+        ? "This section explains the page narrative, intended audience and how Skyvan creates value."
+        : "Bu bölüm sayfanın ana anlatımını, hedef kullanıcıyı ve Skyvan'ın nasıl değer ürettiğini açıklar.",
     },
     {
       type: "feature-list",
-      heading: "Öne çıkanlar",
-      items: ["Rota ve kullanım senaryosu", "Teknik hazırlık", "İnsan onayı"],
+      heading: isEnglish ? "Highlights" : "Öne çıkanlar",
+      items: isEnglish
+        ? ["Route and use case", "Technical readiness", "Human approval"]
+        : ["Rota ve kullanım senaryosu", "Teknik hazırlık", "İnsan onayı"],
     },
     {
       type: "cta",
-      heading: "Sonraki adım",
-      ctaLabel: "Proje Başlat",
-      ctaHref: "/tr/proje-baslat",
+      heading: isEnglish ? "Next step" : "Sonraki adım",
+      ctaLabel: isEnglish ? "Start a project" : "Proje Başlat",
+      ctaHref: `/${publicLocale}/proje-baslat`,
     },
   ];
 
