@@ -23,6 +23,8 @@ import {
 
 import AddPageDrawer from "./AddPageDrawer";
 import type { PageMediaPickerAsset } from "./_components/PageMediaPicker";
+import { isAboutEditorialPage, ABOUT_EDITORIAL_SECTION_IDS } from "@/app/lib/public-editorial-cms";
+
 import { deletePage, repairPageSlug } from "./actions";
 
 type SearchParamsInput =
@@ -34,6 +36,7 @@ type SearchParamsInput =
       entityId?: string;
       seedLocale?: string;
       seedTitle?: string;
+      seedSlug?: string;
     }>
   | {
       q?: string;
@@ -43,6 +46,7 @@ type SearchParamsInput =
       entityId?: string;
       seedLocale?: string;
       seedTitle?: string;
+      seedSlug?: string;
     }
   | undefined;
 
@@ -126,6 +130,7 @@ export default async function PagesPage({ searchParams }: Props) {
   const seedEntityId = String(resolvedSearchParams?.entityId ?? "").trim();
   const seedLocale = String(resolvedSearchParams?.seedLocale ?? "").trim();
   const seedTitle = String(resolvedSearchParams?.seedTitle ?? "").trim();
+  const seedSlug = String(resolvedSearchParams?.seedSlug ?? "").trim();
 
   const whereConditions = [eq(localizedContent.entityType, "page")];
 
@@ -240,7 +245,7 @@ export default async function PagesPage({ searchParams }: Props) {
           entityId: seedEntityId,
           locale: seedLocale || "en",
           title: seedTitle || "",
-          slug: seedTitle ? normalizeSlugText(seedTitle) : "",
+          slug: seedSlug || (seedTitle ? normalizeSlugText(seedTitle) : ""),
           description: "",
           seoTitle: "",
           seoDescription: "",
@@ -438,16 +443,36 @@ export default async function PagesPage({ searchParams }: Props) {
                       <Globe className="h-3.5 w-3.5" />
                       {group.locales.length} locale
                     </div>
+                    {(["tr", "en"] as const)
+                      .filter(
+                        (supportedLocale) =>
+                          !group.locales.some((row) => row.locale === supportedLocale),
+                      )
+                      .map((missingLocale) => (
+                        <span
+                          key={missingLocale}
+                          className="inline-flex items-center rounded-full border border-amber-900/60 bg-amber-950/40 px-3 py-1 text-xs text-amber-200"
+                        >
+                          {missingLocale} eksik
+                        </span>
+                      ))}
 
-                    <Link
-                      href={`/admin/pages?edit=new&entityId=${encodeURIComponent(
-                        group.entityId,
-                      )}&seedLocale=en&seedTitle=${encodeURIComponent(group.baseTitle)}`}
-                      className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
-                    >
-                      <Languages className="h-3.5 w-3.5" />
-                      Locale ekle
-                    </Link>
+                    {(["tr", "en"] as const).some(
+                      (supportedLocale) =>
+                        !group.locales.some((row) => row.locale === supportedLocale),
+                    ) ? (
+                      <Link
+                        href={`/admin/pages?edit=new&entityId=${encodeURIComponent(
+                          group.entityId,
+                        )}&seedLocale=en&seedTitle=${encodeURIComponent(group.baseTitle)}&seedSlug=${encodeURIComponent(
+                          getSafeSlug(group.locales[0]?.slug ?? null, group.baseTitle),
+                        )}`}
+                        className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                      >
+                        <Languages className="h-3.5 w-3.5" />
+                        Locale ekle
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
 
@@ -474,6 +499,9 @@ export default async function PagesPage({ searchParams }: Props) {
                         );
                         const safeSlug = getSafeSlug(row.slug, row.title);
                         const missingSlug = !String(row.slug ?? "").trim();
+                        const curatedSectionCount = isAboutEditorialPage(row.locale, safeSlug)
+                          ? ABOUT_EDITORIAL_SECTION_IDS.length
+                          : 0;
 
                         return (
                           <tr key={row.id} className="align-top">
@@ -538,9 +566,11 @@ export default async function PagesPage({ searchParams }: Props) {
                             </td>
 
                             <td className="px-4 py-4 text-xs text-zinc-400">
-                              {blocksCount > 0
-                                ? `${blocksCount} blok`
-                                : "Yapı tanımlı değil"}
+                              {curatedSectionCount > 0
+                                ? `${blocksCount} CMS + ${curatedSectionCount} küratörlü bölüm`
+                                : blocksCount > 0
+                                  ? `${blocksCount} blok`
+                                  : "Yapı tanımlı değil"}
                             </td>
 
                             <td className="px-4 py-4">
