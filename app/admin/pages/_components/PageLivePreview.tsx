@@ -102,16 +102,24 @@ export function PageLivePreview({
   blocks,
   isAboutEditorial,
 }: PageLivePreviewProps) {
+  if (pageId) {
+    return (
+      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+        <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">Kaydedilmiş taslak; gerçek public bileşenleri, fallback içeriği, blok sırası ve görünürlük kurallarıyla korumalı önizlemede gösterilir.</p>
+        <Link href={`/admin/pages/preview/${pageId}`} className="mt-4 inline-flex rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200 hover:border-zinc-500 hover:text-white">
+          Korumalı önizlemeyi aç
+        </Link>
+      </section>
+    );
+  }
+
   if (isAboutEditorial) {
     return (
       <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
         <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>
-        <p className="mt-2 text-xs leading-5 text-zinc-500">Küratörlü fallback, sıralama, görünürlük ve medya davranışı yalnızca korumalı kayıt önizlemesinde gerçek public bileşenleriyle gösterilir. Önce taslağı kaydedin.</p>
-        {pageId ? (
-          <Link href={`/admin/pages/preview/${pageId}`} className="mt-4 inline-flex rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200 hover:border-zinc-500 hover:text-white">
-            Korumalı önizlemeyi aç
-          </Link>
-        ) : <p className="mt-4 text-xs text-amber-300" role="status">Önizleme bağlantısı kayıt ilk kez kaydedildikten sonra açılır.</p>}
+        <p className="mt-2 text-xs leading-5 text-zinc-500">İlk kayıttan sonra gerçek public bileşenleriyle korumalı önizleme açılır.</p>
+        <p className="mt-4 text-xs text-amber-300" role="status">Önizleme bağlantısı kayıt ilk kez kaydedildikten sonra açılır.</p>
       </section>
     );
   }

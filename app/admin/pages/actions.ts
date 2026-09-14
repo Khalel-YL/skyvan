@@ -28,8 +28,10 @@ import {
   ABOUT_EDITORIAL_SLUG,
   type AboutEditorialPageOverride,
   type AboutEditorialSectionPresentation,
+  type PublicSupplementaryBlockPresentation,
   normalizeAboutEditorialPageOverride,
   normalizeAboutEditorialPresentation,
+  normalizePublicSupplementaryBlockPresentation,
   validateAboutEditorialContract,
 } from "@/app/lib/public-editorial-cms";
 
@@ -86,6 +88,7 @@ type PageBlock = {
     surfaceSlot?: PageMediaSurfaceSlot;
   };
   editorial?: AboutEditorialSectionPresentation;
+  cms?: PublicSupplementaryBlockPresentation;
 };
 
 type PageMediaSurfaceSlot =
@@ -398,13 +401,13 @@ function sanitizeBlock(value: unknown): PageBlock | null {
   }
 
   const items = normalizeItems(raw.items);
-  if (items) {
-    block.items = items;
+  if (type === "feature-list") {
+    block.items = items ?? [];
   }
 
   const stats = normalizeStats(raw.stats);
-  if (stats) {
-    block.stats = stats;
+  if (type === "stats") {
+    block.stats = stats ?? [];
   }
 
   if (isNonEmptyString(raw.ctaLabel)) {
@@ -423,6 +426,11 @@ function sanitizeBlock(value: unknown): PageBlock | null {
   const editorial = normalizeAboutEditorialPresentation(raw.editorial);
   if (editorial && type === "text") {
     block.editorial = editorial;
+  }
+
+  const cms = normalizePublicSupplementaryBlockPresentation(raw.cms);
+  if (cms && type !== "hero") {
+    block.cms = cms;
   }
 
   return block;

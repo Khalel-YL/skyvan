@@ -1,6 +1,9 @@
 import { getCanonicalPublicSlug, type PublicLocale } from "./public-routing";
 import type { PublicMediaSlotName } from "./public-media-surface";
-import type { AboutEditorialPageOverride } from "@/app/lib/public-editorial-cms";
+import type {
+  AboutEditorialPageOverride,
+  PublicSupplementaryBlockPresentation,
+} from "@/app/lib/public-editorial-cms";
 
 import { publicLaunchContent } from "./public-launch-copy";
 import { curatedPublicSlugs, publicEditorialContent } from "./public-editorial-content";
@@ -45,7 +48,7 @@ export type PublicBlockMedia = {
   fit?: "contain" | "cover";
 };
 
-export type PublicBlock =
+type PublicBlockDefinition =
   | {
       type: "hero";
       heading: string;
@@ -93,6 +96,10 @@ export type PublicBlock =
       media?: PublicBlockMedia;
       editorial?: PublicEditorialPresentation;
     };
+
+export type PublicBlock = PublicBlockDefinition & {
+  cms?: PublicSupplementaryBlockPresentation;
+};
 
 export type PublicPageContent = {
   locale: PublicLocale;

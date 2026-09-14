@@ -228,3 +228,21 @@ This document must be updated
 - TECH_STACK.md
 - MODULE_MAP.md
 - SYSTEM_BLUEPRINT.md
+
+---
+
+# Public Editorial CMS
+
+The Public Editorial CMS extends the existing `localized_content.content_json` JSONB contract.
+
+Current controlled capabilities:
+
+- Turkish and English About page overlays preserve curated fallback content.
+- Eight canonical About sections have stable semantic identities.
+- Editors can override copy, order, visibility, presentation and allowlisted CTA destinations.
+- Supplementary text, feature-list, stats and CTA blocks have stable CMS identities.
+- Supplementary blocks support ordering, visibility and controlled layout variants.
+- Managed supplementary media remains disabled until semantic approval and usage tracking are complete.
+- Stored Admin previews render through the real public page renderer and include drafts only inside the protected Admin boundary.
+
+No database migration is required for this slice. Invalid or unpublished CMS data continues to resolve to typed public fallback content.

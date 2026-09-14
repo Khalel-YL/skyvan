@@ -1056,6 +1056,8 @@ export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
           (block) =>
             block.type !== "hero" &&
             !("editorial" in block && block.editorial) &&
+            (page.slug !== "hakkimizda" || Boolean(block.cms)) &&
+            block.cms?.visible !== false &&
             isCustomerFacingEditorialBlock(block),
         )
       : [];
@@ -1064,7 +1066,11 @@ export function PublicPageRenderer({ page }: { page: PublicPageContent }) {
       <PublicEditorialPage page={page}>
         {publishedBlocks.length > 0
           ? publishedBlocks.map((block, index) => (
-              <div key={`${block.type}:${index}`}>
+              <div
+                key={block.cms?.id ?? `${block.type}:${index}`}
+                className={block.cms ? `sv-cms-block sv-cms-block-${block.cms.layout}` : undefined}
+                data-cms-block-id={block.cms?.id}
+              >
                 {renderBlock(block, page, index, surfaces)}
               </div>
             ))

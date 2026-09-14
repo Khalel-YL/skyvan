@@ -5,6 +5,7 @@ import {
   getAboutEditorialCtaSlug,
   mergeAboutEditorialSections,
   normalizeAboutEditorialSectionCta,
+  normalizePublicSupplementaryBlockPresentation,
   validateAboutEditorialContract,
 } from "../app/lib/public-editorial-cms.ts";
 
@@ -49,6 +50,22 @@ assert.ok(
     locale: "tr",
     slug: "hakkimizda",
     editorialPage: undefined,
+    blocks: [{ type: "text", editorial: { ...editorial, sectionId: "unknown-section" } }],
+  }).some((error) => error.includes("Bilinmeyen")),
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "de",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [{ type: "text", editorial }],
+  }).some((error) => error.includes("yalnızca tr veya en")),
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
     blocks: [{ type: "text", editorial, ctaLabel: "İncele" }],
   }).length > 0,
 );
@@ -87,4 +104,55 @@ assert.equal(
   0,
 );
 
-console.log("12 editorial CMS contract assertions passed");
+const cms = {
+  id: "supplemental-12345678",
+  visible: true,
+  layout: "surface",
+} as const;
+assert.deepEqual(normalizePublicSupplementaryBlockPresentation(cms), cms);
+assert.deepEqual(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [{ type: "text", heading: "Ek bölüm", body: "Ek içerik", cms }],
+  }),
+  [],
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [
+      { type: "text", heading: "Bir", cms },
+      { type: "stats", stats: [{ label: "A", value: "B" }], cms },
+    ],
+  }).some((error) => error.includes("birden fazla")),
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [{ type: "text", heading: "Ek bölüm", cms: { ...cms, layout: "freeform" } }],
+  }).some((error) => error.includes("sunumu desteklenmiyor")),
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [{ type: "cta", heading: "Git", ctaLabel: "Dış bağlantı", ctaHref: "https://example.com", cms }],
+  }).some((error) => error.includes("onaylı public rota")),
+);
+assert.ok(
+  validateAboutEditorialContract({
+    locale: "tr",
+    slug: "hakkimizda",
+    editorialPage: undefined,
+    blocks: [{ type: "text", heading: "Medya", cms, media: { url: "https://example.com/media.jpg" } }],
+  }).some((error) => error.includes("yönetilen medya")),
+);
+
+console.log("20 editorial CMS contract assertions passed");

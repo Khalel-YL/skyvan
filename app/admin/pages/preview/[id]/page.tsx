@@ -29,12 +29,12 @@ export default async function PagePreview({ params }: Props) {
   const row = rows[0];
   const page = row ? getAdminPagePreviewContent(row) : null;
 
-  if (!row || !page || page.slug !== "hakkimizda") {
+  if (!row || !page) {
     return (
       <div className="min-h-screen bg-black px-6 py-10 text-white">
         <div className="mx-auto max-w-5xl rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8">
-          <h1 className="text-2xl font-semibold">Hakkımızda önizlemesi bulunamadı</h1>
-          <p className="mt-3 text-sm text-zinc-400">Bu kontrollü önizleme yalnızca Türkçe ve İngilizce Hakkımızda kayıtlarını destekler.</p>
+          <h1 className="text-2xl font-semibold">Public sayfa önizlemesi bulunamadı</h1>
+          <p className="mt-3 text-sm text-zinc-400">Kayıt desteklenen bir public locale ve geçerli bir slug taşımalıdır.</p>
           <Link href="/admin/pages" className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm text-zinc-300 hover:text-white"><ArrowLeft className="h-4 w-4" /> Pages’e dön</Link>
         </div>
       </div>

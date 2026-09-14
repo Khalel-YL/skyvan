@@ -319,6 +319,9 @@
 .sv-editorial-faqs .sv-section + .sv-section { padding-top: 0; }
 .sv-editorial-faqs .sv-faq h2 { margin-bottom: 1.5rem; font-size: clamp(1.5rem, 2vw, 2rem); }
 .sv-published-copy { border-top: 1px solid var(--public-border); background: var(--public-bg-soft); }
+.sv-cms-block + .sv-cms-block { border-top: 1px solid var(--public-border); }
+.sv-cms-block-surface > section { background: var(--public-surface); }
+.sv-cms-block-wide > section > div { max-width: 1440px; }
 .sv-editorial-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1rem 1.5rem; }
 .sv-editorial-proje-baslat .sv-editorial-page-hero, .sv-editorial-iletisim .sv-editorial-page-hero { padding-block: clamp(2.75rem, 4vw, 4.25rem); }
 .sv-editorial-proje-baslat .sv-editorial-sections, .sv-editorial-iletisim .sv-editorial-sections { padding-block: clamp(1.5rem, 3vw, 3rem); }

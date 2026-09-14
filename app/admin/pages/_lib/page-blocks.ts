@@ -2,8 +2,10 @@ import {
   ABOUT_EDITORIAL_SECTION_IDS,
   type AboutEditorialPageOverride,
   type AboutEditorialSectionPresentation,
+  type PublicSupplementaryBlockPresentation,
   normalizeAboutEditorialPageOverride,
   normalizeAboutEditorialPresentation,
+  normalizePublicSupplementaryBlockPresentation,
   validateAboutEditorialContract,
   isAboutEditorialPage,
 } from "@/app/lib/public-editorial-cms";
@@ -32,7 +34,7 @@ export type PageMediaSurfaceSlot =
   | "mediaLab.featured.media"
   | "mediaLab.gallery.preview";
 
-export type PageContentBlock =
+type PageContentBlockDefinition =
   | {
       type: "hero";
       heading: string;
@@ -70,6 +72,10 @@ export type PageContentBlock =
       ctaLabel?: string;
       ctaHref?: string;
     };
+
+export type PageContentBlock = PageContentBlockDefinition & {
+  cms?: PublicSupplementaryBlockPresentation;
+};
 
 export type PageContentJson = {
   isPublished: boolean;
@@ -232,6 +238,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
   const safeType = supportedBlockTypes.has(type as PageContentBlock["type"])
     ? (type as PageContentBlock["type"])
     : "text";
+  const cms = normalizePublicSupplementaryBlockPresentation(raw.cms);
 
   if (safeType === "hero") {
     return {
@@ -251,6 +258,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
       heading: optionalString(raw.heading),
       subtext: optionalString(raw.subtext),
       items: normalizeItems(raw.items),
+      cms,
     };
   }
 
@@ -259,6 +267,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
       type: "stats",
       heading: optionalString(raw.heading),
       stats: normalizeStats(raw.stats),
+      cms,
     };
   }
 
@@ -269,6 +278,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
       body: optionalString(raw.body),
       ctaLabel: optionalString(raw.ctaLabel),
       ctaHref: optionalString(raw.ctaHref),
+      cms,
     };
   }
 
@@ -281,6 +291,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
     ctaHref: optionalString(raw.ctaHref),
     media: normalizeMedia(raw.media),
     editorial: normalizeAboutEditorialPresentation(raw.editorial),
+    cms,
   };
 }
 
@@ -326,6 +337,7 @@ export function prepareAboutEditorialBlocks(
     (block): block is Extract<PageContentBlock, { type: "text" }> =>
       block.type === "text" && Boolean(block.editorial),
   );
+  const supplementary = blocks.filter((block) => Boolean(block.cms));
   const seen = new Set(existing.map((block) => block.editorial?.sectionId));
   const sections: PageContentBlock[] = [
     ...existing,
@@ -341,7 +353,7 @@ export function prepareAboutEditorialBlocks(
     ),
   ];
 
-  return hero ? [hero, ...sections] : sections;
+  return hero ? [hero, ...sections, ...supplementary] : [...sections, ...supplementary];
 }
 
 export function normalizePageContentJson(
@@ -423,6 +435,10 @@ export function validatePageBlocks(input: PageBlockValidationInput): PageBlockVa
 
     if ("media" in block && hasMalformedMedia(block.media)) {
       blockers.push(`${label}: Seçili medya bağlantısı geçerli değil.`);
+    }
+
+    if (block.cms?.visible === false) {
+      continue;
     }
 
     if (block.type === "text" && !block.editorial && !block.heading?.trim() && !block.body?.trim() && !block.content?.trim()) {

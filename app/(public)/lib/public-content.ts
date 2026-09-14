@@ -8,6 +8,7 @@ import { localizedContent } from "@/db/schema";
 import {
   isAboutEditorialPage,
   normalizeAboutEditorialPageOverride,
+  normalizePublicSupplementaryBlockPresentation,
 } from "@/app/lib/public-editorial-cms";
 
 import {
@@ -333,6 +334,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       ctaHref: asString(raw.ctaHref) || undefined,
       media: normalizeMedia(raw.media),
       editorial,
+      cms: normalizePublicSupplementaryBlockPresentation(raw.cms),
     };
   }
 
@@ -350,6 +352,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       items,
       media: normalizeMedia(raw.media),
       editorial: normalizeEditorialPresentation(raw.editorial),
+      cms: normalizePublicSupplementaryBlockPresentation(raw.cms),
     };
   }
 
@@ -366,6 +369,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       stats,
       media: normalizeMedia(raw.media),
       editorial: normalizeEditorialPresentation(raw.editorial),
+      cms: normalizePublicSupplementaryBlockPresentation(raw.cms),
     };
   }
 
@@ -384,6 +388,7 @@ function sanitizeBlock(value: unknown): PublicBlock | null {
       ctaHref: asString(raw.ctaHref) || undefined,
       media: normalizeMedia(raw.media),
       editorial: normalizeEditorialPresentation(raw.editorial),
+      cms: normalizePublicSupplementaryBlockPresentation(raw.cms),
     };
   }
 
@@ -436,7 +441,8 @@ export function getAdminPagePreviewContent(row: LocalizedPageRow) {
     return null;
   }
 
-  return pageFromAdminRow(row, row.locale, slug, { includeDraft: true });
+  const previewSlug = isHomeSlug(row.locale, slug) ? "" : slug;
+  return pageFromAdminRow(row, row.locale, previewSlug, { includeDraft: true });
 }
 
 async function fetchPublishedAdminPage(locale: PublicLocale, slug: string) {

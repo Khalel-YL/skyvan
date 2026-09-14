@@ -22,6 +22,7 @@ import {
   PageMediaPicker,
   type PageMediaPickerAsset,
 } from "./PageMediaPicker";
+import { PageSupplementaryBlockEditor } from "./PageSupplementaryBlockEditor";
 
 type PageBlockEditorProps = {
   blocks: PageContentBlock[];
@@ -329,7 +330,12 @@ function AboutEditorialBlockEditor({
 
 export function PageBlockEditor({ blocks, onChange, mediaAssets, locale, slug }: PageBlockEditorProps) {
   if (isAboutEditorialPage(locale, slug)) {
-    return <AboutEditorialBlockEditor blocks={blocks} onChange={onChange} locale={locale} />;
+    return (
+      <div className="grid gap-5">
+        <AboutEditorialBlockEditor blocks={blocks} onChange={onChange} locale={locale} />
+        <PageSupplementaryBlockEditor blocks={blocks} onChange={onChange} locale={locale} />
+      </div>
+    );
   }
   function setBlock(index: number, nextBlock: PageContentBlock) {
     onChange(blocks.map((block, blockIndex) => (blockIndex === index ? nextBlock : block)));

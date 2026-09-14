@@ -22,6 +22,21 @@ export const ABOUT_EDITORIAL_CTA_SLUGS = [
   "proje-baslat",
 ] as const;
 
+export const PUBLIC_SUPPLEMENTARY_BLOCK_TYPES = [
+  "text",
+  "feature-list",
+  "stats",
+  "cta",
+] as const;
+
+export const PUBLIC_SUPPLEMENTARY_BLOCK_LAYOUTS = [
+  "standard",
+  "surface",
+  "wide",
+] as const;
+
+export const MAX_PUBLIC_SUPPLEMENTARY_BLOCKS = 12;
+
 export type AboutEditorialSectionId =
   (typeof ABOUT_EDITORIAL_SECTION_IDS)[number];
 export type AboutEditorialLocale = "tr" | "en";
@@ -33,6 +48,16 @@ export type AboutEditorialLayout =
   | "media-right"
   | "wide-media";
 export type AboutEditorialVisual = "inherit" | "none";
+export type PublicSupplementaryBlockType =
+  (typeof PUBLIC_SUPPLEMENTARY_BLOCK_TYPES)[number];
+export type PublicSupplementaryBlockLayout =
+  (typeof PUBLIC_SUPPLEMENTARY_BLOCK_LAYOUTS)[number];
+
+export type PublicSupplementaryBlockPresentation = {
+  id: string;
+  visible: boolean;
+  layout: PublicSupplementaryBlockLayout;
+};
 
 export type AboutEditorialPageOverride = {
   title?: string;
@@ -72,6 +97,9 @@ const layouts = new Set<string>([
   "media-right",
   "wide-media",
 ]);
+const supplementaryBlockTypes = new Set<string>(PUBLIC_SUPPLEMENTARY_BLOCK_TYPES);
+const supplementaryBlockLayouts = new Set<string>(PUBLIC_SUPPLEMENTARY_BLOCK_LAYOUTS);
+const supplementaryBlockIdPattern = /^supplemental-[a-z0-9][a-z0-9-]{7,79}$/;
 
 function optionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -174,6 +202,30 @@ export function normalizeAboutEditorialPresentation(
   };
 }
 
+export function normalizePublicSupplementaryBlockPresentation(
+  value: unknown,
+): PublicSupplementaryBlockPresentation | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const id = optionalString(raw.id)?.toLowerCase();
+  if (!id || !supplementaryBlockIdPattern.test(id)) {
+    return undefined;
+  }
+
+  const layout = typeof raw.layout === "string" && supplementaryBlockLayouts.has(raw.layout)
+    ? raw.layout as PublicSupplementaryBlockLayout
+    : "standard";
+
+  return {
+    id,
+    visible: typeof raw.visible === "boolean" ? raw.visible : true,
+    layout,
+  };
+}
+
 export function validateAboutEditorialContract(input: {
   locale: string;
   slug: string;
@@ -213,6 +265,9 @@ export function validateAboutEditorialContract(input: {
   }
 
   const seen = new Set<string>();
+  const seenSupplementaryIds = new Set<string>();
+  let supplementaryCount = 0;
+  let heroCount = 0;
   for (const value of input.blocks) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       continue;
@@ -220,8 +275,56 @@ export function validateAboutEditorialContract(input: {
 
     const raw = value as Record<string, unknown>;
     if (raw.editorial === undefined) {
-      if (input.slug === ABOUT_EDITORIAL_SLUG && raw.type !== "hero") {
-        errors.push("Hakkımızda sayfasına serbest ek içerik bloğu eklenemez.");
+      if (input.slug !== ABOUT_EDITORIAL_SLUG) {
+        continue;
+      }
+      if (raw.type === "hero") {
+        heroCount += 1;
+        if (raw.cms !== undefined) {
+          errors.push("Hakkımızda hero bloğu ek CMS kimliği taşıyamaz.");
+        }
+        continue;
+      }
+
+      const cms = normalizePublicSupplementaryBlockPresentation(raw.cms);
+      const type = optionalString(raw.type);
+      supplementaryCount += 1;
+
+      if (!cms) {
+        errors.push("Hakkımızda ek bloğu geçerli ve sabit bir CMS kimliği taşımalıdır.");
+        continue;
+      }
+      const rawCms = raw.cms as Record<string, unknown>;
+      if (rawCms.visible !== undefined && typeof rawCms.visible !== "boolean") {
+        errors.push(`${cms.id}: görünürlük true veya false olmalıdır.`);
+      }
+      if (
+        rawCms.layout !== undefined &&
+        (typeof rawCms.layout !== "string" || !supplementaryBlockLayouts.has(rawCms.layout))
+      ) {
+        errors.push(`${cms.id}: ek blok sunumu desteklenmiyor.`);
+      }
+      if (!type || !supplementaryBlockTypes.has(type)) {
+        errors.push(`${cms.id}: bu ek blok türü desteklenmiyor.`);
+      }
+      if (seenSupplementaryIds.has(cms.id)) {
+        errors.push(`Ek blok kimliği birden fazla kullanılamaz: ${cms.id}.`);
+      }
+      seenSupplementaryIds.add(cms.id);
+      if (raw.media !== undefined) {
+        errors.push(`${cms.id}: yönetilen medya değişimi henüz desteklenmiyor.`);
+      }
+
+      const ctaLabel = optionalString(raw.ctaLabel);
+      const ctaHref = optionalString(raw.ctaHref);
+      if ((ctaLabel && !ctaHref) || (!ctaLabel && ctaHref)) {
+        errors.push(`${cms.id}: CTA etiketi ve hedefi birlikte tanımlanmalıdır.`);
+      }
+      if (ctaLabel && ctaLabel.length > 80) {
+        errors.push(`${cms.id}: CTA etiketi 80 karakterden uzun olamaz.`);
+      }
+      if (ctaHref && !getAboutEditorialCtaSlug(input.locale, ctaHref)) {
+        errors.push(`${cms.id}: CTA hedefi yalnızca aynı dildeki onaylı public rotalardan biri olabilir.`);
       }
       continue;
     }
@@ -264,6 +367,9 @@ export function validateAboutEditorialContract(input: {
     if (raw.media !== undefined) {
       errors.push(`${sectionId}: yönetilen medya değişimi bu batch içinde desteklenmiyor.`);
     }
+    if (raw.cms !== undefined) {
+      errors.push(`${sectionId}: ana bölüm aynı zamanda ek CMS bloğu olamaz.`);
+    }
 
     if (raw.ctaLabel !== undefined && typeof raw.ctaLabel !== "string") {
       errors.push(`${sectionId}: CTA etiketi metin olmalıdır.`);
@@ -283,6 +389,13 @@ export function validateAboutEditorialContract(input: {
     if (ctaHref && !getAboutEditorialCtaSlug(input.locale, ctaHref)) {
       errors.push(`${sectionId}: CTA hedefi yalnızca aynı dildeki onaylı public rotalardan biri olabilir.`);
     }
+  }
+
+  if (supplementaryCount > MAX_PUBLIC_SUPPLEMENTARY_BLOCKS) {
+    errors.push(`Hakkımızda sayfasında en fazla ${MAX_PUBLIC_SUPPLEMENTARY_BLOCKS} ek blok kullanılabilir.`);
+  }
+  if (heroCount > 1) {
+    errors.push("Hakkımızda sayfasında birden fazla hero bloğu kullanılamaz.");
   }
 
   return errors;
