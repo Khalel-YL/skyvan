@@ -94,6 +94,7 @@ export default function AddPageDrawer({
   const [state, formAction, isPending] = useActionState(savePage, initialState);
   const submitIntentInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initialData?.id);
+  const isLocaleVariant = !isEdit && Boolean(initialData?.entityId || seedEntityId);
 
   const defaultLocale = normalizeLocale(seedLocale || initialData?.locale || "tr") || "tr";
   const defaultTitle = seedTitle || initialData?.title || "";
@@ -183,9 +184,14 @@ export default function AddPageDrawer({
   }, [closeDrawer, state.ok]);
 
   function handleGenerateSeo() {
-    const safeTitle = title.trim() || "Skyvan sayfası";
+    const isEnglish = locale.toLowerCase().startsWith("en");
+    const safeTitle = title.trim() || (isEnglish ? "Skyvan page" : "Skyvan sayfası");
     const generatedTitle = `${safeTitle} | Skyvan`.slice(0, 90).trim();
-    const generatedDescription = `${safeTitle} hakkında Skyvan yaklaşımı, karar bağlamı ve üretim hazırlığı bilgilerini keşfedin.`
+    const generatedDescription = (
+      isEnglish
+        ? `${safeTitle}: Skyvan's approach, decision context and production-readiness notes.`
+        : `${safeTitle} hakkında Skyvan yaklaşımı, karar bağlamı ve üretim hazırlığı bilgilerini keşfedin.`
+    )
       .slice(0, 170)
       .trim();
 
@@ -206,10 +212,16 @@ export default function AddPageDrawer({
               Admin / Sayfalar
             </div>
             <h2 className="mt-2 text-xl font-semibold text-white">
-              {isEdit ? "Sayfayı düzenle" : "Yeni sayfa oluştur"}
+              {isEdit
+                ? "Sayfayı düzenle"
+                : isLocaleVariant
+                  ? "Yeni locale ekle"
+                  : "Yeni sayfa oluştur"}
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Yapılandırılmış bloklar, SEO, önizleme ve yayın kontrolü tek yüzeyde.
+              {isLocaleVariant
+                ? `Mevcut sayfanın ${locale} varyantını oluşturuyorsun. Ortak slug korunur; içerik ve SEO alanlarını bu locale için düzenle.`
+                : "Yapılandırılmış bloklar, SEO, önizleme ve yayın kontrolü tek yüzeyde."}
             </p>
           </div>
 
@@ -255,7 +267,9 @@ export default function AddPageDrawer({
                   <div>
                     <h3 className="text-sm font-semibold text-white">Temel bilgiler</h3>
                     <p className="mt-1 text-xs text-zinc-500">
-                      Başlık, slug ve dil yayın kimliği oluşturur.
+                      {isLocaleVariant
+                        ? "Locale varyantı için başlık ve içerik çevrilir; canonical slug aynı kalır."
+                        : "Başlık, slug ve dil yayın kimliği oluşturur."}
                     </p>
                   </div>
                   <span className="rounded-full border border-zinc-800 px-3 py-1 text-[11px] text-zinc-400">
@@ -326,6 +340,7 @@ export default function AddPageDrawer({
               <PageSeoPanel
                 title={title}
                 slug={slug}
+                locale={locale}
                 seoTitle={seoTitle}
                 seoDescription={seoDescription}
                 onSeoTitleChange={setSeoTitle}
@@ -421,6 +436,7 @@ export default function AddPageDrawer({
               <PageAiCopilot
                 title={title}
                 description={description}
+                locale={locale}
                 seoTitle={seoTitle}
                 seoDescription={seoDescription}
                 onInsertHero={(block) => setBlocks((current) => [block, ...current])}
