@@ -596,9 +596,12 @@ export async function buildAlternates(locale: PublicLocale, slug?: string | null
 
 export async function buildPublicMetadata(page: PublicPageContent): Promise<Metadata> {
   const url = getPublicUrl(page.locale, page.slug);
+  const metadataTitle = /skyvan/i.test(page.seoTitle)
+    ? { absolute: page.seoTitle }
+    : page.seoTitle;
 
   return {
-    title: page.seoTitle,
+    title: metadataTitle,
     description: page.seoDescription,
     alternates: await buildAlternates(page.locale, page.slug),
     robots: {

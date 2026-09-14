@@ -234,7 +234,7 @@
 
 /* Complete editorial pages: baseline content remains visible even for thin CMS records. */
 .sv-editorial-page-hero { padding-block: clamp(3rem, 6vw, 6rem); border-bottom: 1px solid var(--public-border); }
-.sv-editorial-page-hero-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(2.5rem, 6vw, 7rem); align-items: center; }
+.sv-editorial-page-hero-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(2.5rem, 5vw, 5.5rem); align-items: center; }
 .sv-editorial-page-hero-compact .sv-editorial-page-hero-grid { grid-template-columns: minmax(0, 48rem); }
 .sv-editorial-page-hero-text:not(.sv-editorial-page-hero-compact) .sv-editorial-page-hero-grid { grid-template-columns: minmax(0, 58rem); }
 .sv-editorial-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
@@ -243,7 +243,7 @@
 .sv-editorial-page-hero-image, .sv-landscape .sv-image { overflow: hidden; border-radius: var(--public-radius-wide); }
 .sv-editorial-page-hero-image.sv-image-contain img, .sv-editorial-section-image.sv-image-contain img { object-fit: contain; }
 .sv-editorial-hero-figure > figcaption, .sv-editorial-figure > figcaption { margin-top: .75rem; }
-.sv-editorial-sections { padding-block: clamp(2rem, 5vw, 5rem); }
+.sv-editorial-sections { padding-block: clamp(1.5rem, 3vw, 3.5rem); }
 .sv-editorial-section { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); gap: clamp(2rem, 8vw, 8rem); padding-block: clamp(2.5rem, 5vw, 5rem); border-bottom: 1px solid var(--public-border); }
 .sv-editorial-section:first-child { border-top: 1px solid var(--public-border); }
 .sv-editorial-section-with-media { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; }
@@ -256,6 +256,7 @@
 .sv-section-index { grid-row: 1 / span 3; padding-top: .45rem; font-size: .75rem; letter-spacing: .12em; color: var(--public-muted); }
 .sv-editorial-section-copy h2 { max-width: 20em; font-size: clamp(1.75rem, 2.7vw, 3rem); }
 .sv-editorial-section-copy p { max-width: 45rem; margin-top: 1.3rem; }
+.sv-editorial-section-copy > .sv-text-link { grid-column: 2; justify-self: start; width: max-content; max-width: 100%; margin-top: 1rem; }
 .sv-editorial-section-copy ul { grid-column: 2; margin: 1.5rem 0 0; padding: 0; list-style: none; }
 .sv-editorial-section-copy li { position: relative; padding: .8rem 0 .8rem 1.25rem; border-top: 1px solid var(--public-border); line-height: 1.65; color: var(--public-muted); }
 .sv-editorial-section-copy li::before { content: ""; position: absolute; left: 0; top: 1.45rem; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
@@ -264,6 +265,7 @@
 .sv-editorial-section-text-only .sv-editorial-section-copy h2 { grid-column: 2; grid-row: 1 / span 2; max-width: 15em; }
 .sv-editorial-section-text-only .sv-editorial-section-copy p { grid-column: 3; grid-row: 1; max-width: 42rem; margin-top: .15rem; }
 .sv-editorial-section-text-only .sv-editorial-section-copy ul { grid-column: 3; grid-row: 2; max-width: 42rem; }
+.sv-editorial-section-text-only .sv-editorial-section-copy > .sv-text-link { grid-column: 3; }
 .sv-editorial-section-image { aspect-ratio: 1.5; }
 .sv-living-studies-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .sv-living-studies-single .sv-living-studies-grid { grid-template-columns: minmax(0, 1fr); }
@@ -355,6 +357,8 @@
   .sv-coming-copy { max-width: 46%; }
 }
 @media (max-width: 1023px) {
+  .sv-editorial-page-hero-grid { grid-template-columns: minmax(0, 1fr); }
+  .sv-editorial-page-hero-image { aspect-ratio: 1.6; }
   .sv-workshop-architecture ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sv-workshop-architecture ol li:nth-child(odd) { padding-left: 0; border-left: 0; }
   .sv-workshop-architecture ol li:nth-child(n+3) { border-top: 1px solid var(--public-border); }
@@ -365,6 +369,7 @@
   .sv-editorial-section-text-only .sv-editorial-section-copy h2 { grid-column: 2; grid-row: 1; }
   .sv-editorial-section-text-only .sv-editorial-section-copy p { grid-column: 2; grid-row: 2; margin-top: 1.2rem; }
   .sv-editorial-section-text-only .sv-editorial-section-copy ul { grid-column: 2; grid-row: 3; }
+  .sv-editorial-section-text-only .sv-editorial-section-copy > .sv-text-link { grid-column: 2; }
 }
 @media (max-width: 767px) {
   .public-site.sv-public { --public-radius-wide: 16px; --public-radius-media: 14px; --public-radius-workshop: 24px; }

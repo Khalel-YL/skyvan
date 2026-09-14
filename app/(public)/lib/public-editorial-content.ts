@@ -48,7 +48,7 @@ export type PublicEditorialCopy = {
 const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
   hakkimizda: {
     title: "Hakkımızda", seoTitle: "Hakkımızda | Skyvan", seoDescription: "Skyvan’ın gerçek bir motokaravan yapımından gelen deneyimini, malzeme ve mühendislik yaklaşımını keşfedin.", eyebrow: "Hakkımızda",
-    heading: "Gerçek bir motokaravanı inşa ederken öğrendiklerimizle yola çıktık.",
+    heading: "Gerçek bir motokaravan inşa ederek başladık.",
     body: "Skyvan, eksiksiz bir motokaravanı kendi ellerimizle inşa ederken edinilen deneyimden doğdu. Bu deneyimi yaşam odaklı tasarım, dikkatli malzeme kararları ve açık teknik değerlendirmeyle geleceğin projelerine taşıyoruz.",
     sections: [
       { id: "why-skyvan-exists", heading: "Skyvan, kararları daha anlaşılır kılmak için var.", body: "Bir karavan projesi donanım listesinden önce yaşam biçimiyle başlar. Yolculuk alışkanlıklarını, alanı paylaşan kişileri ve günlük öncelikleri görünür kılmak; doğru teknik sorulara ulaşmanın ilk adımıdır." },
@@ -197,7 +197,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
 const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
   hakkimizda: {
     title: "About Skyvan", seoTitle: "About Skyvan | Skyvan", seoDescription: "Discover how hands-on experience building a real motorhome shapes Skyvan’s material and engineering decisions.", eyebrow: "About Skyvan",
-    heading: "We began with what we learned by building a real motorhome.", body: "Skyvan is shaped by hands-on experience from building a complete motorhome. We are carrying that experience into future projects through life-led design, considered material choices and clear technical review.",
+    heading: "We began by building a real motorhome.", body: "Skyvan is shaped by hands-on experience from building a complete motorhome. We are carrying that experience into future projects through life-led design, considered material choices and clear technical review.",
     sections: [
       { id: "why-skyvan-exists", heading: "Skyvan exists to make connected decisions easier to understand.", body: "A motorhome project begins with a way of living, not an equipment list. Making travel habits, the people sharing the space and everyday priorities visible leads to better technical questions." },
       { id: "hands-on-build-experience", heading: "Building reveals what a drawing cannot.", body: "Hands-on experience building a real motorhome showed us how a decision that looks right on paper changes through fabrication, everyday use and maintenance. Skyvan’s approach grows from that direct experience." },
