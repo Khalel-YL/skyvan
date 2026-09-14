@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 type PageSeoPanelProps = {
   title: string;
   slug: string;
+  locale: string;
   seoTitle: string;
   seoDescription: string;
   onSeoTitleChange: (value: string) => void;
@@ -15,6 +16,7 @@ type PageSeoPanelProps = {
 export function PageSeoPanel({
   title,
   slug,
+  locale,
   seoTitle,
   seoDescription,
   onSeoTitleChange,
@@ -24,7 +26,8 @@ export function PageSeoPanel({
   const displayTitle = seoTitle.trim() || title.trim() || "Skyvan";
   const displayDescription =
     seoDescription.trim() || "SEO açıklaması arama sonucunda burada görünecek.";
-  const url = `https://skyvan.com.tr/${slug.trim() || "sayfa"}`;
+  const safeLocale = locale.trim().toLowerCase() || "tr";
+  const url = `https://skyvan.com.tr/${safeLocale}/${slug.trim() || "sayfa"}`;
   const descriptionLength = seoDescription.trim().length;
 
   return (
