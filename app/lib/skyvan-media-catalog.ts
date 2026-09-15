@@ -1,9 +1,10 @@
 /**
  * Curated Skyvan visual source of truth.
  *
- * The files live in `public/images/skyvan/concepts` and are intentionally
- * versioned.  Admin media rows are metadata pointers to these files; the
- * public renderer still treats the static files as the curated fallback.
+ * The files live in `public/images/skyvan/concepts` and
+ * `public/images/skyvan/engineering` and are intentionally versioned.
+ * Admin media rows are metadata pointers to these files; the public renderer
+ * still treats the static files as the curated fallback.
  */
 export type SkyvanMediaCatalogItem = {
   mediaId: string;
@@ -276,6 +277,70 @@ export const skyvanMediaCatalog = {
       en: "Skyvan concept infographic explaining insulation layers in the overcab wall.",
     },
     tags: ["alkoven", "yalıtım", "katman", "infografik"],
+    usageScope: "public",
+    isFeatured: false,
+  },
+  "engineering-electrical-service": {
+    mediaId: "bde40a73-1f04-47c7-8de4-2f1b9dc6d9e1",
+    entityId: "b0c2e5de-2a8c-4c45-a5d3-6b0a017c4a11",
+    path: "/images/skyvan/engineering/electrical-service-bay-v1.webp",
+    width: 1536,
+    height: 1024,
+    title: "Elektrik servis kabini",
+    description: "Akü, MPPT, inverter/şarj, DC dağıtım ve koruma bileşenlerinin erişilebilir servis yerleşimini anlatan konsept görsel.",
+    alt: {
+      tr: "Skyvan elektrik servis kabininde akü, MPPT, inverter/şarj ve koruma bileşenlerinin erişilebilir yerleşim konsepti.",
+      en: "Concept of an accessible Skyvan electrical service bay with batteries, MPPT, inverter/charger and protective distribution.",
+    },
+    tags: ["elektrik", "marin kablo", "MPPT", "servis", "mühendislik", "yeni"],
+    usageScope: "public",
+    isFeatured: false,
+  },
+  "engineering-water-service": {
+    mediaId: "cf1b4f66-0f23-4492-aab2-9f7a8af5e2f8",
+    entityId: "64af371a-452b-4d93-bb5d-b7cb5f4c12a2",
+    path: "/images/skyvan/engineering/water-service-bay-v1.webp",
+    width: 1536,
+    height: 1024,
+    title: "Temiz su tesisatı servis kabini",
+    description: "Temiz su deposu, süzgeç, değiştirilebilir filtre, diyafram pompası, akümülatör ve dağıtıcıyı birlikte gösteren konsept servis görseli.",
+    alt: {
+      tr: "Skyvan temiz su servis kabininde depo, süzgeç, filtre, diyafram pompası, akümülatör ve dağıtıcı yerleşimi.",
+      en: "Skyvan clean-water service bay concept with tank, strainer, filter, diaphragm pump, accumulator and manifold.",
+    },
+    tags: ["su", "temiz su", "filtre", "pompa", "manifold", "mühendislik", "yeni"],
+    usageScope: "public",
+    isFeatured: false,
+  },
+  "engineering-solar-roof": {
+    mediaId: "5f3b8d2c-8c3a-4d50-9f66-1a8d3f41b7c2",
+    entityId: "7b2e0d4a-63c8-4c4d-8e2a-5a9b9c3f77d0",
+    path: "/images/skyvan/engineering/solar-roof-cable-routing-v1.webp",
+    width: 1536,
+    height: 1024,
+    title: "Çatı solar ve kablo güzergâhı",
+    description: "Panel alanı, çatı ekipmanları, servis açıklıkları ve hava koşullarına dayanıklı kablo girişini birlikte anlatan konsept görsel.",
+    alt: {
+      tr: "Skyvan çatısında solar panel alanı, iklimlendirme, servis açıklıkları ve yalıtılmış kablo girişi yerleşim konsepti.",
+      en: "Skyvan roof concept showing the solar panel field, climate unit, service hatches and weather-sealed cable entry.",
+    },
+    tags: ["çatı", "güneş paneli", "kablo", "servis", "mühendislik", "yeni"],
+    usageScope: "public",
+    isFeatured: false,
+  },
+  "engineering-insulation-service": {
+    mediaId: "8c6a0d22-4e96-4b61-a0d2-c9e1f4a6b732",
+    entityId: "3f4e5a6b-7c8d-4e9f-a0b1-c2d3e4f5a678",
+    path: "/images/skyvan/engineering/insulation-service-chase-v1.webp",
+    width: 1536,
+    height: 1024,
+    title: "Yalıtım ve servis kanalı kesiti",
+    description: "Dış kabuktan iç kaplamaya uzanan katmanları ve elektrik-su servis yollarını ayrı, erişilebilir bir kesitte gösteren konsept görsel.",
+    alt: {
+      tr: "Skyvan duvar kesitinde dış kabuk, yalıtım, nem kontrol katmanı ve ayrı elektrik-su servis kanalı konsepti.",
+      en: "Skyvan wall cutaway concept showing the exterior skin, insulation, moisture layer and separate electrical-water service chase.",
+    },
+    tags: ["yalıtım", "tesisat", "servis erişimi", "mühendislik", "yeni"],
     usageScope: "public",
     isFeatured: false,
   },

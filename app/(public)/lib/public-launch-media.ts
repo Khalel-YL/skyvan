@@ -80,6 +80,10 @@ export const publicLaunchAssets = {
   "engineering-roof": {
     ...catalogAsset("roof-equipment"),
   },
+  "engineering-electrical-service": catalogAsset("engineering-electrical-service"),
+  "engineering-water-service": catalogAsset("engineering-water-service"),
+  "engineering-solar-roof": catalogAsset("engineering-solar-roof"),
+  "engineering-insulation-service": catalogAsset("engineering-insulation-service"),
 } as const;
 
 export type PublicLaunchAssetId = keyof typeof publicLaunchAssets;

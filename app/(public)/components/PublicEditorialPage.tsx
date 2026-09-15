@@ -57,8 +57,10 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
   },
   muhendislik: {
     "vehicle-context": { asset: "exterior-landscape" },
-    "electrical-service": { asset: "electrical-rear-service", className: "sv-image-contain" },
-    "water-service": { asset: "water-clean-service", className: "sv-image-contain" },
+    "material-weight-awareness": { asset: "engineering-insulation-service", className: "sv-image-contain" },
+    "roof-electrical-compatibility": { asset: "engineering-solar-roof", className: "sv-image-contain" },
+    "electrical-service": { asset: "engineering-electrical-service", className: "sv-image-contain" },
+    "water-service": { asset: "engineering-water-service", className: "sv-image-contain" },
     controls: { asset: "control-centre", className: "sv-image-contain" },
   },
   workshop: {
