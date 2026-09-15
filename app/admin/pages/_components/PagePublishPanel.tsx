@@ -29,16 +29,16 @@ export function PagePublishPanel({
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+    <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-white">Yayın kontrolü</h3>
           <p className="mt-1 text-xs text-zinc-500">
-            Taslak kaydetme ve yayınlama ayrı aksiyonlardır. Yayın engeli varsa yayın kapalı kalır.
+            Taslak ve yayın ayrı aksiyonlardır. Engeller çözülmeden yayın açılamaz.
           </p>
         </div>
         <span
-          className={`rounded-full border px-3 py-1 text-[11px] font-medium ${
+          className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
             isPublished
               ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
               : "border-amber-500/25 bg-amber-500/10 text-amber-200"
@@ -48,11 +48,11 @@ export function PagePublishPanel({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-2 text-sm">
+      <div className="mt-3 grid gap-2 text-sm">
         {blockers.length > 0 ? (
           <div className="rounded-2xl border border-rose-900/60 bg-rose-950/30 p-3 text-rose-200">
             <div className="font-medium">Yayın engeli</div>
-            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
+            <ul className="mt-2 max-h-32 list-disc space-y-1 overflow-y-auto pl-4 text-xs leading-5">
               {blockers.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -76,7 +76,7 @@ export function PagePublishPanel({
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-2">
+      <div className="mt-4 grid gap-2">
         {isEdit && isPublished ? (
           <>
             <button
@@ -85,7 +85,7 @@ export function PagePublishPanel({
               value="keep-published"
               {...intentHandlers("keep-published")}
               disabled={pending || blockers.length > 0}
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-45"
             >
               {pending ? "Kaydediliyor..." : "Yayındaki sayfayı güncelle"}
             </button>
@@ -95,7 +95,7 @@ export function PagePublishPanel({
               value="unpublish"
               {...intentHandlers("unpublish")}
               disabled={pending}
-              className="rounded-2xl border border-amber-900/70 bg-amber-950/30 px-4 py-3 text-sm font-medium text-amber-200 transition hover:border-amber-700 hover:bg-amber-950/50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-amber-900/70 bg-amber-950/30 px-3 py-2.5 text-sm font-medium text-amber-200 transition hover:border-amber-700 hover:bg-amber-950/50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? "Taslağa alınıyor..." : "Yayından kaldır / Taslağa al"}
             </button>
@@ -108,7 +108,7 @@ export function PagePublishPanel({
               value="draft"
               {...intentHandlers("draft")}
               disabled={pending}
-              className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm font-medium text-zinc-200 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? "Kaydediliyor..." : "Taslak kaydet"}
             </button>
@@ -118,7 +118,7 @@ export function PagePublishPanel({
               value="publish"
               {...intentHandlers("publish")}
               disabled={pending || blockers.length > 0}
-              className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-45"
             >
               {pending ? "Yayınlanıyor..." : isEdit ? "Değişiklikleri yayınla" : "Sayfayı yayınla"}
             </button>

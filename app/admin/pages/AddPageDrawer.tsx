@@ -205,20 +205,20 @@ export default function AddPageDrawer({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm">
-      <div className="ml-auto flex h-full w-full max-w-[96rem] flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-800 px-5 py-4">
+      <div className="ml-auto flex h-full w-full max-w-[80rem] flex-col border-l border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-800 px-4 py-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">
               Admin / Sayfalar
             </div>
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2 className="mt-1.5 text-lg font-semibold text-white">
               {isEdit
                 ? "Sayfayı düzenle"
                 : isLocaleVariant
                   ? "Yeni locale ekle"
                   : "Yeni sayfa oluştur"}
             </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-400">
               {isLocaleVariant
                 ? `Mevcut sayfanın ${locale} varyantını oluşturuyorsun. Ortak slug korunur; içerik ve SEO alanlarını bu locale için düzenle.`
                 : "Yapılandırılmış bloklar, SEO, önizleme ve yayın kontrolü tek yüzeyde."}
@@ -228,7 +228,7 @@ export default function AddPageDrawer({
           <button
             type="button"
             onClick={closeDrawer}
-            className="rounded-2xl border border-zinc-800 p-2 text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+            className="rounded-xl border border-zinc-800 p-2 text-zinc-400 transition hover:border-zinc-700 hover:text-white"
             aria-label="Editörü kapat"
           >
             <X className="h-5 w-5" />
@@ -260,10 +260,10 @@ export default function AddPageDrawer({
             readOnly
           />
 
-          <div className="grid gap-5 px-5 py-5 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
-            <div className="grid min-w-0 gap-5">
-              <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-                <div className="mb-4 flex items-center justify-between">
+          <div className="grid gap-4 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <div className="grid min-w-0 gap-4">
+              <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-white">Temel bilgiler</h3>
                     <p className="mt-1 text-xs text-zinc-500">
@@ -272,12 +272,12 @@ export default function AddPageDrawer({
                         : "Başlık, slug ve dil yayın kimliği oluşturur."}
                     </p>
                   </div>
-                  <span className="rounded-full border border-zinc-800 px-3 py-1 text-[11px] text-zinc-400">
+                  <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-[11px] text-zinc-400">
                     {isEdit ? "Düzenleme" : "Oluşturma"}
                   </span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-xs text-zinc-400">Locale</span>
                     <input
@@ -286,7 +286,7 @@ export default function AddPageDrawer({
                       readOnly={isAboutEditorial}
                       onChange={(event) => setLocale(normalizeLocale(event.target.value))}
                       placeholder="tr"
-                      className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none transition focus:border-zinc-600"
+                      className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm outline-none transition focus:border-zinc-600"
                     />
                     {state.errors?.locale ? <p className="text-xs text-rose-400">{state.errors.locale}</p> : null}
                   </label>
@@ -305,7 +305,7 @@ export default function AddPageDrawer({
                         }
                       }}
                       placeholder="Örn. Premium Karavan Dönüşümü"
-                      className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none transition focus:border-zinc-600"
+                      className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm outline-none transition focus:border-zinc-600"
                     />
                     {state.errors?.title ? <p className="text-xs text-rose-400">{state.errors.title}</p> : null}
                   </label>
@@ -318,7 +318,7 @@ export default function AddPageDrawer({
                       readOnly={isAboutEditorial}
                       onChange={(event) => setSlug(normalizeSlug(event.target.value))}
                       placeholder="premium-karavan-donusumu"
-                      className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 font-mono text-sm outline-none transition focus:border-zinc-600"
+                      className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 font-mono text-sm outline-none transition focus:border-zinc-600"
                     />
                     {state.errors?.slug ? <p className="text-xs text-rose-400">{state.errors.slug}</p> : null}
                   </label>
@@ -329,9 +329,9 @@ export default function AddPageDrawer({
                       name="description"
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
-                      rows={3}
+                      rows={2}
                       placeholder="Sayfanın kısa açıklaması"
-                      className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm outline-none transition focus:border-zinc-600"
+                      className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm outline-none transition focus:border-zinc-600"
                     />
                   </label>
                 </div>
@@ -352,12 +352,12 @@ export default function AddPageDrawer({
               {state.errors?.seoDescription ? <p className="text-xs text-rose-400">{state.errors.seoDescription}</p> : null}
 
               {isAboutEditorial ? (
-                <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+                <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
                   <div>
                     <h3 className="text-sm font-semibold text-white">Public Hakkımızda girişi</h3>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">Boş bırakılan alanlar güvenli küratörlü içeriğe döner. Slug ve locale bu sayfa çifti için kilitlidir.</p>
                   </div>
-                  <div className="mt-4 grid gap-4">
+                  <div className="mt-3 grid gap-3">
                     {([
                       ["title", "Public başlık (H1)", aboutFallback.heading, false],
                       ["eyebrow", "Eyebrow", aboutFallback.eyebrow, false],
@@ -365,7 +365,7 @@ export default function AddPageDrawer({
                     ] as const).map(([key, label, fallback, multiline]) => (
                       <label key={key} className="grid gap-2">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</span>
-                        {multiline ? <textarea value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} rows={4} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" /> : <input value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} className="w-full rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" />}
+                        {multiline ? <textarea value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} rows={3} className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" /> : <input value={editorialPage?.[key] ?? ""} onChange={(event) => setEditorialPage((current) => ({ ...current, [key]: event.target.value || undefined }))} placeholder={fallback} className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600" />}
                         <button type="button" onClick={() => setEditorialPage((current) => ({ ...current, [key]: undefined }))} className="w-max text-xs text-zinc-400 underline-offset-4 hover:text-white hover:underline">Küratörlü değere dön</button>
                       </label>
                     ))}
@@ -383,7 +383,7 @@ export default function AddPageDrawer({
               {state.errors?.content ? <p className="text-xs text-rose-400">{state.errors.content}</p> : null}
             </div>
 
-            <aside className="grid h-max gap-5 xl:sticky xl:top-5">
+            <aside className="grid h-max gap-3 xl:sticky xl:top-4">
               <PagePublishPanel
                 isPublished={isPublished}
                 blockers={validation.blockers}
@@ -393,21 +393,9 @@ export default function AddPageDrawer({
                 onIntentChange={handleIntentChange}
               />
 
-              <div className="flex items-center justify-between gap-3 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-4">
-                <span>
-                  <span className="block text-sm font-semibold text-white">Mevcut durum</span>
-                  <span className="mt-1 block text-xs text-zinc-500">
-                    Yayındaki sayfada normal kaydetme yayın durumunu korur. Taslağa almak ayrı ve uyarılı bir aksiyondur.
-                  </span>
-                </span>
-                <span className={`rounded-full border px-3 py-1 text-xs ${isPublished ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200" : "border-amber-500/25 bg-amber-500/10 text-amber-200"}`}>
-                  {isPublished ? "Yayında" : "Taslak"}
-                </span>
-              </div>
-
               {state.message ? (
                 <div
-                  className={`rounded-2xl border px-4 py-3 text-sm ${
+                  className={`rounded-xl border px-3 py-2.5 text-sm ${
                     state.ok
                       ? "border-emerald-900 bg-emerald-950/40 text-emerald-300"
                       : "border-rose-900 bg-rose-950/40 text-rose-300"
@@ -418,7 +406,7 @@ export default function AddPageDrawer({
               ) : null}
 
               {state.errors?.form ? (
-                <div className="rounded-2xl border border-rose-900 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
+                <div className="rounded-xl border border-rose-900 bg-rose-950/40 px-3 py-2.5 text-sm text-rose-300">
                   {state.errors.form}
                 </div>
               ) : null}

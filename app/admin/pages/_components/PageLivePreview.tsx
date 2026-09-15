@@ -104,7 +104,7 @@ export function PageLivePreview({
 }: PageLivePreviewProps) {
   if (pageId) {
     return (
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
         <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>
         <p className="mt-2 text-xs leading-5 text-zinc-500">Kaydedilmiş taslak; gerçek public bileşenleri, fallback içeriği, blok sırası ve görünürlük kurallarıyla korumalı önizlemede gösterilir.</p>
         <Link href={`/admin/pages/preview/${pageId}`} className="mt-4 inline-flex rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200 hover:border-zinc-500 hover:text-white">
@@ -116,7 +116,7 @@ export function PageLivePreview({
 
   if (isAboutEditorial) {
     return (
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
         <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>
         <p className="mt-2 text-xs leading-5 text-zinc-500">İlk kayıttan sonra gerçek public bileşenleriyle korumalı önizleme açılır.</p>
         <p className="mt-4 text-xs text-amber-300" role="status">Önizleme bağlantısı kayıt ilk kez kaydedildikten sonra açılır.</p>
@@ -125,18 +125,18 @@ export function PageLivePreview({
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <details className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
         <div>
           <h3 className="text-sm font-semibold text-white">Canlı önizleme</h3>
-          <p className="mt-1 text-xs text-zinc-500">Public render yapısını kompakt admin panelinde gösterir.</p>
+          <p className="mt-1 text-xs text-zinc-500">Public render yapısını taslak üzerinde kontrol et.</p>
         </div>
-        <span className="rounded-full border border-zinc-800 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+        <span className="shrink-0 rounded-full border border-zinc-800 px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
           {locale || "tr"} / {slug || "-"}
         </span>
-      </div>
+      </summary>
 
-      <div className="max-h-[34rem] overflow-y-auto rounded-[1.5rem] border border-zinc-800 bg-[#f6f3ee] text-[#151515]">
+      <div className="mt-3 max-h-[34rem] overflow-y-auto rounded-2xl border border-zinc-800 bg-[#f6f3ee] text-[#151515]">
         <div className="border-b border-black/10 px-5 py-4">
           <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-black/45">
             Skyvan public önizleme
@@ -194,6 +194,6 @@ export function PageLivePreview({
           ))}
         </div>
       </div>
-    </section>
+    </details>
   );
 }
