@@ -75,45 +75,46 @@ export function PageAiCopilot({
   ];
 
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
-      <div className="flex items-start gap-3">
+    <details className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+      <summary className="flex cursor-pointer list-none items-start gap-3 [&::-webkit-details-marker]:hidden">
         <div className="rounded-2xl border border-zinc-800 bg-black p-2 text-zinc-300">
           <Wand2 className="h-5 w-5" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-white">AI Copilot</h3>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
             Deterministik öneri panelidir. API çağrısı yapmaz, DB yazmaz, publish etmez.
           </p>
         </div>
-      </div>
+        <span className="shrink-0 text-[11px] text-zinc-500">Önerileri aç</span>
+      </summary>
 
-      <div className="mt-5 grid gap-3">
-        <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+      <div className="mt-3 grid gap-2 border-t border-zinc-800/80 pt-3">
+        <div className="rounded-xl border border-zinc-800 bg-black/40 p-3">
           <div className="text-sm font-medium text-white">Hero draft</div>
           <p className="mt-2 text-xs leading-5 text-zinc-500">{heroSuggestion.heading}</p>
           <button
             type="button"
             onClick={() => onInsertHero(heroSuggestion)}
-            className="mt-3 rounded-2xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
+            className="mt-3 rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
           >
             Insert suggestion
           </button>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+        <div className="rounded-xl border border-zinc-800 bg-black/40 p-3">
           <div className="text-sm font-medium text-white">SEO rewrite</div>
           <p className="mt-2 text-xs leading-5 text-zinc-500">{seoSuggestion.seoTitle}</p>
           <button
             type="button"
             onClick={() => onApplySeo(seoSuggestion)}
-            className="mt-3 rounded-2xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
+            className="mt-3 rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
           >
             Insert suggestion
           </button>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-black/40 p-4">
+        <div className="rounded-xl border border-zinc-800 bg-black/40 p-3">
           <div className="text-sm font-medium text-white">Suggested structure</div>
           <p className="mt-2 text-xs leading-5 text-zinc-500">
             Hero, context text, feature list, and CTA blocks.
@@ -121,12 +122,12 @@ export function PageAiCopilot({
           <button
             type="button"
             onClick={() => onApplyStructure(structureSuggestion)}
-            className="mt-3 rounded-2xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
+            className="mt-3 rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
           >
             Insert suggestion
           </button>
         </div>
       </div>
-    </section>
+    </details>
   );
 }

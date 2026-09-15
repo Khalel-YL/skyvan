@@ -136,7 +136,7 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-5">
+    <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-white">Ek içerik blokları</h3>
@@ -162,17 +162,23 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
           Henüz ek blok yok. Public sayfa mevcut sekiz güvenli ana bölümle çalışmaya devam eder.
         </div>
       ) : (
-        <div className="mt-5 space-y-3">
+        <div className="mt-4 space-y-2">
           {supplementary.map((block, index) => {
             const cms = block.cms!;
             return (
-              <article key={cms.id} className="rounded-[1.35rem] border border-zinc-800 bg-black/35 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-white">E{String(index + 1).padStart(2, "0")} · {getBlockLabel(block.type)}</div>
-                    <div className="mt-1 font-mono text-[11px] text-zinc-600">{cms.id}</div>
+              <details key={cms.id} className="rounded-2xl border border-zinc-800 bg-black/35 p-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-white">E{String(index + 1).padStart(2, "0")} · {getBlockLabel(block.type)}</div>
+                    <div className="mt-1 truncate font-mono text-[11px] text-zinc-600">{cms.id}</div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <span className="shrink-0 text-[11px] text-zinc-500">Düzenle</span>
+                </summary>
+
+                <div className="mt-3 border-t border-zinc-800/80 pt-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Ek blok ayarları</span>
+                    <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => moveBlock(cms.id, -1)} disabled={index === 0} className="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white disabled:opacity-35" aria-label="Ek bloğu yukarı taşı"><ArrowUp className="h-3.5 w-3.5" /></button>
                     <button type="button" onClick={() => moveBlock(cms.id, 1)} disabled={index === supplementary.length - 1} className="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white disabled:opacity-35" aria-label="Ek bloğu aşağı taşı"><ArrowDown className="h-3.5 w-3.5" /></button>
                     <button type="button" onClick={() => duplicateBlock(block)} className="rounded-xl border border-zinc-800 p-2 text-zinc-400 hover:text-white" aria-label="Ek bloğu çoğalt"><Copy className="h-3.5 w-3.5" /></button>
@@ -180,10 +186,10 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
                       {cms.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}{cms.visible ? "Görünür" : "Gizli"}
                     </button>
                     <button type="button" onClick={() => removeBlock(cms.id)} className="rounded-xl border border-red-950 p-2 text-rose-300 hover:border-red-800" aria-label="Ek bloğu sil"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-4 grid gap-3">
+                <div className="mt-3 grid gap-3">
                   <label className="grid gap-2">
                     <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Sunum</span>
                     <select value={cms.layout} onChange={(event) => updateBlock(cms.id, { ...block, cms: { ...cms, layout: event.target.value as typeof cms.layout } })} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600">
@@ -213,7 +219,8 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
                     </div>
                   </> : null}
                 </div>
-              </article>
+                </div>
+              </details>
             );
           })}
         </div>
