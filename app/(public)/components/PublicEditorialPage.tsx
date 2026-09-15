@@ -46,17 +46,19 @@ function getAssetAlt(assetId: PublicLaunchAssetId, locale: PublicPageContent["lo
 
 const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>> = {
   muhendislik: {
-    "water-service": { asset: "engineering-connectors", className: "sv-image-contain" },
+    "electrical-service": { asset: "electrical-rear-service", className: "sv-image-contain" },
+    "water-service": { asset: "water-clean-service", className: "sv-image-contain" },
+    controls: { asset: "control-centre", className: "sv-image-contain" },
   },
   workshop: {
-    "technical-validation": { asset: "engineering-automation" },
+    "technical-validation": { asset: "roof-equipment", className: "sv-image-contain" },
   },
   "nasil-calisir": {
     layout: { asset: "ufuk-day", className: "sv-image-contain" },
   },
   "uretim-sureci": {
-    "technical-definition": { asset: "engineering-connectors", className: "sv-image-contain" },
-    checks: { asset: "engineering-automation" },
+    "technical-definition": { asset: "electrical-rear-service", className: "sv-image-contain" },
+    checks: { asset: "electrical-cabinet", className: "sv-image-contain" },
   },
 };
 

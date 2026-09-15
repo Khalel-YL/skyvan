@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -25,6 +25,9 @@ import {
   getYouTubeEmbedUrl,
   getYouTubeThumbnailUrl,
   isSafeHttpUrl,
+  getMediaPrimaryUrl,
+  getMediaPreviewUrl,
+  normalizeMediaContent,
   normalizeTags,
 } from "./media-types";
 
@@ -177,6 +180,46 @@ async function getMediaById(id: string): Promise<MediaRecord | null> {
     .limit(1);
 
   return (rows[0] as MediaRecord | undefined) ?? null;
+}
+
+async function findMediaUsage(media: MediaRecord) {
+  const db = getDbOrThrow();
+  const content = normalizeMediaContent(media.contentJson, media.title || "");
+  const tokens = [
+    media.id,
+    getMediaPrimaryUrl(content),
+    getMediaPreviewUrl(content),
+    content.thumbnailUrl,
+    content.posterUrl,
+  ].filter((token): token is string => Boolean(token));
+
+  if (tokens.length === 0) {
+    return [] as Array<{ entityType: string; locale: string; title: string | null; slug: string | null }>;
+  }
+
+  const rows = await db
+    .select({
+      entityType: localizedContent.entityType,
+      locale: localizedContent.locale,
+      title: localizedContent.title,
+      slug: localizedContent.slug,
+      contentJson: localizedContent.contentJson,
+    })
+    .from(localizedContent)
+    .where(ne(localizedContent.entityType, MEDIA_ENTITY_TYPE));
+
+  return rows
+    .filter((row) => {
+      const serialized = JSON.stringify(row.contentJson ?? "");
+      return tokens.some((token) => serialized.includes(token));
+    })
+    .map((row) => ({
+      entityType: row.entityType,
+      locale: row.locale,
+      title: row.title,
+      slug: row.slug,
+    }))
+    .slice(0, 6);
 }
 
 async function writeMediaAudit(input: {
@@ -387,6 +430,18 @@ export async function deleteMedia(id: string) {
       redirectMediaError("Silinecek kayıt media entity türünde değil.");
     }
 
+    const usages = await findMediaUsage(existingMedia);
+
+    if (usages.length > 0) {
+      const usageLabels = usages
+        .slice(0, 3)
+        .map((usage) => `${usage.locale.toUpperCase()} · ${usage.entityType} · ${usage.title || usage.slug || "Adsız kayıt"}`)
+        .join(", ");
+      redirectMediaError(
+        `Medya kaydı Pages veya başka bir içerikte kullanılıyor (${usageLabels}). Önce bağlantıyı kaldırıp tekrar dene.`,
+      );
+    }
+
     const auditActor = await requireStrictAuditActor();
     const deletedRows = await db
       .delete(localizedContent)
@@ -445,6 +500,7 @@ export async function deleteMedia(id: string) {
   }
 
   revalidatePath("/admin/media");
+  revalidatePath("/admin/pages");
   redirect(
     buildMediaRedirectUrl({
       mediaAction: "deleted",

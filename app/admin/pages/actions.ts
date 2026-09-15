@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -34,6 +34,11 @@ import {
   normalizePublicSupplementaryBlockPresentation,
   validateAboutEditorialContract,
 } from "@/app/lib/public-editorial-cms";
+import {
+  getMediaPreviewUrl,
+  getMediaPrimaryUrl,
+  normalizeMediaContent,
+} from "@/app/admin/media/media-types";
 
 export type PageFormState = {
   ok: boolean;
@@ -551,6 +556,105 @@ function normalizeContentJson(params: {
   };
 }
 
+type PageMediaRow = {
+  id: string;
+  title: string | null;
+  contentJson: unknown;
+};
+
+/**
+ * Pages receives media metadata from a client-side form, so the submitted
+ * URL/title cannot be treated as an authority. Resolve every mediaId against
+ * the Media Library and persist the canonical URL/metadata instead. A page
+ * may only bind media explicitly marked for public use.
+ */
+async function validateAndCanonicalizePageMedia(params: {
+  db: ReturnType<typeof getDbOrThrow>;
+  blocks: PageBlock[];
+}) {
+  const mediaIds = Array.from(
+    new Set(
+      params.blocks
+        .map((block) => block.media?.mediaId)
+        .filter((mediaId): mediaId is string => Boolean(mediaId)),
+    ),
+  );
+
+  if (mediaIds.length === 0) {
+    return { blocks: params.blocks };
+  }
+
+  const rows = (await params.db
+    .select({
+      id: localizedContent.id,
+      title: localizedContent.title,
+      contentJson: localizedContent.contentJson,
+    })
+    .from(localizedContent)
+    .where(
+      and(
+        eq(localizedContent.entityType, "media"),
+        inArray(localizedContent.id, mediaIds),
+      ),
+    )) as PageMediaRow[];
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+  const errors: string[] = [];
+
+  const blocks = params.blocks.map((block) => {
+    const submittedMedia = block.media;
+
+    if (!submittedMedia) {
+      return block;
+    }
+
+    const row = rowsById.get(submittedMedia.mediaId);
+
+    if (!row) {
+      errors.push(`Medya kaydı bulunamadı: ${submittedMedia.mediaId}.`);
+      return block;
+    }
+
+    const content = normalizeMediaContent(row.contentJson, row.title || "");
+    const primaryUrl = getMediaPrimaryUrl(content);
+    const previewUrl = getMediaPreviewUrl(content);
+
+    if (content.usageScope !== "public") {
+      errors.push(`“${content.title || row.title || "Adsız medya"}” public Pages içeriğine bağlanamaz; medya kapsamı Yayın olmalı.`);
+      return block;
+    }
+
+    if (!primaryUrl || content.mediaType !== submittedMedia.mediaType) {
+      errors.push(`“${content.title || row.title || "Adsız medya"}” medya türü veya ana URL bilgisi geçersiz.`);
+      return block;
+    }
+
+    if (primaryUrl !== submittedMedia.url) {
+      errors.push(`“${content.title || row.title || "Adsız medya"}” kaydı değişmiş; Pages editöründe medyayı yeniden seç.`);
+      return block;
+    }
+
+    return {
+      ...block,
+      media: {
+        mediaId: submittedMedia.mediaId,
+        mediaType: content.mediaType,
+        title: content.title || row.title || "Adsız medya",
+        url: primaryUrl,
+        previewUrl: previewUrl || undefined,
+        embedUrl: content.embedUrl,
+        provider: content.provider,
+        altText: content.altText,
+        surfaceSlot: submittedMedia.surfaceSlot,
+      },
+    };
+  });
+
+  return {
+    blocks,
+    error: errors.length > 0 ? Array.from(new Set(errors)).join(" ") : undefined,
+  };
+}
+
 function isPagePublishedContent(value: unknown) {
   return Boolean(
     value &&
@@ -806,6 +910,36 @@ export async function savePage(
 
   if (normalizedContent.error) {
     errors.content = normalizedContent.error;
+  }
+
+  if (!normalizedContent.error) {
+    try {
+      const mediaValidation = await validateAndCanonicalizePageMedia({
+        db,
+        blocks: normalizedContent.contentJson.blocks,
+      });
+      normalizedContent.contentJson.blocks = mediaValidation.blocks;
+
+      if (mediaValidation.error) {
+        errors.content = mediaValidation.error;
+      }
+    } catch (error) {
+      console.error("savePage media validation error", {
+        operation: id ? "update" : "create",
+        errorName: getSafeErrorName(error),
+        errorMessage: getSafeErrorMessage(error),
+      });
+
+      return {
+        ok: false,
+        message: "Sayfa kaydedilemedi.",
+        values,
+        errors: {
+          ...errors,
+          form: getSaveFailureMessage(error),
+        },
+      };
+    }
   }
 
   if (!isPublished && !normalizedContent.hasUserBlocks) {

@@ -381,7 +381,7 @@ export default async function PagesPage({ searchParams }: Props) {
       const content = normalizeMediaContent(media.contentJson, media.title || "");
       const url = getMediaPrimaryUrl(content);
 
-      if (!url) {
+      if (!url || content.usageScope !== "public") {
         return acc;
       }
 

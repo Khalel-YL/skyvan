@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, Check, Film, Image as ImageIcon, Search, X } from "lucide-react";
+import Link from "next/link";
+import { Box, Check, Film, Image as ImageIcon, RefreshCw, Search, X } from "lucide-react";
 
 import type { PageBlockMedia } from "../_lib/page-blocks";
 
@@ -113,17 +114,26 @@ export function PageMediaPicker({
             Medya bağlantısı
           </p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Blok görselini Medya Kütüphanesi kayıtlarından seç.
+            Blok görselini, kullanım kapsamı Yayın olan Medya Kütüphanesi kayıtlarından seç.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-2xl border border-zinc-700 bg-black px-3 py-2 text-xs text-zinc-200 transition hover:border-zinc-500"
-        >
-          {selected ? "Medyayı değiştir" : "Medya seç"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/media"
+            target="_blank"
+            className="rounded-2xl border border-zinc-800 bg-black/40 px-3 py-2 text-xs text-zinc-500 transition hover:border-zinc-600 hover:text-zinc-200"
+          >
+            Kütüphaneyi yönet
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-2xl border border-zinc-700 bg-black px-3 py-2 text-xs text-zinc-200 transition hover:border-zinc-500"
+          >
+            {selected ? "Medyayı değiştir" : "Medya seç"}
+          </button>
+        </div>
       </div>
 
       {selected ? (
@@ -145,7 +155,7 @@ export function PageMediaPicker({
               ))}
             </select>
             <p className="mt-2 text-xs leading-5 text-zinc-500">
-              Boş bırakılırsa medya yalnızca mevcut blok içinde kullanılır.
+              Slot kaydedilir; public launch/editorial yüzeyinde görünmesi için semantic approval gerekir. Boş bırakılırsa medya yalnızca mevcut blok içinde kullanılır.
             </p>
           </div>
 
@@ -242,7 +252,26 @@ export function PageMediaPicker({
             <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
               {mediaAssets.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-zinc-800 p-10 text-center text-sm text-zinc-500">
-                  Henüz medya kaydı yok. Önce Medya Kütüphanesi’nden kayıt oluştur.
+                  <p>Henüz medya kaydı yok.</p>
+                  <p className="mt-2">Önce Medya Kütüphanesi’nden gerçek bir kayıt oluştur veya küratörlü Skyvan görsellerini bağla.</p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <Link
+                      href="/admin/media"
+                      target="_blank"
+                      className="inline-flex rounded-2xl border border-zinc-700 bg-black px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                    >
+                      Medya Kütüphanesi’ni aç
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="inline-flex items-center gap-1.5 rounded-2xl border border-zinc-800 bg-black/60 px-3 py-2 text-xs font-semibold text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-200"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Kayıtları yenile
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[11px] leading-5 text-zinc-600">Yenilemeden önce kaydedilmemiş sayfa düzenlemesi varsa taslak olarak kaydet.</p>
                 </div>
               ) : filteredAssets.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-zinc-800 p-10 text-center text-sm text-zinc-500">

@@ -12,6 +12,7 @@ import { localizedContent } from "@/db/schema";
 
 import AddMediaDrawer from "./AddMediaDrawer";
 import MediaAssetStage from "./MediaAssetStage";
+import SyncCuratedMediaButton from "./SyncCuratedMediaButton";
 import {
   type MediaAsset,
   getMediaPreviewUrl,
@@ -23,6 +24,7 @@ import {
 type MediaSearchParams = Promise<{
   mediaAction?: string;
   mediaMessage?: string;
+  mediaCount?: string;
 }>;
 
 type MediaListItem = {
@@ -53,6 +55,17 @@ function getActionFeedback(params: Awaited<MediaSearchParams>) {
     return {
       tone: "success" as const,
       message: "Medya kaydı silindi.",
+    };
+  }
+
+  if (params.mediaAction === "curated-synced") {
+    const count = Number.parseInt(params.mediaCount || "0", 10);
+    return {
+      tone: "success" as const,
+      message:
+        count > 0
+          ? `${count} küratörlü Skyvan görseli Medya Kütüphanesi'ne eklendi; Pages düzenleyicisinde seçilebilir.`
+          : "Küratörlü Skyvan görselleri zaten Medya Kütüphanesi'nde; Pages düzenleyicisinde seçilebilir.",
     };
   }
 
@@ -229,11 +242,14 @@ export default async function MediaLibraryPage({
             </p>
           </div>
 
-          <AddMediaDrawer
-            disabled={!db}
-            noticeMessage={actionFeedback?.message ?? null}
-            noticeTone={actionFeedback?.tone ?? "info"}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <SyncCuratedMediaButton disabled={!db} />
+            <AddMediaDrawer
+              disabled={!db}
+              noticeMessage={actionFeedback?.message ?? null}
+              noticeTone={actionFeedback?.tone ?? "info"}
+            />
+          </div>
         </div>
       </section>
 
@@ -303,6 +319,7 @@ export default async function MediaLibraryPage({
               Bu yüzey gerçek medya referanslarını yönetir. Depolama boyutu, sahte
               kullanım sayısı veya otomatik AI skoru gösterilmez. Kullanım bağlantısı
               yalnızca içerik JSON içinde gerçek referans bulunduğunda görünür.
+              Pages editörü yalnızca kullanım kapsamı <span className="text-zinc-200">Yayın</span> olan kayıtları seçilebilir kabul eder.
             </p>
           </div>
         </div>

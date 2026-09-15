@@ -1,25 +1,57 @@
 import type { PublicBlockMedia, PublicSemanticMediaRole } from "./launch-content";
 import { getSafePublicMedia } from "./public-media-surface";
+import {
+  skyvanMediaCatalog,
+  type SkyvanMediaCatalogKey,
+} from "@/app/lib/skyvan-media-catalog";
+
+function catalogAsset(key: SkyvanMediaCatalogKey) {
+  const asset = skyvanMediaCatalog[key];
+
+  return {
+    src: asset.path,
+    width: asset.width,
+    height: asset.height,
+    alt: asset.alt,
+  } as const;
+}
 
 export const publicLaunchAssets = {
-  "exterior-light": { src: "/images/skyvan/concepts/exterior-light.webp", width: 1672, height: 941 },
-  "exterior-dark": { src: "/images/skyvan/concepts/exterior-dark.webp", width: 1672, height: 941 },
-  "exterior-landscape": { src: "/images/skyvan/concepts/exterior-landscape.webp", width: 1672, height: 941 },
-  lounge: { src: "/images/skyvan/concepts/lounge.webp", width: 1672, height: 941 },
-  alcove: { src: "/images/skyvan/concepts/alcove.webp", width: 1672, height: 941 },
-  toilet: { src: "/images/skyvan/concepts/toilet.webp", width: 1122, height: 1402 },
-  shower: { src: "/images/skyvan/concepts/shower.webp", width: 1122, height: 1402 },
+  "exterior-light": catalogAsset("exterior-landscape"),
+  "exterior-dark": catalogAsset("hero-studio"),
+  "exterior-landscape": catalogAsset("exterior-landscape"),
+  lounge: catalogAsset("interior-first-view"),
+  // The existing alcove room image remains the accurate room study. The new
+  // `alcove-layers` asset is an explanatory infographic and is exposed below
+  // as a separate visual instead of being substituted into the room gallery.
+  alcove: {
+    src: "/images/skyvan/concepts/alcove.webp",
+    width: 1672,
+    height: 941,
+    alt: {
+      tr: "Skyvan alkovenli karavanın kabin üstü yatak bölümünün konsept tasarımı.",
+      en: "Skyvan concept sleeping area above the motorhome cab.",
+    },
+  },
+  toilet: catalogAsset("toilet-separate"),
+  shower: catalogAsset("shower-separate"),
+  "interior-first-view": catalogAsset("interior-first-view"),
+  "kitchen-transition": catalogAsset("kitchen-transition"),
+  "lounge-table": catalogAsset("lounge-table"),
+  "lounge-bed": catalogAsset("lounge-bed"),
+  "water-clean-service": catalogAsset("water-clean-service"),
+  "water-grey-service": catalogAsset("water-grey-service"),
+  "electrical-rear-service": catalogAsset("electrical-rear-service"),
+  "electrical-cabinet": catalogAsset("electrical-cabinet"),
+  "roof-equipment": catalogAsset("roof-equipment"),
+  "control-centre": catalogAsset("control-centre-concept"),
+  "boiler-service": catalogAsset("boiler-service"),
+  "alcove-layers": catalogAsset("alcove-layers"),
   "ufuk-day": {
-    src: "/images/skyvan/models-v2/ufuk-day.webp",
-    width: 1536,
-    height: 1024,
+    ...catalogAsset("lounge-table"),
     modelId: "ufuk",
     scene: "day",
     pairId: "ufuk-lounge-conversion-v2",
-    alt: {
-      tr: "Ufuk: U oturum, yükseltilmiş masa ve zemine bağlı teleskopik ayak; gündüz görünümü.",
-      en: "Ufuk concept: U lounge, raised table and floor-mounted telescopic pedestal in day mode.",
-    },
   },
   "ufuk-conversion": {
     src: "/images/skyvan/models-v2/ufuk-conversion.webp",
@@ -34,43 +66,19 @@ export const publicLaunchAssets = {
     },
   },
   "ufuk-night": {
-    src: "/images/skyvan/models-v2/ufuk-night.webp",
-    width: 1536,
-    height: 1024,
+    ...catalogAsset("lounge-bed"),
     modelId: "ufuk",
     scene: "night",
     pairId: "ufuk-lounge-conversion-v2",
-    alt: {
-      tr: "Ufuk: aynı U oturumun yatağa dönüşmüş hali; masa ayağı yatak altında bağlı kalıyor.",
-      en: "Ufuk concept: the same U lounge converted for sleep, with the pedestal retained beneath the bed.",
-    },
   },
   "engineering-automation": {
-    src: "/images/skyvan/models-v2/engineering-automation.webp",
-    width: 1536,
-    height: 1024,
-    alt: {
-      tr: "Karavan girişinde küçük kontrol ekranı ve fiziksel anahtarlar için arayüz konsepti.",
-      en: "Interface concept for a small entry-area control screen and physical switches.",
-    },
+    ...catalogAsset("control-centre-concept"),
   },
   "engineering-connectors": {
-    src: "/images/skyvan/models-v2/engineering-connectors.webp",
-    width: 1536,
-    height: 1024,
-    alt: {
-      tr: "Kompakt su dağıtım başlığı, bağlantı bilezikleri, vanalar ve sabitleme klipsleri detayı.",
-      en: "Detail study of a compact water manifold, connector collars, valves and retaining clips.",
-    },
+    ...catalogAsset("water-clean-service"),
   },
   "engineering-roof": {
-    src: "/images/skyvan/models-v2/engineering-roof.webp",
-    width: 1672,
-    height: 941,
-    alt: {
-      tr: "Skyvan gövde konseptinin düz tavanında dört panel ve açık bırakılmış tavan açıklıkları.",
-      en: "Four-panel arrangement study on a Skyvan body concept, with roof openings left clear.",
-    },
+    ...catalogAsset("roof-equipment"),
   },
 } as const;
 

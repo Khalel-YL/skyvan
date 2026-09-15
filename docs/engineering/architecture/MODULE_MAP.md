@@ -72,6 +72,8 @@ Administrative interface.
 - Platform administration
 - Management tools
 - Operational control
+- Pages and locale-aware public content editing
+- Media metadata, usage scanning and audited bindings consumed by Pages
 
 ---
 
