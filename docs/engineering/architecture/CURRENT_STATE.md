@@ -251,7 +251,7 @@ Current controlled capabilities:
 - Supplementary text, feature-list, stats and CTA blocks have stable CMS identities.
 - Supplementary blocks support ordering, visibility and controlled layout variants.
 - Managed supplementary media remains disabled until semantic approval and usage tracking are complete.
-- Versioned Skyvan concept assets are tracked in `public/images/skyvan/concepts`; engineering-specific v1 visuals are tracked in `public/images/skyvan/engineering`. Both are described once in `app/lib/skyvan-media-catalog.ts`.
+- Versioned Skyvan concept assets are tracked in `public/images/skyvan/concepts`; engineering-specific v1 visuals (marine cable, PV cable/module/combiner, water manifold/pump/filter and vertical wall section) are tracked in `public/images/skyvan/engineering`. Both are described once in `app/lib/skyvan-media-catalog.ts`.
 - Admin Media can sync that catalog into audited `localized_content` media pointers; Admin Pages reads the same records through its media picker, re-validates `mediaId` bindings on the server and records real block usage.
 - Public editorial managed slots remain semantic-approval gated; selecting a slot in Pages records the binding without replacing the current curated fallback until an explicit approval is registered.
 - Stored Admin previews render through the real public page renderer and include drafts only inside the protected Admin boundary.

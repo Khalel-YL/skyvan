@@ -282,6 +282,9 @@
 .sv-editorial-reference > span:last-child { font-size: .74rem; line-height: 1.55; }
 .sv-editorial-visual-stack { display: grid; gap: 1.25rem; align-content: start; }
 .sv-editorial-visual-stack > .sv-editorial-figure, .sv-editorial-visual-stack > .sv-technical-diagram { min-width: 0; }
+.sv-editorial-related-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.sv-editorial-related-grid > :only-child { grid-column: 1 / -1; }
+.sv-editorial-related-grid .sv-editorial-section-image { aspect-ratio: 1.5; }
 .sv-technical-diagram { overflow: hidden; border: 1px solid var(--public-border); border-radius: var(--public-radius-media); background: linear-gradient(145deg, var(--public-bg-soft), var(--public-bg)); }
 .sv-technical-diagram-meta { display: flex; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; border-bottom: 1px solid var(--public-border); color: var(--public-muted); font-size: .62rem; font-weight: 600; letter-spacing: .16em; }
 .sv-technical-diagram-meta span:last-child { text-align: right; opacity: .65; }
@@ -468,6 +471,8 @@
   .sv-editorial-chapter-links::-webkit-scrollbar { display: none; }
   .sv-editorial-chapter-links a { flex: 0 0 auto; max-width: 14rem; }
   .sv-editorial-section-reverse.sv-editorial-section-with-media .sv-editorial-section-copy { order: 0; }
+  .sv-editorial-related-grid { grid-template-columns: 1fr; gap: .9rem; }
+  .sv-editorial-related-grid > :only-child { grid-column: auto; }
   .sv-editorial-page-hero-image, .sv-editorial-section-image { aspect-ratio: 1.25; }
   .sv-living-studies-grid, .sv-living-studies-single .sv-living-studies-grid, .sv-roof-evaluation-surface { grid-template-columns: 1fr; }
   .sv-living-study-image, .sv-living-studies-single .sv-living-study-image { aspect-ratio: 1.05; }

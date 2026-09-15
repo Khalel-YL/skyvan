@@ -58,7 +58,7 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
   muhendislik: {
     "vehicle-context": { asset: "exterior-landscape" },
     "material-weight-awareness": { asset: "engineering-insulation-service", className: "sv-image-contain" },
-    "roof-electrical-compatibility": { asset: "engineering-solar-roof", className: "sv-image-contain" },
+    "roof-electrical-compatibility": { asset: "engineering-solar-panel", className: "sv-image-contain" },
     "electrical-service": { asset: "engineering-electrical-service", className: "sv-image-contain" },
     "water-service": { asset: "engineering-water-service", className: "sv-image-contain" },
     controls: { asset: "control-centre", className: "sv-image-contain" },
@@ -82,6 +82,23 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
   "uretim-sureci": {
     "technical-definition": { asset: "electrical-rear-service", className: "sv-image-contain" },
     checks: { asset: "electrical-cabinet", className: "sv-image-contain" },
+  },
+};
+
+const relatedVisualsBySection: Partial<Record<CuratedPublicSlug, Record<string, readonly Visual[]>>> = {
+  muhendislik: {
+    "roof-electrical-compatibility": [
+      { asset: "engineering-solar-cable", className: "sv-image-contain" },
+    ],
+    "electrical-service": [
+      { asset: "engineering-marine-cable", className: "sv-image-contain" },
+      { asset: "engineering-solar-combiner", className: "sv-image-contain" },
+    ],
+    "water-service": [
+      { asset: "engineering-water-manifold", className: "sv-image-contain" },
+      { asset: "engineering-water-pump", className: "sv-image-contain" },
+      { asset: "engineering-water-filter", className: "sv-image-contain" },
+    ],
   },
 };
 
@@ -172,6 +189,12 @@ function EditorialVisual({ visual, locale }: { visual: Visual; locale: PublicPag
   </figure>;
 }
 
+function EditorialVisualGroup({ visuals, locale }: { visuals: readonly Visual[]; locale: PublicPageContent["locale"] }) {
+  return <div className="sv-editorial-related-grid">
+    {visuals.map((visual, index) => <EditorialVisual key={`${visual.asset}-${index}`} visual={visual} locale={locale} />)}
+  </div>;
+}
+
 function ManagedEditorialVisual({ media, locale }: { media: PublicBlockMedia; locale: PublicPageContent["locale"] }) {
   const focalPosition = media.focalPosition
     ? `${media.focalPosition.x}% ${media.focalPosition.y}%`
@@ -215,6 +238,7 @@ function RoofEvaluation({ locale }: { locale: PublicPageContent["locale"] }): Re
 function SectionBody({ section, index, slug, page }: { section: EditorialSection; index: number; slug: CuratedPublicSlug; page: PublicPageContent }) {
   const locale = page.locale;
   const visual = sectionVisuals[slug]?.[section.id];
+  const relatedVisuals = relatedVisualsBySection[slug]?.[section.id];
   const technicalDiagram = technicalDiagramBySection[slug]?.[section.id];
   const isRoofEvaluation = slug === "muhendislik" && section.id === "roof-electrical-compatibility";
   const livingStudies = slug === "karavan-deneyimi" && section.id === "sleep" ? ["alcove"] as const
@@ -246,6 +270,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
     {resolvedVisual !== "none" ? <div className="sv-editorial-visual-stack">
       {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : null}
       {resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : null}
+      {resolvedVisual === "curated" && relatedVisuals ? <EditorialVisualGroup visuals={relatedVisuals} locale={locale} /> : null}
       {resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : null}
       {resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
       {resolvedVisual === "curated" && technicalDiagram ? <PublicTechnicalDiagram kind={technicalDiagram} locale={locale} /> : null}
