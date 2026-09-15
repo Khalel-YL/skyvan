@@ -25,7 +25,10 @@ import {
 import AddPageDrawer from "./AddPageDrawer";
 import DeletePageButton from "./DeletePageButton";
 import type { PageMediaPickerAsset } from "./_components/PageMediaPicker";
-import { isAboutEditorialPage, ABOUT_EDITORIAL_SECTION_IDS } from "@/app/lib/public-editorial-cms";
+import {
+  getPublicEditorialSectionIds,
+  isPublicEditorialPage,
+} from "@/app/lib/public-editorial-cms";
 
 import { repairPageSlug } from "./actions";
 
@@ -693,8 +696,8 @@ export default async function PagesPage({ searchParams }: Props) {
                         );
                         const safeSlug = getSafeSlug(row.slug, row.title);
                         const missingSlug = !String(row.slug ?? "").trim();
-                        const curatedSectionCount = isAboutEditorialPage(row.locale, safeSlug)
-                          ? ABOUT_EDITORIAL_SECTION_IDS.length
+                        const curatedSectionCount = isPublicEditorialPage(row.locale, safeSlug)
+                          ? getPublicEditorialSectionIds(safeSlug).length
                           : 0;
 
                         return (

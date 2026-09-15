@@ -6,10 +6,10 @@ import { and, eq, or } from "drizzle-orm";
 import { db, hasDatabaseUrl } from "@/db/db";
 import { localizedContent } from "@/db/schema";
 import {
-  isAboutEditorialPage,
-  normalizeAboutEditorialPageOverride,
+  isPublicEditorialPage,
+  normalizePublicEditorialPageOverride,
   normalizePublicSupplementaryBlockPresentation,
-  validateAboutEditorialContract,
+  validatePublicEditorialContract,
 } from "@/app/lib/public-editorial-cms";
 
 import {
@@ -410,8 +410,8 @@ function pageFromAdminRow(
   const rawBlocks = Array.isArray(content?.blocks) ? content.blocks : [];
 
   if (
-    isAboutEditorialPage(locale, slug) &&
-    validateAboutEditorialContract({
+    isPublicEditorialPage(locale, slug) &&
+    validatePublicEditorialContract({
       locale,
       slug,
       editorialPage: content?.editorialPage,
@@ -439,8 +439,8 @@ function pageFromAdminRow(
     seoTitle: asString(row.seoTitle) || title,
     seoDescription: asString(row.seoDescription) || description || getFallbackPage(locale, slug).seoDescription,
     blocks,
-    editorialPage: isAboutEditorialPage(locale, slug)
-      ? normalizeAboutEditorialPageOverride(content?.editorialPage)
+    editorialPage: isPublicEditorialPage(locale, slug)
+      ? normalizePublicEditorialPageOverride(content?.editorialPage)
       : undefined,
   };
 }

@@ -12,11 +12,11 @@ import {
 
 import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 import {
-  ABOUT_EDITORIAL_CTA_SLUGS,
+  PUBLIC_EDITORIAL_CTA_SLUGS,
   MAX_PUBLIC_SUPPLEMENTARY_BLOCKS,
   PUBLIC_SUPPLEMENTARY_BLOCK_LAYOUTS,
-  getAboutEditorialCtaHref,
-  getAboutEditorialCtaSlug,
+  getPublicEditorialCtaHref,
+  getPublicEditorialCtaSlug,
   type PublicSupplementaryBlockType,
 } from "@/app/lib/public-editorial-cms";
 
@@ -141,7 +141,7 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
         <div>
           <h3 className="text-sm font-semibold text-white">Ek içerik blokları</h3>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-500">
-            Ana Hakkımızda bölümlerini değiştirmeden yeni içerik ekleyin. Ek bloklar ana bölümlerin ardından, belirlediğiniz sırayla gösterilir.
+            Ana editoryal bölümleri değiştirmeden yeni içerik ekleyin. Ek bloklar ana bölümlerin ardından, belirlediğiniz sırayla gösterilir.
           </p>
         </div>
         <span className="w-max rounded-full border border-zinc-800 px-3 py-1 text-[11px] text-zinc-400">
@@ -159,7 +159,7 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
 
       {supplementary.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-zinc-800 bg-black/25 px-5 py-8 text-center text-xs leading-5 text-zinc-500">
-          Henüz ek blok yok. Public sayfa mevcut sekiz güvenli ana bölümle çalışmaya devam eder.
+          Henüz ek blok yok. Public sayfa mevcut güvenli ana bölümlerle çalışmaya devam eder.
         </div>
       ) : (
         <div className="mt-4 space-y-2">
@@ -215,7 +215,7 @@ export function PageSupplementaryBlockEditor({ blocks, locale, onChange }: Props
                     <Field label="Açıklama" value={block.body ?? ""} onChange={(body) => updateBlock(cms.id, { ...block, body })} multiline />
                     <div className="grid gap-3 md:grid-cols-2">
                       <Field label="Buton etiketi" value={block.ctaLabel ?? ""} onChange={(ctaLabel) => updateBlock(cms.id, { ...block, ctaLabel: ctaLabel || undefined })} />
-                      <label className="grid gap-2"><span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Buton hedefi</span><select value={block.ctaHref ?? ""} onChange={(event) => { const href = event.target.value; const previousSlug = block.ctaHref ? getAboutEditorialCtaSlug(safeLocale, block.ctaHref) : undefined; const nextSlug = ABOUT_EDITORIAL_CTA_SLUGS.find((slug) => getAboutEditorialCtaHref(safeLocale, slug) === href); const previousLabel = previousSlug ? publicEditorialContent[safeLocale][previousSlug].title : undefined; const nextLabel = nextSlug ? publicEditorialContent[safeLocale][nextSlug].title : undefined; updateBlock(cms.id, { ...block, ctaHref: href || undefined, ctaLabel: href ? (!block.ctaLabel || block.ctaLabel === previousLabel ? nextLabel : block.ctaLabel) : undefined }); }} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"><option value="">CTA gösterme</option>{ABOUT_EDITORIAL_CTA_SLUGS.map((slug) => <option key={slug} value={getAboutEditorialCtaHref(safeLocale, slug)}>{publicEditorialContent[safeLocale][slug].title}</option>)}</select></label>
+                      <label className="grid gap-2"><span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Buton hedefi</span><select value={block.ctaHref ?? ""} onChange={(event) => { const href = event.target.value; const previousSlug = block.ctaHref ? getPublicEditorialCtaSlug(safeLocale, block.ctaHref) : undefined; const nextSlug = PUBLIC_EDITORIAL_CTA_SLUGS.find((slug) => getPublicEditorialCtaHref(safeLocale, slug) === href); const previousLabel = previousSlug ? publicEditorialContent[safeLocale][previousSlug].title : undefined; const nextLabel = nextSlug ? publicEditorialContent[safeLocale][nextSlug].title : undefined; updateBlock(cms.id, { ...block, ctaHref: href || undefined, ctaLabel: href ? (!block.ctaLabel || block.ctaLabel === previousLabel ? nextLabel : block.ctaLabel) : undefined }); }} className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"><option value="">CTA gösterme</option>{PUBLIC_EDITORIAL_CTA_SLUGS.map((slug) => <option key={slug} value={getPublicEditorialCtaHref(safeLocale, slug)}>{publicEditorialContent[safeLocale][slug].title}</option>)}</select></label>
                     </div>
                   </> : null}
                 </div>

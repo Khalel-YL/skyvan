@@ -48,8 +48,8 @@ export const skyvanMediaCatalog = {
     title: "Temiz su servis bölmesi",
     description: "Temiz su deposu, pompa ve baca erişimini birlikte gösteren konsept servis görünümü.",
     alt: {
-      tr: "Skyvan temiz su servis bölmesi; 100 litre temiz su deposu, pompa ve baca erişimi konsepti.",
-      en: "Skyvan clean-water service bay concept with a 100-litre tank, pump and vent access.",
+      tr: "Skyvan temiz su servis bölmesi; depo, pompa ve havalandırma erişimi konsepti.",
+      en: "Skyvan clean-water service bay concept with tank, pump and vent access.",
     },
     tags: ["su", "temiz su", "servis", "mühendislik"],
     usageScope: "public",
@@ -64,8 +64,8 @@ export const skyvanMediaCatalog = {
     title: "Gri su servis bölmesi",
     description: "Gri su deposu, pompa tahliye hattı ve dış basamak ilişkisini gösteren konsept servis görünümü.",
     alt: {
-      tr: "Skyvan gri su servis bölmesi; 100 litre depo, pompa tahliye hattı ve dış basamak konsepti.",
-      en: "Skyvan grey-water service bay concept with a 100-litre tank, pump drain and step access.",
+      tr: "Skyvan gri su servis bölmesi; depo, tahliye hattı ve dış basamak ilişkisi konsepti.",
+      en: "Skyvan grey-water service bay concept with tank, drain route and step access.",
     },
     tags: ["su", "gri su", "servis", "mühendislik"],
     usageScope: "public",

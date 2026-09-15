@@ -1,14 +1,16 @@
 import {
-  ABOUT_EDITORIAL_SECTION_IDS,
   type AboutEditorialPageOverride,
-  type AboutEditorialSectionPresentation,
+  type PublicEditorialSectionPresentation,
   type PublicSupplementaryBlockPresentation,
-  normalizeAboutEditorialPageOverride,
-  normalizeAboutEditorialPresentation,
+  normalizePublicEditorialPageOverride,
+  normalizePublicEditorialPresentation,
   normalizePublicSupplementaryBlockPresentation,
-  validateAboutEditorialContract,
-  isAboutEditorialPage,
+  validatePublicEditorialContract,
+  getPublicEditorialSectionIds,
+  isPublicEditorialPage,
+  isPublicEditorialSectionId,
 } from "@/app/lib/public-editorial-cms";
+import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 
 export type PageBlockMedia = {
   mediaId: string;
@@ -52,7 +54,7 @@ type PageContentBlockDefinition =
       ctaLabel?: string;
       ctaHref?: string;
       media?: PageBlockMedia;
-      editorial?: AboutEditorialSectionPresentation;
+      editorial?: PublicEditorialSectionPresentation;
     }
   | {
       type: "feature-list";
@@ -290,7 +292,7 @@ function normalizeBlock(value: unknown): PageContentBlock | null {
     ctaLabel: optionalString(raw.ctaLabel),
     ctaHref: optionalString(raw.ctaHref),
     media: normalizeMedia(raw.media),
-    editorial: normalizeAboutEditorialPresentation(raw.editorial),
+    editorial: normalizePublicEditorialPresentation(raw.editorial),
     cms,
   };
 }
@@ -323,25 +325,32 @@ export function createDefaultPageBlocks(params?: {
   ];
 }
 
-export function prepareAboutEditorialBlocks(
+export function preparePublicEditorialBlocks(
   blocks: PageContentBlock[],
   locale: string,
   slug: string,
 ) {
-  if (!isAboutEditorialPage(locale, slug)) {
+  if (!isPublicEditorialPage(locale, slug)) {
     return blocks;
   }
 
   const hero = blocks.find((block) => block.type === "hero");
   const existing = blocks.filter(
     (block): block is Extract<PageContentBlock, { type: "text" }> =>
-      block.type === "text" && Boolean(block.editorial),
+      block.type === "text" &&
+      Boolean(block.editorial) &&
+      isPublicEditorialSectionId(slug, block.editorial!.sectionId),
   );
   const supplementary = blocks.filter((block) => Boolean(block.cms));
   const seen = new Set(existing.map((block) => block.editorial?.sectionId));
+  const safeLocale = locale === "en" ? "en" : "tr";
+  const fallbackSections = publicEditorialContent[safeLocale][slug].sections;
+  const sectionIds = fallbackSections.length > 0
+    ? fallbackSections.map((section) => section.id)
+    : getPublicEditorialSectionIds(slug);
   const sections: PageContentBlock[] = [
     ...existing,
-    ...ABOUT_EDITORIAL_SECTION_IDS.filter((sectionId) => !seen.has(sectionId)).map(
+    ...sectionIds.filter((sectionId) => !seen.has(sectionId)).map(
       (sectionId): PageContentBlock => ({
         type: "text",
         editorial: {
@@ -354,6 +363,14 @@ export function prepareAboutEditorialBlocks(
   ];
 
   return hero ? [hero, ...sections, ...supplementary] : [...sections, ...supplementary];
+}
+
+export function prepareAboutEditorialBlocks(
+  blocks: PageContentBlock[],
+  locale: string,
+  slug: string,
+) {
+  return preparePublicEditorialBlocks(blocks, locale, slug);
 }
 
 export function normalizePageContentJson(
@@ -382,7 +399,7 @@ export function normalizePageContentJson(
   return {
     isPublished: published,
     blocks: blocks.length > 0 ? blocks : createDefaultPageBlocks(fallback),
-    editorialPage: normalizeAboutEditorialPageOverride(raw.editorialPage),
+    editorialPage: normalizePublicEditorialPageOverride(raw.editorialPage),
   };
 }
 
@@ -390,7 +407,7 @@ export function validatePageBlocks(input: PageBlockValidationInput): PageBlockVa
   const blockers: string[] = [];
   const warnings: string[] = [];
 
-  const editorialErrors = validateAboutEditorialContract({
+  const editorialErrors = validatePublicEditorialContract({
     locale: input.locale ?? "",
     slug: input.slug.trim(),
     editorialPage: input.editorialPage,
@@ -468,7 +485,7 @@ export function serializePageContentJson(input: PageContentJson) {
   const normalized = {
     isPublished: input.isPublished,
     blocks: normalizedBlocks,
-    editorialPage: normalizeAboutEditorialPageOverride(input.editorialPage),
+    editorialPage: normalizePublicEditorialPageOverride(input.editorialPage),
   };
 
   return JSON.stringify(normalized);

@@ -2,6 +2,7 @@ import { getCanonicalPublicSlug, type PublicLocale } from "./public-routing";
 import type { PublicMediaSlotName } from "./public-media-surface";
 import type {
   AboutEditorialPageOverride,
+  PublicEditorialSectionPresentation,
   PublicSupplementaryBlockPresentation,
 } from "@/app/lib/public-editorial-cms";
 
@@ -26,10 +27,11 @@ export type PublicSemanticMediaRole =
   | "editorial.production.section"
   | "editorial.general.section";
 
-export type PublicEditorialPresentation = {
-  sectionId: string;
+export type PublicEditorialPresentation = Omit<
+  PublicEditorialSectionPresentation,
+  "visual" | "visible"
+> & {
   visual: "inherit" | "none" | "media";
-  layout?: "text-only" | "media-left" | "media-right" | "wide-media";
   visible?: boolean;
 };
 

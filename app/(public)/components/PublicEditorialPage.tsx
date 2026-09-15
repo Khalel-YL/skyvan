@@ -23,14 +23,15 @@ import {
 import { getLaunchHero } from "../lib/public-launch-selection";
 import { resolveEditorialVisual } from "../lib/public-media-surface";
 import {
-  isAboutEditorialSectionId,
-  mergeAboutEditorialSections,
+  isPublicEditorialSectionId,
+  mergePublicEditorialSections,
 } from "@/app/lib/public-editorial-cms";
 import { getLocalizedPath } from "../lib/public-routing";
 import { PublicConceptMedia } from "./PublicConceptMedia";
 import { PublicLivingConceptStudies, PublicLivingGallery } from "./PublicLivingGallery";
 import { PublicMediaSurface } from "./PublicMediaSurface";
 import { PublicProjectAction } from "./PublicProjectAction";
+import { PublicTechnicalDiagram, type PublicTechnicalDiagramKind } from "./PublicTechnicalDiagram";
 
 type Visual = { asset: PublicLaunchAssetId; className?: string };
 
@@ -45,7 +46,17 @@ function getAssetAlt(assetId: PublicLaunchAssetId, locale: PublicPageContent["lo
 }
 
 const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>> = {
+  hakkimizda: {
+    "organized-service-access": { asset: "electrical-rear-service", className: "sv-image-contain" },
+    "living-space-and-engineering": { asset: "interior-first-view" },
+    "workshop-extension": { asset: "control-centre", className: "sv-image-contain" },
+  },
+  "karavan-deneyimi": {
+    kitchen: { asset: "kitchen-transition" },
+    storage: { asset: "lounge-table" },
+  },
   muhendislik: {
+    "vehicle-context": { asset: "exterior-landscape" },
     "electrical-service": { asset: "electrical-rear-service", className: "sv-image-contain" },
     "water-service": { asset: "water-clean-service", className: "sv-image-contain" },
     controls: { asset: "control-centre", className: "sv-image-contain" },
@@ -71,6 +82,22 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
     checks: { asset: "electrical-cabinet", className: "sv-image-contain" },
   },
 };
+
+const technicalDiagramBySection: Partial<Record<CuratedPublicSlug, Record<string, PublicTechnicalDiagramKind>>> = {
+  muhendislik: {
+    "material-weight-awareness": "load-aero",
+    "electrical-service": "solar-electrical",
+    "water-service": "water-service",
+    controls: "service-access",
+  },
+  workshop: {
+    "category-choices": "load-aero",
+    "technical-validation": "solar-electrical",
+    "project-sealing": "service-access",
+  },
+};
+
+const chapterNavSlugs = new Set<CuratedPublicSlug>(["muhendislik", "workshop", "karavan-deneyimi"]);
 
 const heroAssets: Partial<Record<CuratedPublicSlug, PublicLaunchAssetId>> = {
   hakkimizda: "lounge",
@@ -119,16 +146,12 @@ function getResolvedEditorialCopy(
   slug: CuratedPublicSlug,
   fallback: (typeof publicEditorialContent)["tr"][CuratedPublicSlug],
 ) {
-  if (slug !== "hakkimizda") {
-    return fallback;
-  }
-
   type EditorialTextBlock = Extract<PublicBlock, { type: "text" }>;
   const blocks = page.blocks.filter(
     (block): block is EditorialTextBlock => block.type === "text" && Boolean(block.editorial) &&
-      isAboutEditorialSectionId(block.editorial!.sectionId),
+      isPublicEditorialSectionId(slug, block.editorial!.sectionId),
   );
-  const sections = mergeAboutEditorialSections(fallback.sections, blocks, page.locale);
+  const sections = mergePublicEditorialSections(fallback.sections, blocks, slug, page.locale);
 
   return {
     ...fallback,
@@ -190,6 +213,7 @@ function RoofEvaluation({ locale }: { locale: PublicPageContent["locale"] }): Re
 function SectionBody({ section, index, slug, page }: { section: EditorialSection; index: number; slug: CuratedPublicSlug; page: PublicPageContent }) {
   const locale = page.locale;
   const visual = sectionVisuals[slug]?.[section.id];
+  const technicalDiagram = technicalDiagramBySection[slug]?.[section.id];
   const isRoofEvaluation = slug === "muhendislik" && section.id === "roof-electrical-compatibility";
   const livingStudies = slug === "karavan-deneyimi" && section.id === "sleep" ? ["alcove"] as const
     : slug === "karavan-deneyimi" && section.id === "personal-space" ? ["toilet", "shower"] as const
@@ -200,7 +224,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
   const approvedMedia = presentation?.visual === "media" && override?.media?.semanticRole === requestedRole
     ? getApprovedCmsLaunchMedia(override.media, { role: requestedRole })
     : null;
-  const hasCuratedVisual = Boolean(visual || isRoofEvaluation || livingStudies);
+  const hasCuratedVisual = Boolean(visual || technicalDiagram || isRoofEvaluation || livingStudies);
   const resolvedVisual = resolveEditorialVisual({
     presentation,
     hasCuratedVisual,
@@ -217,8 +241,24 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
       {section.bullets ? <ul>{section.bullets.map((item) => <li key={item}>{item}</li>)}</ul> : null}
       {section.cta ? <Link className="sv-text-link" href={section.cta.href}>{section.cta.label}<ArrowUpRight size={17} aria-hidden="true" /></Link> : null}
     </div>
-    {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
+    {resolvedVisual !== "none" ? <div className="sv-editorial-visual-stack">
+      {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : null}
+      {resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : null}
+      {resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : null}
+      {resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
+      {resolvedVisual === "curated" && technicalDiagram ? <PublicTechnicalDiagram kind={technicalDiagram} locale={locale} /> : null}
+    </div> : null}
   </section>;
+}
+
+function EditorialChapterNav({ copy, slug, locale }: { copy: (typeof publicEditorialContent)["tr"][CuratedPublicSlug]; slug: CuratedPublicSlug; locale: "tr" | "en" }) {
+  if (!chapterNavSlugs.has(slug) || copy.sections.length === 0) return null;
+  return <nav className="sv-editorial-chapter-nav" aria-label={locale === "tr" ? "Sayfa bölümleri" : "Page chapters"}>
+    <span className="sv-editorial-chapter-label">{locale === "tr" ? "Bölümlere geç" : "Jump to chapter"}</span>
+    <div className="sv-editorial-chapter-links">
+      {copy.sections.map((section, index) => <a key={section.id} href={`#${section.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{section.heading}</a>)}
+    </div>
+  </nav>;
 }
 
 function WorkshopDecisionArchitecture({ copy, status }: {
@@ -233,6 +273,21 @@ function WorkshopDecisionArchitecture({ copy, status }: {
       <div className="sv-workshop-authority">{copy.authority.map((item) => <article key={item.title}><h3>{item.title}</h3><p>{item.body}</p></article>)}</div>
       <p className="sv-workshop-architecture-note">{copy.note}</p>
     </div>
+  </section>;
+}
+
+function EditorialReferences({ references, locale }: { references: NonNullable<(typeof publicEditorialContent)["tr"][CuratedPublicSlug]["references"]>; locale: "tr" | "en" }) {
+  if (references.length === 0) return null;
+  return <section className="sv-container sv-editorial-references" aria-labelledby="editorial-references-title">
+    <p className="sv-eyebrow">{locale === "tr" ? "Teknik referanslar" : "Technical references"}</p>
+    <h2 id="editorial-references-title">{locale === "tr" ? "Açıklama çerçevemizi açık kaynaklarla besliyoruz." : "Our explanatory framework stays open to reference material."}</h2>
+    <div className="sv-editorial-reference-grid">
+      {references.map((reference) => <a key={reference.href} href={reference.href} target="_blank" rel="noreferrer" className="sv-editorial-reference">
+        <span className="sv-editorial-reference-label">{reference.label}<ArrowUpRight size={15} aria-hidden="true" /></span>
+        <span>{reference.description}</span>
+      </a>)}
+    </div>
+    <p className="sv-disclaimer">{locale === "tr" ? "Bu bağlantılar ürün seçimi, kurulum talimatı veya Skyvan onayı yerine geçmez; proje verileri ve güncel üretici dokümanları ayrıca doğrulanır." : "These links are references, not product selections, installation instructions or Skyvan approvals; project data and current manufacturer documentation are checked separately."}</p>
   </section>;
 }
 
@@ -266,9 +321,9 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
       <div className="sv-container sv-editorial-page-hero-grid">
         <div className="sv-editorial-copy">
           <div className="sv-editorial-kicker"><p className="sv-eyebrow">{copy.eyebrow}</p>{copy.status ? <span className="sv-status">{copy.status}</span> : null}</div>
-          <h1 id="editorial-title">{slug === "hakkimizda" ? copy.heading : cmsHero?.heading || copy.heading}</h1>
-          <p>{slug === "hakkimizda" ? copy.body : cmsHero?.subtext || copy.body}</p>
-          {slug !== "hakkimizda" && cmsHero?.body ? <p>{cmsHero.body}</p> : null}
+          <h1 id="editorial-title">{page.editorialPage?.title ? copy.heading : cmsHero?.heading || copy.heading}</h1>
+          <p>{page.editorialPage?.introduction ? copy.body : cmsHero?.subtext || copy.body}</p>
+          {page.editorialPage?.introduction ? null : cmsHero?.body ? <p>{cmsHero.body}</p> : null}
         </div>
         {heroAsset && !isCompact ? <figure className="sv-editorial-hero-figure">
           <PublicConceptMedia
@@ -285,9 +340,11 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
       </div>
     </section>
 
+    <div className="sv-container"><EditorialChapterNav copy={copy} slug={slug} locale={page.locale} /></div>
+
     {slug === "workshop" && copy.decisionArchitecture ? <WorkshopDecisionArchitecture copy={copy.decisionArchitecture} status={copy.status} /> : null}
 
-    {slug === "karavan-deneyimi" ? <section className="sv-container sv-section sv-editorial-gallery" aria-labelledby="living-gallery-title">
+    {slug === "karavan-deneyimi" ? <section id="living" className="sv-container sv-section sv-editorial-gallery" aria-labelledby="living-gallery-title">
       <p className="sv-eyebrow">{launchCopy.product.eyebrow}</p>
       <h2 id="living-gallery-title">{copy.sections[0].heading}</h2>
       <p className="sv-editorial-gallery-intro">{copy.sections[0].body}</p>
@@ -305,6 +362,8 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
     </div>}
 
     {copy.note && !isProjectStart ? <div className="sv-container"><p className="sv-editorial-note">{copy.note}</p></div> : null}
+
+    {copy.references ? <EditorialReferences references={copy.references} locale={page.locale} /> : null}
 
     {children ? <aside className="sv-published-copy" aria-label={page.locale === "tr" ? "Yayınlanmış ek içerik" : "Additional published content"}>{children}</aside> : null}
 

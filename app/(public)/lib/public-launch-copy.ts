@@ -5,7 +5,7 @@ type Item = { title: string; body: string };
 type DiscoverySlug = "hakkimizda" | "muhendislik" | "workshop" | "nasil-calisir";
 type DiscoveryItem = Item & { id: string; linkLabel: string; slug: DiscoverySlug };
 export type PublicLaunchCopy = {
-  nav: { discover: string; workshop: string; engineering: string; about: string };
+  nav: { home: string; discover: string; workshop: string; engineering: string; about: string };
   project: string; upcoming: string; concept: string; conceptNote: string;
   hero: Story & { subtext: string; primaryCta: string; secondaryCta: string; footnote: string };
   definition: Story;
@@ -28,7 +28,7 @@ export type PublicLaunchCopy = {
 
 export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
   tr: {
-    nav: { discover: "Keşfet", workshop: "Workshop", engineering: "Mühendislik", about: "Hakkımızda" },
+    nav: { home: "Ana sayfa", discover: "Keşfet", workshop: "Workshop", engineering: "Mühendislik", about: "Hakkımızda" },
     project: "Proje Başlat", upcoming: "Yakında", concept: "Konsept tasarım",
     conceptNote: "Görseller Skyvan tasarım vizyonunu gösterir. Yerleşim ve donanım, araç özelinde teknik değerlendirme ve onayla netleşir.",
     hero: {
@@ -106,7 +106,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
     footer: "Özgürlük, mühendislikle.",
   },
   en: {
-    nav: { discover: "Discover", workshop: "Workshop", engineering: "Engineering", about: "About" },
+    nav: { home: "Home", discover: "Discover", workshop: "Workshop", engineering: "Engineering", about: "About" },
     project: "Start a Project", upcoming: "Coming soon", concept: "Concept design",
     conceptNote: "These images express Skyvan’s design vision. Layouts and equipment depend on vehicle-specific technical review and approval.",
     hero: { eyebrow: "More room. More life.", heading: "Freedom,\nengineered.", subtext: "Your route. Your way of living. A motorhome project considered as a whole.", body: "", primaryCta: "Discover Skyvan", secondaryCta: "Start a Project", footnote: "At home on the road. In the heart of life." },

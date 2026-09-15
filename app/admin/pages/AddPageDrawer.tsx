@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 
 import {
   type AboutEditorialPageOverride,
-  isAboutEditorialPage,
+  isPublicEditorialPage,
 } from "@/app/lib/public-editorial-cms";
 import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 
@@ -21,7 +21,7 @@ import {
   type PageContentBlock,
   createDefaultPageBlocks,
   normalizePageContentJson,
-  prepareAboutEditorialBlocks,
+  preparePublicEditorialBlocks,
   serializePageContentJson,
   validatePageBlocks,
 } from "./_lib/page-blocks";
@@ -125,15 +125,17 @@ export default function AddPageDrawer({
   const [seoTitle, setSeoTitle] = useState(defaultSeoTitle);
   const [seoDescription, setSeoDescription] = useState(defaultSeoDescription);
   const [blocks, setBlocks] = useState<PageContentBlock[]>(() =>
-    prepareAboutEditorialBlocks(defaultContent.blocks, defaultLocale, defaultSlug),
+    preparePublicEditorialBlocks(defaultContent.blocks, defaultLocale, defaultSlug),
   );
   const [editorialPage, setEditorialPage] = useState<AboutEditorialPageOverride | undefined>(
     defaultContent.editorialPage,
   );
   const [isPublished] = useState(defaultContent.isPublished);
   const [submitIntent, setSubmitIntent] = useState<PageSubmitIntent>("draft");
-  const isAboutEditorial = isAboutEditorialPage(locale, slug);
-  const aboutFallback = publicEditorialContent[locale === "en" ? "en" : "tr"].hakkimizda;
+  const isPublicEditorial = isPublicEditorialPage(locale, slug);
+  const editorialFallback = isPublicEditorial
+    ? publicEditorialContent[locale === "en" ? "en" : "tr"][slug]
+    : undefined;
 
   const validation = validatePageBlocks({
     title,
@@ -283,7 +285,7 @@ export default function AddPageDrawer({
                     <input
                       name="locale"
                       value={locale}
-                      readOnly={isAboutEditorial}
+                      readOnly={isPublicEditorial}
                       onChange={(event) => setLocale(normalizeLocale(event.target.value))}
                       placeholder="tr"
                       className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 text-sm outline-none transition focus:border-zinc-600"
@@ -315,7 +317,7 @@ export default function AddPageDrawer({
                     <input
                       name="slug"
                       value={slug}
-                      readOnly={isAboutEditorial}
+                      readOnly={isPublicEditorial}
                       onChange={(event) => setSlug(normalizeSlug(event.target.value))}
                       placeholder="premium-karavan-donusumu"
                       className="w-full rounded-xl border border-zinc-800 bg-black px-3 py-2.5 font-mono text-sm outline-none transition focus:border-zinc-600"
@@ -351,17 +353,17 @@ export default function AddPageDrawer({
               {state.errors?.seoTitle ? <p className="text-xs text-rose-400">{state.errors.seoTitle}</p> : null}
               {state.errors?.seoDescription ? <p className="text-xs text-rose-400">{state.errors.seoDescription}</p> : null}
 
-              {isAboutEditorial ? (
+              {isPublicEditorial && editorialFallback ? (
                 <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-white">Public Hakkımızda girişi</h3>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">Boş bırakılan alanlar güvenli küratörlü içeriğe döner. Slug ve locale bu sayfa çifti için kilitlidir.</p>
+                    <h3 className="text-sm font-semibold text-white">Public editoryal girişi</h3>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">Boş bırakılan alanlar güvenli küratörlü içeriğe döner. Bu sayfanın canonical slug ve locale çifti kilitlidir.</p>
                   </div>
                   <div className="mt-3 grid gap-3">
                     {([
-                      ["title", "Public başlık (H1)", aboutFallback.heading, false],
-                      ["eyebrow", "Eyebrow", aboutFallback.eyebrow, false],
-                      ["introduction", "Giriş metni", aboutFallback.body, true],
+                      ["title", "Public başlık (H1)", editorialFallback.heading, false],
+                      ["eyebrow", "Eyebrow", editorialFallback.eyebrow, false],
+                      ["introduction", "Giriş metni", editorialFallback.body, true],
                     ] as const).map(([key, label, fallback, multiline]) => (
                       <label key={key} className="grid gap-2">
                         <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</span>
@@ -418,7 +420,7 @@ export default function AddPageDrawer({
                 locale={locale}
                 slug={slug}
                 blocks={blocks}
-                isAboutEditorial={isAboutEditorial}
+                isPublicEditorial={isPublicEditorial}
               />
 
               <PageAiCopilot

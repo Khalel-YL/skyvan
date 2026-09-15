@@ -27,12 +27,12 @@ import {
 import {
   ABOUT_EDITORIAL_SLUG,
   type AboutEditorialPageOverride,
-  type AboutEditorialSectionPresentation,
+  type PublicEditorialSectionPresentation,
   type PublicSupplementaryBlockPresentation,
-  normalizeAboutEditorialPageOverride,
-  normalizeAboutEditorialPresentation,
+  normalizePublicEditorialPageOverride,
+  normalizePublicEditorialPresentation,
   normalizePublicSupplementaryBlockPresentation,
-  validateAboutEditorialContract,
+  validatePublicEditorialContract,
 } from "@/app/lib/public-editorial-cms";
 import {
   getMediaPreviewUrl,
@@ -92,7 +92,7 @@ type PageBlock = {
     altText?: string;
     surfaceSlot?: PageMediaSurfaceSlot;
   };
-  editorial?: AboutEditorialSectionPresentation;
+  editorial?: PublicEditorialSectionPresentation;
   cms?: PublicSupplementaryBlockPresentation;
 };
 
@@ -376,7 +376,7 @@ function sanitizeMedia(value: unknown): PageBlock["media"] {
   };
 }
 
-function sanitizeBlock(value: unknown): PageBlock | null {
+function sanitizeBlock(value: unknown, slug?: string): PageBlock | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
@@ -428,7 +428,7 @@ function sanitizeBlock(value: unknown): PageBlock | null {
     block.media = media;
   }
 
-  const editorial = normalizeAboutEditorialPresentation(raw.editorial);
+  const editorial = normalizePublicEditorialPresentation(raw.editorial, slug);
   if (editorial && type === "text") {
     block.editorial = editorial;
   }
@@ -525,7 +525,7 @@ function normalizeContentJson(params: {
       : {};
 
   const rawBlocks = Array.isArray(rawObject.blocks) ? rawObject.blocks : [];
-  const editorialErrors = validateAboutEditorialContract({
+  const editorialErrors = validatePublicEditorialContract({
     locale: params.locale,
     slug: params.slug,
     editorialPage: rawObject.editorialPage,
@@ -543,14 +543,14 @@ function normalizeContentJson(params: {
     };
   }
 
-  const blocks = rawBlocks.map(sanitizeBlock).filter(Boolean) as PageBlock[];
+  const blocks = rawBlocks.map((block) => sanitizeBlock(block, params.slug)).filter(Boolean) as PageBlock[];
   const hasUserBlocks = blocks.length > 0;
 
   return {
     contentJson: {
       isPublished: params.isPublished,
       blocks,
-      editorialPage: normalizeAboutEditorialPageOverride(rawObject.editorialPage),
+      editorialPage: normalizePublicEditorialPageOverride(rawObject.editorialPage),
     },
     hasUserBlocks,
   };

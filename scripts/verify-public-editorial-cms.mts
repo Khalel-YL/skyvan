@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 
 import {
   ABOUT_EDITORIAL_SECTION_IDS,
+  getPublicEditorialCtaHref,
+  getPublicEditorialCtaSlug,
+  getPublicEditorialSectionIds,
   getAboutEditorialCtaHref,
   getAboutEditorialCtaSlug,
   mergeAboutEditorialSections,
   normalizeAboutEditorialSectionCta,
   normalizePublicSupplementaryBlockPresentation,
   validateAboutEditorialContract,
+  validatePublicEditorialContract,
 } from "../app/lib/public-editorial-cms.ts";
 
 const editorial = {
@@ -21,6 +25,9 @@ const safeHref = getAboutEditorialCtaHref("tr", "muhendislik");
 assert.equal(safeHref, "/tr/muhendislik");
 assert.equal(getAboutEditorialCtaSlug("tr", safeHref), "muhendislik");
 assert.equal(getAboutEditorialCtaSlug("en", safeHref), undefined);
+assert.equal(getPublicEditorialCtaHref("en", "workshop"), "/en/workshop");
+assert.equal(getPublicEditorialCtaSlug("tr", "/tr/muhendislik"), "muhendislik");
+assert.equal(getPublicEditorialSectionIds("muhendislik").length, 8);
 assert.deepEqual(normalizeAboutEditorialSectionCta("tr", "İncele", safeHref), {
   label: "İncele",
   href: safeHref,
@@ -45,6 +52,26 @@ assert.ok(
     editorialPage: undefined,
     blocks: [{ type: "text", editorial, ctaLabel: "İncele", ctaHref: "https://example.com" }],
   }).length > 0,
+);
+assert.deepEqual(
+  validatePublicEditorialContract({
+    locale: "tr",
+    slug: "muhendislik",
+    editorialPage: { title: "Teknik yaklaşım" },
+    blocks: [
+      { type: "text", editorial: { sectionId: "electrical-service", visible: true, visual: "inherit" } },
+      { type: "text", editorial: { sectionId: "water-service", visible: true, visual: "inherit" } },
+    ],
+  }),
+  [],
+);
+assert.ok(
+  validatePublicEditorialContract({
+    locale: "tr",
+    slug: "workshop",
+    editorialPage: undefined,
+    blocks: [{ type: "text", editorial: { sectionId: "why-skyvan-exists", visible: true, visual: "inherit" } }],
+  }).some((error) => error.includes("Bilinmeyen")),
 );
 assert.ok(
   validateAboutEditorialContract({
@@ -181,4 +208,4 @@ assert.ok(
   }).some((error) => error.includes("yönetilen medya")),
 );
 
-console.log("24 editorial CMS contract assertions passed");
+console.log("28 editorial CMS contract assertions passed");

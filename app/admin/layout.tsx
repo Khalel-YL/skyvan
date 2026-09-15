@@ -6,6 +6,11 @@ import { getAdminBootstrapState } from "@/app/lib/auth/bootstrap";
 import { getAdminAccessState } from "@/app/lib/auth/server";
 import { AdminShell } from "./_components/admin-shell";
 
+// Admin pages depend on the signed session and live database state. Keeping
+// the shell dynamic prevents a production build from trying to prerender a
+// database-backed screen such as Orders.
+export const dynamic = "force-dynamic";
+
 function getAccessStatusLabel(status: string) {
   switch (status) {
     case "secret_missing":

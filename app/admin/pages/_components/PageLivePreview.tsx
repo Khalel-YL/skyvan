@@ -12,7 +12,7 @@ type PageLivePreviewProps = {
   locale: string;
   slug: string;
   blocks: PageContentBlock[];
-  isAboutEditorial?: boolean;
+  isPublicEditorial?: boolean;
 };
 
 function PreviewMediaShell({
@@ -100,7 +100,7 @@ export function PageLivePreview({
   locale,
   slug,
   blocks,
-  isAboutEditorial,
+  isPublicEditorial,
 }: PageLivePreviewProps) {
   if (pageId) {
     return (
@@ -114,7 +114,7 @@ export function PageLivePreview({
     );
   }
 
-  if (isAboutEditorial) {
+  if (isPublicEditorial) {
     return (
       <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
         <h3 className="text-sm font-semibold text-white">Doğru public önizleme</h3>

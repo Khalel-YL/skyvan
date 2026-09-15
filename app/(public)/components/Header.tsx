@@ -19,6 +19,7 @@ export function Header(): React.JSX.Element {
   const toggle = useRef<HTMLButtonElement>(null);
   const home = getLocalizedPath(locale);
   const items = [
+    { label: copy.nav.home, href: home },
     { label: copy.nav.discover, href: getLocalizedPath(locale, "karavan-deneyimi") },
     { label: copy.nav.workshop, href: getLocalizedPath(locale, "workshop") },
     { label: copy.nav.engineering, href: getLocalizedPath(locale, "muhendislik") },
@@ -28,7 +29,7 @@ export function Header(): React.JSX.Element {
     <header className="sv-header" onKeyDown={(event) => { if (event.key === "Escape" && menuOpen) { setMenuOpen(false); toggle.current?.focus(); } }}>
       <a href="#public-main" className="sv-skip">{locale === "tr" ? "İçeriğe geç" : "Skip to content"}</a>
       <div className="sv-container sv-header-row">
-        <Link href={home} className="sv-brand" aria-label="Skyvan" onClick={() => setMenuOpen(false)}><BrandLogo variant="emblem" tone="auto" size="headerEmblem" priority /><span>SKYVAN</span></Link>
+        <Link href={home} className="sv-brand" aria-label={locale === "tr" ? "Skyvan ana sayfa" : "Skyvan home"} title={locale === "tr" ? "Ana sayfa" : "Home"} onClick={() => setMenuOpen(false)}><BrandLogo variant="emblem" tone="auto" size="headerEmblem" priority /><span>SKYVAN</span></Link>
         <nav className="sv-desktop-nav" aria-label={locale === "tr" ? "Ana menü" : "Main navigation"}>{items.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}</nav>
         <div className="sv-header-tools">
           <div className="sv-desktop-tool"><ThemeToggle locale={locale} /></div>

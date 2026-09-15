@@ -10,6 +10,10 @@ import {
   type WorkshopAssetLayerMetadata,
 } from "@/app/workshop/_lib/workshop-assets";
 
+// The interactive configurator reads live catalogue data. It must be rendered
+// at request time rather than queried while the application is being built.
+export const dynamic = "force-dynamic";
+
 function sanitizeWorkshopAssetLayers(
   assets: Awaited<ReturnType<typeof getWorkshopAssetsForModel>>,
 ): WorkshopAssetLayerMetadata[] {

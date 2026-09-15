@@ -4,10 +4,11 @@ import { useState, type ReactNode } from "react";
 import { Copy, GripVertical, Plus, Trash2, ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw } from "lucide-react";
 
 import {
-  ABOUT_EDITORIAL_CTA_SLUGS,
-  getAboutEditorialCtaHref,
-  getAboutEditorialCtaSlug,
-  isAboutEditorialPage,
+  PUBLIC_EDITORIAL_CTA_SLUGS,
+  getPublicEditorialCtaHref,
+  getPublicEditorialCtaSlug,
+  isPublicEditorialPage,
+  type PublicEditorialSlug,
 } from "@/app/lib/public-editorial-cms";
 import { publicEditorialContent } from "@/app/(public)/lib/public-editorial-content";
 
@@ -194,13 +195,14 @@ function Field({
   );
 }
 
-function AboutEditorialBlockEditor({
+function PublicEditorialBlockEditor({
   blocks,
   onChange,
   locale,
-}: Pick<PageBlockEditorProps, "blocks" | "onChange" | "locale">) {
+  slug,
+}: Omit<Pick<PageBlockEditorProps, "blocks" | "onChange" | "locale">, never> & { slug: PublicEditorialSlug }) {
   const safeLocale = locale === "en" ? "en" : "tr";
-  const fallback = publicEditorialContent[safeLocale].hakkimizda;
+  const fallback = publicEditorialContent[safeLocale][slug];
   const editorialBlocks = blocks.filter(
     (block): block is Extract<PageContentBlock, { type: "text" }> =>
       block.type === "text" && Boolean(block.editorial),
@@ -233,9 +235,9 @@ function AboutEditorialBlockEditor({
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-white">Hakkımızda editoryal bölümleri</h3>
+        <h3 className="text-sm font-semibold text-white">Public editoryal bölümleri</h3>
         <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-500">
-          Bu sekiz bölüm mevcut küratörlü içeriğin üzerine güvenli bir katman uygular. Boş alanlar küratörlü değeri kullanır; yönetilen medya değişimi henüz kullanıma açık değildir.
+          Bu bölümler mevcut küratörlü içeriğin üzerine güvenli bir katman uygular. Boş alanlar küratörlü değeri kullanır; yönetilen medya değişimi henüz kullanıma açık değildir.
         </p>
       </div>
 
@@ -243,9 +245,9 @@ function AboutEditorialBlockEditor({
         {editorialBlocks.map((block, index) => {
           const editorial = block.editorial!;
           const fallbackSection = fallback.sections.find((section) => section.id === editorial.sectionId)!;
-          const headingId = `about-${editorial.sectionId}-heading`;
-          const bodyId = `about-${editorial.sectionId}-body`;
-          const ctaLabelId = `about-${editorial.sectionId}-cta-label`;
+          const headingId = `editorial-${editorial.sectionId}-heading`;
+          const bodyId = `editorial-${editorial.sectionId}-body`;
+          const ctaLabelId = `editorial-${editorial.sectionId}-cta-label`;
 
           return (
             <ControlledDetails key={editorial.sectionId} className="rounded-2xl border border-zinc-800 bg-black/35 p-3" defaultOpen={index === 0}>
@@ -315,10 +317,10 @@ function AboutEditorialBlockEditor({
                       onChange={(event) => {
                         const href = event.target.value;
                         const previousDestination = block.ctaHref
-                          ? getAboutEditorialCtaSlug(safeLocale, block.ctaHref)
+                          ? getPublicEditorialCtaSlug(safeLocale, block.ctaHref)
                           : undefined;
-                        const destination = ABOUT_EDITORIAL_CTA_SLUGS.find(
-                          (candidate) => getAboutEditorialCtaHref(safeLocale, candidate) === href,
+                        const destination = PUBLIC_EDITORIAL_CTA_SLUGS.find(
+                          (candidate) => getPublicEditorialCtaHref(safeLocale, candidate) === href,
                         );
                         const previousDefaultLabel = previousDestination
                           ? publicEditorialContent[safeLocale][previousDestination].title
@@ -338,8 +340,8 @@ function AboutEditorialBlockEditor({
                       className="rounded-2xl border border-zinc-800 bg-black px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"
                     >
                       <option value="">CTA gösterme</option>
-                      {ABOUT_EDITORIAL_CTA_SLUGS.map((destination) => (
-                        <option key={destination} value={getAboutEditorialCtaHref(safeLocale, destination)}>
+                      {PUBLIC_EDITORIAL_CTA_SLUGS.map((destination) => (
+                        <option key={destination} value={getPublicEditorialCtaHref(safeLocale, destination)}>
                           {publicEditorialContent[safeLocale][destination].title}
                         </option>
                       ))}
@@ -359,10 +361,10 @@ function AboutEditorialBlockEditor({
 }
 
 export function PageBlockEditor({ blocks, onChange, mediaAssets, locale, slug }: PageBlockEditorProps) {
-  if (isAboutEditorialPage(locale, slug)) {
+  if (isPublicEditorialPage(locale, slug)) {
     return (
       <div className="grid gap-5">
-        <AboutEditorialBlockEditor blocks={blocks} onChange={onChange} locale={locale} />
+        <PublicEditorialBlockEditor blocks={blocks} onChange={onChange} locale={locale} slug={slug} />
         <PageSupplementaryBlockEditor blocks={blocks} onChange={onChange} locale={locale} />
       </div>
     );

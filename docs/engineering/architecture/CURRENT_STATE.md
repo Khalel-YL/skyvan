@@ -148,6 +148,14 @@ Medium
 - AI-first engineering direction
 - Clear separation of responsibilities
 - Existing engineering documentation
+- Curated public page families in Turkish and English, with Admin Pages overlays for text, section order/visibility, layout and same-language CTAs
+- Engineering and Workshop explanatory content with clearly labelled concept media and code-native technical diagrams
+
+## Public Editorial Coverage
+
+The public editorial foundation contains ten page families: the localized home page plus nine shared-slug pages (`hakkimizda`, `karavan-deneyimi`, `muhendislik`, `workshop`, `nasil-calisir`, `uretim-sureci`, `sss`, `iletisim`, `proje-baslat`). With Turkish and English variants this is twenty localized routes. The legacy `sistem` path canonicalizes to `workshop`.
+
+Engineering and Workshop remain explanatory surfaces. They do not claim a live configurator, product recommendation, price, telemetry or project record. Technical values are checked against the vehicle, product datasheet, installation manual and applicable local requirements before any project decision.
 
 ---
 
