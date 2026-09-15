@@ -51,7 +51,17 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
     controls: { asset: "control-centre", className: "sv-image-contain" },
   },
   workshop: {
+    // Workshop is a visual journey as well as a written explanation. Keep
+    // each stage tied to one specific concept asset so a single isolated
+    // image does not make the remaining stages feel unfinished.
+    "vehicle-selection": { asset: "exterior-dark" },
+    "project-foundation": { asset: "interior-first-view" },
+    "category-choices": { asset: "kitchen-transition" },
+    "visible-preview": { asset: "lounge-table" },
+    "preview-boundary": { asset: "alcove-layers", className: "sv-image-contain" },
     "technical-validation": { asset: "roof-equipment", className: "sv-image-contain" },
+    "project-sealing": { asset: "electrical-rear-service", className: "sv-image-contain" },
+    "progress-visibility": { asset: "control-centre", className: "sv-image-contain" },
   },
   "nasil-calisir": {
     layout: { asset: "ufuk-day", className: "sv-image-contain" },
