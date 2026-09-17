@@ -189,9 +189,23 @@ function EditorialVisual({ visual, locale }: { visual: Visual; locale: PublicPag
   </figure>;
 }
 
-function EditorialVisualGroup({ visuals, locale }: { visuals: readonly Visual[]; locale: PublicPageContent["locale"] }) {
-  return <div className="sv-editorial-related-grid">
-    {visuals.map((visual, index) => <EditorialVisual key={`${visual.asset}-${index}`} visual={visual} locale={locale} />)}
+function EditorialVisualCollection({
+  visual,
+  relatedVisuals,
+  locale,
+}: {
+  visual?: Visual;
+  relatedVisuals?: readonly Visual[];
+  locale: PublicPageContent["locale"];
+}) {
+  const visuals = [visual, ...(relatedVisuals ?? [])].filter(Boolean) as Visual[];
+
+  if (visuals.length === 0) {
+    return null;
+  }
+
+  return <div className="sv-editorial-media-grid" data-count={Math.min(visuals.length, 4)}>
+    {visuals.map((item, index) => <EditorialVisual key={`${item.asset}-${index}`} visual={item} locale={locale} />)}
   </div>;
 }
 
@@ -269,8 +283,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
     </div>
     {resolvedVisual !== "none" ? <div className="sv-editorial-visual-stack">
       {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : null}
-      {resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : null}
-      {resolvedVisual === "curated" && relatedVisuals ? <EditorialVisualGroup visuals={relatedVisuals} locale={locale} /> : null}
+      {resolvedVisual === "curated" ? <EditorialVisualCollection visual={visual} relatedVisuals={relatedVisuals} locale={locale} /> : null}
       {resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : null}
       {resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
       {resolvedVisual === "curated" && technicalDiagram ? <PublicTechnicalDiagram kind={technicalDiagram} locale={locale} /> : null}
