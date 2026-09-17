@@ -249,13 +249,13 @@
 .sv-editorial-chapter-nav { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 1rem 2rem; align-items: start; padding-block: 1.25rem; border-bottom: 1px solid var(--public-border); }
 .sv-editorial-chapter-label { padding-top: .45rem; font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--public-muted); white-space: nowrap; }
 .sv-editorial-chapter-links { display: flex; flex-wrap: wrap; gap: .5rem; }
-.sv-editorial-chapter-links a { display: inline-flex; align-items: baseline; gap: .55rem; max-width: 18rem; padding: .42rem .65rem; border: 1px solid var(--public-border); border-radius: 999px; color: var(--public-muted); font-size: .78rem; line-height: 1.35; transition: border-color .2s ease, color .2s ease, background .2s ease; }
-.sv-editorial-chapter-links a:hover, .sv-editorial-chapter-links a:focus-visible { border-color: var(--public-border-strong); background: var(--public-bg-soft); color: var(--public-text); }
+.sv-editorial-chapter-links a { display: inline-flex; align-items: baseline; gap: .55rem; max-width: 20rem; padding: .3rem 0; border-bottom: 1px solid transparent; color: var(--public-muted); font-size: .78rem; line-height: 1.35; transition: border-color .2s ease, color .2s ease; }
+.sv-editorial-chapter-links a:hover, .sv-editorial-chapter-links a:focus-visible { border-color: currentColor; color: var(--public-text); }
 .sv-editorial-chapter-links a span { font-variant-numeric: tabular-nums; color: var(--public-text); font-size: .68rem; letter-spacing: .12em; }
 .sv-editorial-sections { padding-block: clamp(1.5rem, 3vw, 3.5rem); }
 .sv-editorial-section { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); gap: clamp(2rem, 8vw, 8rem); padding-block: clamp(2.5rem, 5vw, 5rem); border-bottom: 1px solid var(--public-border); scroll-margin-top: 6rem; }
 .sv-editorial-section:first-child { border-top: 1px solid var(--public-border); }
-.sv-editorial-section-with-media { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; }
+.sv-editorial-section-with-media { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: start; }
 .sv-editorial-section-reverse.sv-editorial-section-with-media .sv-editorial-section-copy { order: 2; }
 .sv-editorial-section-wide-media { grid-template-columns: minmax(0, 1fr); }
 .sv-editorial-section-wide-media .sv-editorial-section-copy { order: 0 !important; }
@@ -285,35 +285,33 @@
 .sv-editorial-reference > span:last-child { font-size: .74rem; line-height: 1.55; }
 .sv-editorial-visual-stack { display: grid; gap: 1.25rem; align-content: start; }
 .sv-editorial-visual-stack > .sv-editorial-figure, .sv-editorial-visual-stack > .sv-technical-diagram { min-width: 0; }
+.sv-editorial-figure .sv-image img, .sv-engineering-image img, .sv-lounge-frame img { transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
+.sv-editorial-figure:hover .sv-image img, .sv-engineering-split figure:hover .sv-engineering-image img, .sv-living-gallery figure:hover .sv-lounge-frame img { transform: scale(1.018); }
 .sv-editorial-related-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .sv-editorial-related-grid > :only-child { grid-column: 1 / -1; }
 .sv-editorial-related-grid .sv-editorial-section-image { aspect-ratio: 1.5; }
 
-/* Skyvan technical plates: calm, dark and diagram-led, matching the engineering imagery. */
+/* Skyvan technical plates: quiet editorial figures, not dashboard cards. */
 .sv-technical-diagram {
-  --diagram-bg: #111516;
-  --diagram-panel: #191e20;
-  --diagram-panel-raised: #202628;
-  --diagram-text: #f4f1e8;
-  --diagram-muted: rgba(244, 241, 232, .58);
-  --diagram-border: rgba(244, 241, 232, .16);
-  --diagram-border-strong: rgba(244, 241, 232, .34);
-  --diagram-grid: rgba(244, 241, 232, .055);
-  --diagram-accent: #c9a45f;
-  --diagram-route: #d0a260;
+  --diagram-bg: var(--public-bg);
+  --diagram-panel: var(--public-bg-soft);
+  --diagram-panel-raised: var(--public-surface);
+  --diagram-text: var(--public-text);
+  --diagram-muted: var(--public-muted);
+  --diagram-border: var(--public-border);
+  --diagram-border-strong: var(--public-border-strong);
+  --diagram-grid: transparent;
+  --diagram-accent: var(--public-text);
+  --diagram-route: var(--public-border-strong);
   display: grid;
   overflow: hidden;
-  border: 1px solid var(--diagram-border);
-  border-radius: var(--public-radius-media);
+  border-block: 1px solid var(--diagram-border);
   background: var(--diagram-bg);
   color: var(--diagram-text);
-  color-scheme: dark;
-  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, .1);
+  color-scheme: inherit;
 }
-.sv-technical-diagram[data-diagram-kind="solar-electrical"] { --diagram-accent: #d2a45d; --diagram-route: #c96e5f; }
-.sv-technical-diagram[data-diagram-kind="water-service"] { --diagram-accent: #8eb4c7; --diagram-route: #6898b4; }
-.sv-technical-diagram[data-diagram-kind="service-access"] { --diagram-accent: #c6b77a; --diagram-route: #a6ae8a; }
-.sv-technical-diagram-meta { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem .8rem; border-bottom: 1px solid var(--diagram-border); color: var(--diagram-muted); font-size: .6rem; font-weight: 600; letter-spacing: .16em; }
+.sv-technical-diagram[data-diagram-kind="solar-electrical"], .sv-technical-diagram[data-diagram-kind="water-service"], .sv-technical-diagram[data-diagram-kind="service-access"] { --diagram-accent: var(--public-text); --diagram-route: var(--public-border-strong); }
+.sv-technical-diagram-meta { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem .8rem; color: var(--diagram-muted); font-size: .6rem; font-weight: 600; letter-spacing: .16em; }
 .sv-technical-diagram-meta span:first-child { color: var(--diagram-accent); }
 .sv-technical-diagram-meta span:last-child { text-align: right; }
 .sv-technical-diagram-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: .85rem 1.15rem .3rem; }
@@ -321,8 +319,8 @@
 .sv-technical-diagram-heading span:last-child { color: var(--diagram-muted); font-size: .58rem; letter-spacing: .12em; text-align: right; }
 .sv-technical-diagram-svg { display: block; width: 100%; height: auto; padding: .35rem .7rem 0; }
 .sv-technical-diagram-mobile-flow, .sv-technical-diagram-mobile-balance { display: none; }
-.sv-technical-diagram-frame { fill: var(--diagram-bg); stroke: var(--diagram-border); stroke-width: 1; }
-.sv-technical-diagram-grid { opacity: .85; pointer-events: none; }
+.sv-technical-diagram-frame { fill: transparent; stroke: var(--diagram-border); stroke-width: 1; }
+.sv-technical-diagram-grid { display: none; }
 .sv-technical-diagram-grid-line { fill: none; stroke: var(--diagram-grid); stroke-width: .8; }
 .sv-technical-diagram-micro-label { fill: var(--diagram-muted); font-size: 9px; letter-spacing: .15em; }
 .sv-technical-diagram-caption { fill: var(--diagram-muted); font-size: 10.5px; letter-spacing: .035em; }
@@ -345,7 +343,7 @@
 .sv-technical-diagram-axis { fill: none; stroke: var(--diagram-accent); stroke-width: 1; stroke-dasharray: 4 5; opacity: .9; }
 .sv-technical-diagram-arrow, .sv-technical-diagram-centre { fill: var(--diagram-accent); }
 .sv-technical-diagram-axis-label { fill: var(--diagram-accent); font-size: 9px; letter-spacing: .12em; }
-.sv-technical-diagram figcaption { display: grid; gap: .4rem; padding: .95rem 1.15rem 1.1rem; border-top: 1px solid var(--diagram-border); background: var(--diagram-panel); }
+.sv-technical-diagram figcaption { display: grid; gap: .4rem; padding: .95rem 1.15rem 1.1rem; background: var(--diagram-bg); }
 .sv-technical-diagram figcaption strong { color: var(--diagram-text); font-size: .92rem; font-weight: 500; letter-spacing: -.01em; }
 .sv-technical-diagram figcaption span { color: var(--diagram-muted); font-size: .75rem; line-height: 1.6; }
 .sv-living-studies-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
@@ -410,6 +408,12 @@
 @media (prefers-reduced-motion: no-preference) {
   .sv-hero-content, .sv-editorial-copy, .sv-coming-copy { animation: sv-enter .5s ease-out both; }
   @keyframes sv-enter { from { opacity: .15; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sv-editorial-section-with-media .sv-editorial-copy, .sv-editorial-section-with-media .sv-editorial-visual-stack, .sv-editorial-gallery, .sv-editorial-references { animation: sv-scroll-reveal linear both; animation-timeline: view(); animation-range: entry 8% cover 25%; }
+    @keyframes sv-scroll-reveal { from { opacity: .35; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .sv-public *, .sv-public *::before, .sv-public *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

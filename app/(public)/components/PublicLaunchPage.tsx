@@ -68,7 +68,7 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
         <div className="sv-section-line"><span>{copy.engineering.eyebrow}</span><span aria-hidden="true" /></div>
         <div className="sv-engineering-split">
           <div><h2 id="engineering-title">{copy.engineering.heading}</h2><p>{copy.engineering.body}</p><p className="sv-approval">{copy.engineering.approval}</p><Link href={getLocalizedPath(page.locale, "muhendislik")} className="sv-text-link">{copy.engineering.cta}<ArrowUpRight size={17} aria-hidden="true" /></Link></div>
-          <figure><PublicConceptMedia name="engineering-automation" alt={publicLaunchAssets["engineering-automation"].alt[page.locale]} className="sv-engineering-image" media={engineeringMedia} mediaRole={{ role: "launch.engineering" }} /><figcaption className="sv-concept-label">{copy.concept}</figcaption></figure>
+          <figure><PublicConceptMedia name="electrical-rear-service" alt={publicLaunchAssets["electrical-rear-service"].alt[page.locale]} className="sv-engineering-image" media={engineeringMedia} mediaRole={{ role: "launch.engineering" }} /><figcaption className="sv-concept-label">{copy.concept}</figcaption></figure>
         </div>
       </section>
       <section className="sv-container sv-section sv-faq" aria-labelledby="faq-title">

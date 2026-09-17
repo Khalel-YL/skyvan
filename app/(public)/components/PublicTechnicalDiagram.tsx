@@ -81,11 +81,9 @@ function DiagramNode({
 }) {
   return (
     <g className={`sv-technical-diagram-station sv-technical-diagram-station-${tone}`}>
-      <rect x={x} y={y} width={width} height="58" rx="7" className="sv-technical-diagram-node" />
-      <line x1={x + 14} y1={y + 12} x2={x + width - 14} y2={y + 12} className="sv-technical-diagram-node-rule" />
-      <circle cx={x + width - 16} cy={y + 12} r="2.5" className="sv-technical-diagram-node-port" />
-      <text x={x + 16} y={y + 31} className="sv-technical-diagram-index">{String(index + 1).padStart(2, "0")}</text>
-      <text x={x + 16} y={y + 48} className="sv-technical-diagram-label">{label}</text>
+      <rect x={x} y={y} width={width} height="58" rx="2" className="sv-technical-diagram-node" />
+      <text x={x + 16} y={y + 24} className="sv-technical-diagram-index">{String(index + 1).padStart(2, "0")}</text>
+      <text x={x + 16} y={y + 45} className="sv-technical-diagram-label">{label}</text>
     </g>
   );
 }
@@ -94,25 +92,15 @@ function Arrow({ x1, y1, x2, y2, markerId }: { x1: number; y1: number; x2: numbe
   return <path d={`M ${x1} ${y1} L ${x2} ${y2}`} className="sv-technical-diagram-line" markerEnd={`url(#${markerId})`} />;
 }
 
-function DiagramGrid({ id }: { id: string }) {
-  return (
-    <pattern id={id} width="28" height="28" patternUnits="userSpaceOnUse">
-      <path d="M 28 0 L 0 0 0 28" className="sv-technical-diagram-grid-line" />
-    </pattern>
-  );
-}
-
 function LoadBalanceDiagram({ nodes, ariaLabel, axisLabel }: { nodes: string[]; ariaLabel: string; axisLabel: string }) {
   return (
     <>
       <svg viewBox="0 0 760 320" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg sv-technical-diagram-svg-desktop">
         <title>{ariaLabel}</title>
         <defs>
-          <DiagramGrid id="sv-technical-grid-load" />
           <marker id="sv-technical-arrow-load" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" className="sv-technical-diagram-arrow" /></marker>
         </defs>
         <rect x="18" y="18" width="724" height="284" rx="10" className="sv-technical-diagram-frame" />
-        <rect x="19" y="19" width="722" height="282" rx="9" fill="url(#sv-technical-grid-load)" className="sv-technical-diagram-grid" />
         <text x="36" y="46" className="sv-technical-diagram-micro-label">VEHICLE PLAN / BALANCE STUDY</text>
         <text x="724" y="46" textAnchor="end" className="sv-technical-diagram-micro-label">SCHEMATIC / 01</text>
 
@@ -160,7 +148,6 @@ function FlowDiagram({
   tone: Exclude<DiagramTone, "load">;
 }) {
   const markerId = `sv-technical-arrow-${kind}`;
-  const gridId = `sv-technical-grid-${kind}`;
   const positions = [32, 213, 394, 575];
   const nodeWidth = 154;
   return (
@@ -168,11 +155,9 @@ function FlowDiagram({
       <svg viewBox="0 0 760 292" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg sv-technical-diagram-svg-desktop">
         <title>{ariaLabel}</title>
         <defs>
-          <DiagramGrid id={gridId} />
           <marker id={markerId} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" className="sv-technical-diagram-arrow" /></marker>
         </defs>
         <rect x="18" y="18" width="724" height="256" rx="10" className="sv-technical-diagram-frame" />
-        <rect x="19" y="19" width="722" height="254" rx="9" fill={`url(#${gridId})`} className="sv-technical-diagram-grid" />
         <text x="36" y="46" className="sv-technical-diagram-micro-label">SYSTEM PATH / CONTROLLED ROUTE</text>
         <text x="724" y="46" textAnchor="end" className="sv-technical-diagram-micro-label">SCHEMATIC / 01</text>
         <text x="36" y="76" className="sv-technical-diagram-caption">{captions.top}</text>
