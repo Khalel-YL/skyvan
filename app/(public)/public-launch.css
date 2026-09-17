@@ -244,6 +244,7 @@
 .sv-editorial-page-hero-image { aspect-ratio: 1.45; }
 .sv-editorial-page-hero-image, .sv-landscape .sv-image { overflow: hidden; border-radius: var(--public-radius-wide); }
 .sv-editorial-page-hero-image.sv-image-contain img, .sv-editorial-section-image.sv-image-contain img { object-fit: contain; }
+.sv-editorial-karavan-deneyimi .sv-editorial-page-hero-image { aspect-ratio: 1.68; }
 .sv-editorial-hero-figure > figcaption, .sv-editorial-figure > figcaption { margin-top: .75rem; }
 .sv-editorial-chapter-nav { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 1rem 2rem; align-items: start; padding-block: 1.25rem; border-bottom: 1px solid var(--public-border); }
 .sv-editorial-chapter-label { padding-top: .45rem; font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--public-muted); white-space: nowrap; }
@@ -520,6 +521,7 @@
   .sv-editorial-related-grid { grid-template-columns: 1fr; gap: .9rem; }
   .sv-editorial-related-grid > :only-child { grid-column: auto; }
   .sv-editorial-page-hero-image, .sv-editorial-section-image { aspect-ratio: 1.25; }
+  .sv-editorial-karavan-deneyimi .sv-editorial-page-hero-image { aspect-ratio: 1.25; }
   .sv-living-studies-grid, .sv-living-studies-single .sv-living-studies-grid, .sv-roof-evaluation-surface { grid-template-columns: 1fr; }
   .sv-living-study-image, .sv-living-studies-single .sv-living-study-image { aspect-ratio: 1.05; }
   .sv-roof-evaluation-geometry { min-height: 13rem; }
