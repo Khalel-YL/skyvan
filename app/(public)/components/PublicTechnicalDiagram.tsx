@@ -98,7 +98,7 @@ function LoadBalanceDiagram({ nodes, ariaLabel, axisLabel }: { nodes: string[]; 
 
 function FlowDiagram({ nodes, ariaLabel, captions }: { nodes: string[]; ariaLabel: string; captions: { top: string; bottom: string } }) {
   return (
-    <svg viewBox="0 0 720 250" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg">
+    <svg viewBox="0 20 720 205" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg">
       <defs><marker id="sv-technical-arrow-flow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" className="sv-technical-diagram-arrow" /></marker></defs>
       <path d="M94 126 H626" className="sv-technical-diagram-track" />
       {nodes.map((node, index) => {
