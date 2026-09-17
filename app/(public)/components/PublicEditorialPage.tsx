@@ -33,6 +33,7 @@ import { PublicMediaSurface } from "./PublicMediaSurface";
 import { PublicProjectAction } from "./PublicProjectAction";
 import { PublicTechnicalDiagram, type PublicTechnicalDiagramKind } from "./PublicTechnicalDiagram";
 import { PublicEngineeringVisualRail, type EngineeringVisualCard } from "./PublicEngineeringVisual";
+import { PublicMotion } from "./PublicMotion";
 
 type Visual = { asset: PublicLaunchAssetId; className?: string };
 
@@ -320,7 +321,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
   const hasVisual = resolvedVisual !== "none";
   const mediaOnLeft = presentation?.layout === "media-left" || (!presentation?.layout && index % 2 === 1);
   const wideMedia = hasVisual && presentation?.layout === "wide-media";
-  return <section id={section.id} data-editorial-visual={presentation?.visual ?? "inherit"} className={`sv-editorial-section ${hasVisual ? "sv-editorial-section-with-media" : "sv-editorial-section-text-only"} ${mediaOnLeft ? "sv-editorial-section-reverse" : ""} ${wideMedia ? "sv-editorial-section-wide-media" : ""}`}>
+  return <section id={section.id} data-sv-reveal data-editorial-visual={presentation?.visual ?? "inherit"} className={`sv-editorial-section ${hasVisual ? "sv-editorial-section-with-media" : "sv-editorial-section-text-only"} ${mediaOnLeft ? "sv-editorial-section-reverse" : ""} ${wideMedia ? "sv-editorial-section-wide-media" : ""}`}>
     <div className="sv-editorial-section-copy">
       <span className="sv-section-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
       <h2>{section.heading}</h2>
@@ -423,7 +424,7 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
             media={launchHero.media}
             mediaRole={heroRole ? { role: heroRole } : undefined}
           />
-          <figcaption className="sv-concept-label">{launchCopy.concept}</figcaption>
+          <figcaption className="sv-editorial-hero-caption"><span className="sv-concept-label">{launchCopy.concept}</span><span aria-hidden="true">01 / {page.locale === "tr" ? "Sahne" : "Scene"}</span></figcaption>
         </figure> : null}
       </div>
     </section>
@@ -440,14 +441,14 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
       <p className="sv-disclaimer">{launchCopy.conceptNote}</p>
     </section> : null}
 
-    {copy.faqGroups ? <div className="sv-container sv-editorial-faqs">
-      {copy.faqGroups.map((group) => <section className="sv-faq sv-section" key={group.heading} aria-labelledby={`faq-${group.heading.replace(/\s+/g, "-").toLowerCase()}`}>
+    {copy.faqGroups ? <PublicMotion className="sv-container sv-editorial-faqs">
+      {copy.faqGroups.map((group) => <section data-sv-reveal className="sv-faq sv-section" key={group.heading} aria-labelledby={`faq-${group.heading.replace(/\s+/g, "-").toLowerCase()}`}>
         <h2 id={`faq-${group.heading.replace(/\s+/g, "-").toLowerCase()}`}>{group.heading}</h2>
         {group.items.map((item) => <details key={item.question}><summary>{item.question}<span className="sv-disclosure-icon" aria-hidden="true" /></summary><p>{item.answer}</p></details>)}
       </section>)}
-    </div> : <div className="sv-container sv-editorial-sections">
+    </PublicMotion> : <PublicMotion className="sv-container sv-editorial-sections">
       {copy.sections.map((section, index) => slug === "karavan-deneyimi" && index === 0 ? null : <SectionBody key={section.id} section={section} index={index} slug={slug} page={page} />)}
-    </div>}
+    </PublicMotion>}
 
     {copy.note && !isProjectStart ? <div className="sv-container"><p className="sv-editorial-note">{copy.note}</p></div> : null}
 

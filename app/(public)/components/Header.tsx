@@ -19,12 +19,12 @@ export function Header(): React.JSX.Element {
   const toggle = useRef<HTMLButtonElement>(null);
   const home = getLocalizedPath(locale);
   const items = [
-    { label: copy.nav.home, href: home },
     { label: copy.nav.discover, href: getLocalizedPath(locale, "karavan-deneyimi") },
     { label: copy.nav.workshop, href: getLocalizedPath(locale, "workshop") },
     { label: copy.nav.engineering, href: getLocalizedPath(locale, "muhendislik") },
     { label: copy.nav.about, href: getLocalizedPath(locale, "hakkimizda") },
   ];
+  const mobileItems = [{ label: copy.nav.home, href: home }, ...items];
   return (
     <header className="sv-header" onKeyDown={(event) => { if (event.key === "Escape" && menuOpen) { setMenuOpen(false); toggle.current?.focus(); } }}>
       <a href="#public-main" className="sv-skip">{locale === "tr" ? "İçeriğe geç" : "Skip to content"}</a>
@@ -38,7 +38,7 @@ export function Header(): React.JSX.Element {
           <button ref={toggle} type="button" className="sv-menu-toggle" aria-label={menuOpen ? (locale === "tr" ? "Menüyü kapat" : "Close menu") : (locale === "tr" ? "Menüyü aç" : "Open menu")} aria-expanded={menuOpen} aria-controls="public-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
         </div>
       </div>
-      <div hidden={!menuOpen} className="sv-mobile-menu" id="public-mobile-menu"><div className="sv-container"><nav aria-label={locale === "tr" ? "Mobil menü" : "Mobile navigation"}>{items.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</Link>)}</nav><div className="sv-mobile-tools"><ThemeToggle locale={locale} /><span onClick={() => setMenuOpen(false)}><PublicProjectAction locale={locale} secondary /></span></div></div></div>
+      <div hidden={!menuOpen} className="sv-mobile-menu" id="public-mobile-menu"><div className="sv-container"><nav aria-label={locale === "tr" ? "Mobil menü" : "Mobile navigation"}>{mobileItems.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</Link>)}</nav><div className="sv-mobile-tools"><ThemeToggle locale={locale} /><span onClick={() => setMenuOpen(false)}><PublicProjectAction locale={locale} secondary /></span></div></div></div>
     </header>
   );
 }
