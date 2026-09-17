@@ -84,13 +84,13 @@
 .sv-status { display: inline-flex; align-items: center; border: 1px solid var(--public-border-strong); border-radius: 99px; padding: .2rem .55rem; font-size: .75rem; font-weight: 400; line-height: 1.25; letter-spacing: 0; text-transform: none; white-space: nowrap; color: var(--public-muted); }
 .sv-text-link { display: inline-flex; gap: 1rem; align-items: center; min-height: 44px; padding-block: .5rem; border-bottom: 1px solid var(--public-border-strong); font-size: .875rem; line-height: 1.5; color: var(--public-text); }
 .sv-text-link:hover { border-color: currentColor; }
-.sv-header { position: sticky; top: 0; z-index: 40; background: var(--public-bg); border-bottom: 1px solid var(--public-border); }
-.sv-header-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 1.5rem; min-height: 72px; }
+.sv-header { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--public-bg) 88%, transparent); border-bottom: 1px solid var(--public-border); backdrop-filter: blur(18px) saturate(1.08); }
+.sv-header-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 1.5rem; min-height: 74px; }
 .sv-brand { display: inline-flex; align-items: center; justify-self: start; gap: .65rem; min-height: 44px; color: var(--public-text); }
 .sv-brand > span { font-family: var(--font-skyvan), Arial, sans-serif; font-size: 1rem; letter-spacing: .18em; font-weight: 600; }
-.sv-desktop-nav { display: flex; justify-self: center; gap: 1.8rem; font-size: .8125rem; }
-.sv-desktop-nav a { display: inline-flex; align-items: center; min-height: 44px; border-bottom: 1px solid transparent; }
-.sv-desktop-nav a:hover, .sv-desktop-nav a[aria-current] { border-color: currentColor; }
+.sv-desktop-nav { display: flex; justify-self: center; gap: 2rem; font-size: .8125rem; }
+.sv-desktop-nav a { display: inline-flex; align-items: center; min-height: 44px; border-bottom: 1px solid transparent; color: var(--public-muted); transition: color .2s ease, border-color .2s ease; }
+.sv-desktop-nav a:hover, .sv-desktop-nav a:focus-visible, .sv-desktop-nav a[aria-current] { border-color: currentColor; color: var(--public-text); }
 .sv-header-tools { display: flex; align-items: center; justify-self: end; gap: .5rem; }
 .sv-theme-control { display: inline-flex; align-items: center; padding: 2px; border: 1px solid var(--public-border); border-radius: 99px; background: var(--public-surface); }
 .sv-theme-control button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; color: var(--public-muted); transition: background-color .2s, color .2s; }
@@ -100,8 +100,10 @@
 .sv-language-switcher a { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; border-radius: 99px; padding-inline: .4rem; color: var(--public-muted); transition: background-color .2s, color .2s; }
 .sv-language-switcher a:hover, .sv-language-switcher a:focus-visible { color: var(--public-text); }
 .sv-language-switcher a.is-active { background: var(--public-accent); color: var(--public-accent-text); }
-.sv-header-project .sv-button { min-height: 38px; padding: .55rem .95rem; }
-.sv-header-project .sv-status { display: none; }
+.sv-header-project .sv-project-action { gap: .45rem; }
+.sv-header-project .sv-button { min-height: 36px; padding: .5rem .8rem; border-color: var(--public-border-strong); background: transparent; color: var(--public-text); font-size: .75rem; letter-spacing: .01em; }
+.sv-header-project .sv-button:hover { border-color: var(--public-text); background: var(--public-bg-soft); opacity: 1; }
+.sv-header-project .sv-status { display: inline-flex; padding: .16rem .42rem; font-size: .64rem; letter-spacing: .04em; }
 .sv-menu-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--public-border); border-radius: 50%; }
 .sv-mobile-menu, .sv-mobile-menu[hidden] { display: none; }
 .sv-skip { position: fixed; top: .5rem; left: 1rem; transform: translateY(-150%); background: var(--public-accent); color: var(--public-accent-text); padding: .8rem 1rem; z-index: 100; }
