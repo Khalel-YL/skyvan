@@ -121,7 +121,7 @@ const chapterNavSlugs = new Set<CuratedPublicSlug>(["muhendislik", "workshop", "
 const heroAssets: Partial<Record<CuratedPublicSlug, PublicLaunchAssetId>> = {
   hakkimizda: "lounge",
   "karavan-deneyimi": "lounge",
-  muhendislik: "engineering-automation",
+  muhendislik: "engineering-electrical-service",
   workshop: "exterior-landscape",
 };
 
