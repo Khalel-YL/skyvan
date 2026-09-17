@@ -32,6 +32,7 @@ import { PublicLivingConceptStudies, PublicLivingGallery } from "./PublicLivingG
 import { PublicMediaSurface } from "./PublicMediaSurface";
 import { PublicProjectAction } from "./PublicProjectAction";
 import { PublicTechnicalDiagram, type PublicTechnicalDiagramKind } from "./PublicTechnicalDiagram";
+import { PublicEngineeringVisualRail, type EngineeringVisualCard } from "./PublicEngineeringVisual";
 
 type Visual = { asset: PublicLaunchAssetId; className?: string };
 
@@ -96,6 +97,89 @@ const technicalDiagramBySection: Partial<Record<CuratedPublicSlug, Record<string
     "technical-validation": "solar-electrical",
     "project-sealing": "service-access",
   },
+};
+
+const engineeringVisualsBySection: Record<string, readonly EngineeringVisualCard[]> = {
+  "material-weight-awareness": [
+    {
+      asset: "engineering-insulation-service",
+      title: { tr: "Katmanlı yalıtım ve servis kanalı", en: "Layered insulation and service channel" },
+      summary: {
+        tr: "Yalıtım, ısı köprüleri, ses ve bakım erişimi aynı kesitte birlikte okunur.",
+        en: "Insulation, thermal bridges, sound and service access are read together in one section.",
+      },
+    },
+  ],
+  "roof-electrical-compatibility": [
+    {
+      asset: "engineering-solar-panel",
+      title: { tr: "Çatı yerleşimi", en: "Roof placement" },
+      summary: {
+        tr: "Panel yüzeyi; açıklıklar, servis payı ve kablo girişleriyle birlikte değerlendirilir.",
+        en: "Panel surfaces are reviewed with openings, service clearances and cable entries.",
+      },
+    },
+    {
+      asset: "engineering-solar-cable",
+      title: { tr: "Solar kablo ve bağlantı yolu", en: "Solar cable and route" },
+      summary: {
+        tr: "Kablo güzergâhı, kesit ve sızdırmaz geçiş araç özelinde doğrulanır.",
+        en: "Cable route, cross-section and sealed entry are verified for the specific vehicle.",
+      },
+    },
+    {
+      asset: "engineering-solar-combiner",
+      title: { tr: "PV koruma ve ayırma", en: "PV protection and isolation" },
+      summary: {
+        tr: "Combiner, DC sigorta ve ayırma elemanları gerçek ürün kayıtlarıyla doğrulanır.",
+        en: "Combiner, DC fusing and isolation devices are verified against real product records.",
+      },
+    },
+  ],
+  "electrical-service": [
+    {
+      asset: "engineering-marine-cable",
+      title: { tr: "Marin kablo ve pabuç", en: "Marine cable and terminals" },
+      summary: {
+        tr: "Kalaylı çok telli kablo, kesit, krimp ve etiketleme birlikte ele alınır.",
+        en: "Tinned stranded cable, cross-section, crimping and labelling are considered together.",
+      },
+    },
+    {
+      asset: "engineering-solar-combiner",
+      title: { tr: "DC koruma bölümü", en: "DC protection bay" },
+      summary: {
+        tr: "Koruma zinciri panel, MPPT, akü ve kablo yolu ile aynı teknik bağlamda okunur.",
+        en: "The protection chain is read in the same technical context as the panel, MPPT, battery and cable route.",
+      },
+    },
+  ],
+  "water-service": [
+    {
+      asset: "engineering-water-filter",
+      title: { tr: "Filtre ve süzgeç", en: "Filter and strainer" },
+      summary: {
+        tr: "Pompa öncesi süzgeç, filtreleme ve bakım erişimi birlikte planlanır.",
+        en: "The pre-pump strainer, filtration and service access are planned together.",
+      },
+    },
+    {
+      asset: "engineering-water-pump",
+      title: { tr: "Hidrofor ve titreşim izolasyonu", en: "Pump and vibration isolation" },
+      summary: {
+        tr: "Pompa, esnek bağlantı ve titreşim azaltımı servis erişimiyle birlikte yerleştirilir.",
+        en: "The pump, flexible connection and vibration reduction are placed with service access in mind.",
+      },
+    },
+    {
+      asset: "engineering-water-manifold",
+      title: { tr: "Manifold ve izolasyon vanaları", en: "Manifold and isolation valves" },
+      summary: {
+        tr: "Dağıtım, tahliye ve servis vanaları mobilya sökmeden görülebilir tutulur.",
+        en: "Distribution, drain and service valves remain visible without dismantling furniture.",
+      },
+    },
+  ],
 };
 
 const chapterNavSlugs = new Set<CuratedPublicSlug>(["muhendislik", "workshop", "karavan-deneyimi"]);
@@ -216,6 +300,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
   const locale = page.locale;
   const visual = sectionVisuals[slug]?.[section.id];
   const technicalDiagram = technicalDiagramBySection[slug]?.[section.id];
+  const engineeringVisuals = slug === "muhendislik" ? engineeringVisualsBySection[section.id] : undefined;
   const isRoofEvaluation = slug === "muhendislik" && section.id === "roof-electrical-compatibility";
   const livingStudies = slug === "karavan-deneyimi" && section.id === "sleep" ? ["alcove"] as const
     : slug === "karavan-deneyimi" && section.id === "personal-space" ? ["toilet", "shower"] as const
@@ -226,7 +311,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
   const approvedMedia = presentation?.visual === "media" && override?.media?.semanticRole === requestedRole
     ? getApprovedCmsLaunchMedia(override.media, { role: requestedRole })
     : null;
-  const hasCuratedVisual = Boolean(visual || technicalDiagram || isRoofEvaluation || livingStudies);
+  const hasCuratedVisual = Boolean(visual || technicalDiagram || isRoofEvaluation || livingStudies || engineeringVisuals);
   const resolvedVisual = resolveEditorialVisual({
     presentation,
     hasCuratedVisual,
@@ -246,6 +331,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
     {resolvedVisual !== "none" ? <div className="sv-editorial-visual-stack">
       {resolvedVisual === "managed" && approvedMedia ? <ManagedEditorialVisual media={approvedMedia} locale={locale} /> : null}
       {resolvedVisual === "curated" && visual ? <EditorialVisual visual={visual} locale={locale} /> : null}
+      {resolvedVisual === "curated" && engineeringVisuals ? <PublicEngineeringVisualRail cards={engineeringVisuals} locale={locale} /> : null}
       {resolvedVisual === "curated" && isRoofEvaluation ? <RoofEvaluation locale={locale} /> : null}
       {resolvedVisual === "curated" && livingStudies ? <PublicLivingConceptStudies copy={publicLaunchContent[locale].product} locale={locale} images={[...livingStudies]} /> : null}
       {resolvedVisual === "curated" && technicalDiagram ? <PublicTechnicalDiagram kind={technicalDiagram} locale={locale} /> : null}

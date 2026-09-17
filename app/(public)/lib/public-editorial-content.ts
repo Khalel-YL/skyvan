@@ -59,10 +59,10 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "organized-service-access", heading: "Düzen, servis erişimini de kapsar.", body: "Elektrik ve su bileşenleri yalnızca saklanmamalı; bağlantılar, koruma elemanları ve kontrol noktaları gerektiğinde erişilebilir kalmalıdır. Mobilya ve depolama kararları bu erişimi kapatmamalıdır." },
       { id: "living-space-and-engineering", heading: "Yaşam alanı ile mühendislik aynı planda buluşur.", body: "Oturum, uyku, mutfak ve kişisel alan; dolaşım, açıklıklar, ağırlık, enerji, su ve bakım ihtiyaçlarından bağımsız değildir. Görünen tasarım ile onu mümkün kılan kararlar birlikte gelişir." },
       { id: "open-technical-questions", heading: "Açık soruları saklamayız.", body: "Eksik bilgi bir uygunluk sonucu değildir. Doğrulanması gereken ölçü, ürün verisi veya uygulama koşulu varsa bunu görünür tutmak, varsayımla ilerlemekten daha güvenlidir." },
-      { id: "workshop-extension", heading: "Workshop, bu deneyimin gelecekteki uzantısıdır.", body: "Hazırlanan Workshop; araç, yerleşim ve ürün seçimlerinin birbirini nasıl etkilediğini müşteriye anlaşılır biçimde göstermeyi amaçlıyor. Bu deneyim henüz kullanıma açık değildir." },
+      { id: "workshop-extension", heading: "Atölye, bu deneyimin gelecekteki uzantısıdır.", body: "Hazırlanan Atölye; araç, yerleşim ve ürün seçimlerinin birbirini nasıl etkilediğini müşteriye anlaşılır biçimde göstermeyi amaçlıyor. Bu deneyim henüz kullanıma açık değildir." },
       { id: "human-responsibility", heading: "Son kararın sorumluluğu insanda kalır.", body: "Dijital rehberlik seçenekleri açıklayabilir ve açık soruları gösterebilir. Projeye özgü nihai teknik ve ticari kararlar ise uzman incelemesi ve insan onayı gerektirir." },
     ],
-    actions: [{ label: "Karavan Deneyimi", slug: "karavan-deneyimi" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Workshop", slug: "workshop" }],
+    actions: [{ label: "Karavan Deneyimi", slug: "karavan-deneyimi" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Atölye", slug: "workshop" }],
   },
   "karavan-deneyimi": {
     title: "Karavan Deneyimi", seoTitle: "Karavan Deneyimi | Skyvan", seoDescription: "Oturum, uyku, mutfak, kişisel alan, depolama ve günlük hareketin bir karavan yerleşiminde nasıl buluştuğunu keşfedin.", eyebrow: "Karavan deneyimi",
@@ -74,7 +74,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "personal-space", heading: "Kişisel alan, karavan ölçeğinde.", body: "Birleşik ıslak hacim ve ayrı duş–tuvalet düzenleri farklı alan tercihleri sunar. Kapının açılışı, kurulanma alanı, temizlik, havalandırma, çevresindeki geçiş ve servis erişimi günlük kullanımın parçasıdır." },
       { id: "storage", heading: "Yanınızda taşıdığınız hayat için yer.", body: "Saklama, geriye kalan boşlukları doldurmak değildir. Sık kullanılan eşyalara erişim, büyük parçaların yerleşimi ve yükün araç içindeki dağılımı birlikte ele alınır. Her ek işlev alan, sabitleme, su, enerji ve servis ihtiyacıyla değerlendirilir." },
     ],
-    actions: [{ label: "Workshop’u Tanıyın", slug: "workshop" }, { label: "Mühendislik Yaklaşımı", slug: "muhendislik" }],
+    actions: [{ label: "Atölyeyi Tanıyın", slug: "workshop" }, { label: "Mühendislik Yaklaşımı", slug: "muhendislik" }],
   },
   muhendislik: {
     title: "Mühendislik", seoTitle: "Mühendislik Yaklaşımı | Skyvan", seoDescription: "Skyvan’ın araç bağlamı, fiziksel yerleşim, enerji, su, kontrol ve insan onayını birlikte ele alan mühendislik yaklaşımı.", eyebrow: "Mühendislik",
@@ -96,23 +96,23 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { label: "Truma — Karavan su sistemleri", description: "Karavanlarda depo, pompa, basınç ve dağıtım bileşenlerini anlamak için üretici rehberi.", href: "https://www.truma.com/gb/truma-guides/water-systems-in-motor-homes-and-caravans/" },
       { label: "REHAU — RAUTITAN", description: "İçme suyu tesisatında boru ve bağlantı sistemi yaklaşımı için ürün dokümantasyonu.", href: "https://water.rehau.com/uk-en/solutions-for-building-technology/plumbing-and-drinking-water/supply-lines/rautitan" },
     ],
-    actions: [{ label: "Workshop Yaklaşımını İncele", slug: "workshop" }, { label: "Üretime Hazırlık", slug: "uretim-sureci" }],
+    actions: [{ label: "Atölye Yaklaşımını İncele", slug: "workshop" }, { label: "Üretime Hazırlık", slug: "uretim-sureci" }],
   },
   workshop: {
-    title: "Skyvan ve Workshop", seoTitle: "Skyvan Workshop Yaklaşımı | Skyvan", seoDescription: "Araç, yaşam alanı ve teknik seçimlerin planlanan Workshop deneyiminde nasıl birlikte ele alınacağını keşfedin.", eyebrow: "Skyvan Workshop",
-    heading: "Bir seçimin, bütün projeyi nasıl etkilediğini anlayın.", body: "Skyvan, araç, yaşam alanı ve teknik seçimleri aynı bağlamda ele alan bir deneyim geliştiriyor. Workshop, bu yaklaşımın müşteriye açılacak bölümü olarak hazırlanıyor.", status: "Yakında",
+    title: "Skyvan ve Atölye", seoTitle: "Skyvan Atölye Yaklaşımı | Skyvan", seoDescription: "Araç, yaşam alanı ve teknik seçimlerin planlanan Atölye deneyiminde nasıl birlikte ele alınacağını keşfedin.", eyebrow: "Skyvan Atölye",
+    heading: "Bir seçimin, bütün projeyi nasıl etkilediğini anlayın.", body: "Skyvan, araç, yaşam alanı ve teknik seçimleri aynı bağlamda ele alan bir deneyim geliştiriyor. Atölye, bu yaklaşımın müşteriye açılacak bölümü olarak hazırlanıyor.", status: "Yakında",
     sections: [
       { id: "vehicle-selection", heading: "Önce gövde tipini, sonra araç ölçülerini kurun.", body: "Planlanan akış; alkovenli karavan mı yoksa doğrudan panelvan dönüşümü mü istediğinizi netleştirerek başlayacak. Ardından marka, model, model yılı, gövde ve varyant bilgileriyle L2/L3/L4 ve H2/H3 gibi ölçü sınıfları bağlama oturtulacak. Doğrulanmış kullanılabilir ölçüler, seçimlerin hangi araç için değerlendirildiğini açık tutacak." },
       { id: "project-foundation", heading: "Yolculuğunuzu ve yaşam önceliklerinizi anlatın.", body: "Proje çerçevesi, nasıl seyahat ettiğiniz ve alanı nasıl kullanmak istediğinizle oluşacak. Oturum, uyku, mutfak, banyo, depolama, çalışma ve kişisel alan ihtiyaçları aynı yaşam bağlamında ele alınacak; seçilen düzenin günlük karşılığı görünür kılınacak." },
-      { id: "category-choices", heading: "Ürün kategorilerini ilişkileriyle keşfedin.", body: "Workshop; mobilya ve marin panel seçiminin ağırlığa, akü kimyasının enerji ve servis koşullarına, su deposunun dengeye, panel sayısının çatı alanına ve her bileşenin bakım erişimine etkisini aynı ekranda açıklamayı amaçlıyor. Her seçenek gerçek ürün datasheet’i ve araç bağlamıyla eşleştirilmeden kesin sonuç gibi sunulmayacak.", bullets: ["Malzeme seçimi: ağırlık, kesim ve sabitleme etkisi.", "Enerji seçimi: panel, MPPT, akü, DC–DC ve koruma zinciri.", "Su seçimi: depo, filtre, pompa, manifold ve servis erişimi."] },
+      { id: "category-choices", heading: "Ürün kategorilerini ilişkileriyle keşfedin.", body: "Atölye; mobilya ve marin panel seçiminin ağırlığa, akü kimyasının enerji ve servis koşullarına, su deposunun dengeye, panel sayısının çatı alanına ve her bileşenin bakım erişimine etkisini aynı ekranda açıklamayı amaçlıyor. Her seçenek gerçek ürün datasheet’i ve araç bağlamıyla eşleştirilmeden kesin sonuç gibi sunulmayacak.", bullets: ["Malzeme seçimi: ağırlık, kesim ve sabitleme etkisi.", "Enerji seçimi: panel, MPPT, akü, DC–DC ve koruma zinciri.", "Su seçimi: depo, filtre, pompa, manifold ve servis erişimi."] },
       { id: "visible-preview", heading: "Görünür yaşam alanını önizleyin.", body: "Planlanan 2.5D görünüm; mobilya ve malzeme yüzeylerini, pencere ve kapıları, banyo alanını, oturumu, masayı, yatağı ve uygun olduğunda alkoven yatağı anlaşılır bir kompozisyonda gösterecek. Bu önizleme henüz kullanıma açık değildir." },
       { id: "preview-boundary", heading: "Gizli sistemler görsel bir benzetim değildir.", body: "MPPT, inverter, akü, kablolama, elektrik ve su tesisatı, combiner box, sigortalar ve gizli bağlantılar 2.5D yaşam alanı görünümünde canlandırılmayacak. Bunlar teknik özet ve doğrulama katmanında açık karar başlıkları olarak yer alacak." },
-      { id: "technical-validation", heading: "Fiziksel yerleşimi ve teknik uyumu ayrı ayrı doğrulayın.", body: "Dört adet 200 W panel, yalnızca açıklama amacıyla 800 W’lık bir dizi örneğidir; bu sayı bir öneri veya araç uyumu sonucu değildir. Workshop açıldığında sistem, panel datasheet’i ile çatı ölçüsünü ve elektrik zincirini aynı doğrulama kaydında karşılaştırmayı hedefleyecek.", bullets: ["Paneller, açıklıkları ve servis paylarını koruyarak kullanılabilir çatı alanına fiziksel olarak sığıyor mu?", "Dizinin Voc, Vmp ve Isc değerleri; seçilen MPPT’nin PV gerilim/akım sınırları ve akünün kabul edebileceği şarj akımıyla uyumlu mu?", "Kablo kesiti, DC ayırma, sigorta/combiner ve DC–DC yolu ilgili üretici talimatlarıyla doğrulanmış mı?", "Eksik veri varsa yapay zekâ uygun bir değer uydurmaz; hangi datasheet veya ölçünün gerektiğini açıklar. Doğrulanmış kurallar kesin uyumsuzlukları engeller, nihai karar insan incelemesinde kalır."] },
+      { id: "technical-validation", heading: "Fiziksel yerleşimi ve teknik uyumu ayrı ayrı doğrulayın.", body: "Dört adet 200 W panel, yalnızca açıklama amacıyla 800 W’lık bir dizi örneğidir; bu sayı bir öneri veya araç uyumu sonucu değildir. Atölye açıldığında sistem, panel datasheet’i ile çatı ölçüsünü ve elektrik zincirini aynı doğrulama kaydında karşılaştırmayı hedefleyecek.", bullets: ["Paneller, açıklıkları ve servis paylarını koruyarak kullanılabilir çatı alanına fiziksel olarak sığıyor mu?", "Dizinin Voc, Vmp ve Isc değerleri; seçilen MPPT’nin PV gerilim/akım sınırları ve akünün kabul edebileceği şarj akımıyla uyumlu mu?", "Kablo kesiti, DC ayırma, sigorta/combiner ve DC–DC yolu ilgili üretici talimatlarıyla doğrulanmış mı?", "Eksik veri varsa yapay zekâ uygun bir değer uydurmaz; hangi datasheet veya ölçünün gerektiğini açıklar. Doğrulanmış kurallar kesin uyumsuzlukları engeller, nihai karar insan incelemesinde kalır."] },
       { id: "project-sealing", heading: "Projeyi incelemeye hazır bir kapsamda sabitleyin.", body: "Seçimler, toplam ağırlık ve ağırlık merkezi, enerji/su özeti, uyarılar ve açık sorular ortak bir proje özetinde buluşacak. Temiz suyu sola, gri suyu sağa alma gibi denge hedefleri; gerçek aks yükleri ve araç geometrisi doğrulanmadan mühürlenmiş karar sayılmayacak. Projenin sabitlenmesi otomatik onay anlamına gelmeyecek; nihai teknik ve ticari kararlar insan incelemesi gerektirecek." },
       { id: "progress-visibility", heading: "İlerlemeyi sade bir görünümde izleyin.", body: "Planlanan müşteri görünümü, projenin hangi aşamada olduğunu ve hangi soruların yanıt beklediğini anlaşılır biçimde gösterecek. Canlı proje oluşturma ve takip bugün kullanıma açık değildir." },
     ],
     decisionArchitecture: {
-      eyebrow: "Workshop yaklaşımı", heading: "Skyvan karar mimarisi", body: "Workshop, bir seçimi tek başına göstermek yerine kararın yolculuk bağlamından üretime hazırlığa uzanan etkisini açıklamayı amaçlıyor.",
+      eyebrow: "Atölye yaklaşımı", heading: "Skyvan karar mimarisi", body: "Atölye, bir seçimi tek başına göstermek yerine kararın yolculuk bağlamından üretime hazırlığa uzanan etkisini açıklamayı amaçlıyor.",
       stages: [
         { title: "Rota ve bağlam", body: "Araç, varyant ve kullanım çerçevesi." },
         { title: "Yaşam biçimi", body: "Oturum, uyku, mutfak, banyo ve depolama öncelikleri." },
@@ -125,7 +125,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
         { title: "Doğrulanmış kurallar", body: "Kesin uyumsuzluklarda ilerlemeyi engeller." },
         { title: "İnsan onayı", body: "Nihai teknik ve ticari kararı verir." },
       ],
-      note: "Bu panel, hazırlanmakta olan Workshop yaklaşımının açıklamasıdır; çalışan bir yapılandırıcı veya canlı proje durumu değildir.",
+      note: "Bu panel, hazırlanmakta olan Atölye yaklaşımının açıklamasıdır; çalışan bir yapılandırıcı veya canlı proje durumu değildir.",
     },
     actions: [{ label: "Proje Başlat", slug: "proje-baslat" }, { label: "Mühendislik", slug: "muhendislik" }, { label: "Nasıl Çalışır", slug: "nasil-calisir" }],
   },
@@ -159,7 +159,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
     heading: "Merak ettiklerinize açık yanıtlar.", body: "Tasarım çalışmaları, araç uyumu ve hazırlanmakta olan proje deneyimi hakkında başlangıç bilgileri.", sections: [],
     faqGroups: [
       { heading: "Skyvan ve tasarım", items: [
-        { question: "Skyvan nasıl bir yaklaşım sunuyor?", answer: "Karavan yaşamını yerleşim, günlük ihtiyaçlar ve teknik kararlarla birlikte ele alıyoruz. Bu site tasarım yaklaşımını tanıtır; geliştirilmekte olan Workshop seçimlerin ilişkisini açıklamaya yardımcı olacak." },
+        { question: "Skyvan nasıl bir yaklaşım sunuyor?", answer: "Karavan yaşamını yerleşim, günlük ihtiyaçlar ve teknik kararlarla birlikte ele alıyoruz. Bu site tasarım yaklaşımını tanıtır; geliştirilmekte olan Atölye seçimlerin ilişkisini açıklamaya yardımcı olacak." },
         { question: "Görseller tamamlanmış araçları mı gösteriyor?", answer: "“Konsept tasarım” olarak işaretlenen görseller tasarım çalışmalarıdır. Belirli bir araca onaylanmış uyum, dahil donanım veya tamamlanmış üretim kanıtı değildir." },
         { question: "Farklı sayfalardaki bütün odalar aynı araca mı ait?", answer: "Yalnızca aynı model ve görsel grubu olarak tanımlanan çalışmalar birlikte değerlendirilmelidir. Farklı yerleşimler tek bir aracın parçaları gibi düşünülmemelidir." },
       ] },
@@ -170,8 +170,8 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
         { question: "MPPT seçimi yalnızca panel gücüne göre mi yapılır?", answer: "Hayır. Panel dizisi, bağlantı düzeni, akü sistemi, çalışma koşulları ve üretici sınırları birlikte değerlendirilmelidir. Bu site cihaz seçimi veya bağlantı talimatı vermez." },
         { question: "Elektrikli masa veya çamaşır makinesi her projede olabilir mi?", answer: "Her ek işlev alan, ağırlık, sabitleme, enerji, su ve servis ihtiyacıyla değerlendirilir. Bir görselde bulunması her araca uygun veya dahil olduğu anlamına gelmez." },
       ] },
-      { heading: "Başlangıç ve Workshop", items: [
-        { question: "Workshop bugün kullanılabiliyor mu?", answer: "Henüz değil. Proje başlatma sayfası hazırlık bilgisi sunar; galeri seçimleri proje kaydı oluşturmaz." },
+      { heading: "Başlangıç ve Atölye", items: [
+        { question: "Atölye bugün kullanılabiliyor mu?", answer: "Henüz değil. Proje başlatma sayfası hazırlık bilgisi sunar; galeri seçimleri proje kaydı oluşturmaz." },
         { question: "Yanlış seçimler nasıl ele alınacak?", answer: "Planlanan deneyimde doğrulanmış bilgiye dayanan kurallar uyumsuz seçimleri durdurabilecek. Eksik bilgi açıkça belirtilecek; yapay zekâ uyarının nedenini açıklamaya yardımcı olacak." },
         { question: "Son teknik ve ticari kararı kim verir?", answer: "Projeye özgü değerlendirme ve insan onayı gerekir. Sistem önerisi veya yapay zekâ açıklaması kendiliğinden teknik onay, fiyat ya da teklif oluşturmaz." },
         { question: "Fiyat veya teslim tarihi görebilir miyim?", answer: "Bu tanıtım sitesinde proje fiyatı ve teslim tarihi sunulmuyor. “Yakında” ifadesi belirli bir açılış veya teslim tarihi taahhüdü değildir." },
@@ -198,7 +198,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
       { id: "technical-question", heading: "Hangi soruların netleşmesini istersiniz?", body: "Bir ürünün sığıp sığmadığı, enerji ihtiyacı veya yatak dönüşümü gibi konuları not edin. Bunları şimdi çözmeniz gerekmiyor; amaç ihtiyaçlarınızı daha açık ifade edebilmek." },
     ],
     note: "Proje başlatma deneyimi hazırlanıyor.",
-    actions: [{ label: "Yaşam Alanlarını Keşfet", slug: "karavan-deneyimi" }, { label: "Workshop’u Tanı", slug: "workshop" }],
+    actions: [{ label: "Yaşam Alanlarını Keşfet", slug: "karavan-deneyimi" }, { label: "Atölyeyi Tanı", slug: "workshop" }],
   },
 };
 

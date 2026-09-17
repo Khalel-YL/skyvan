@@ -123,6 +123,7 @@ function isWorkshopBlock(block: PublicBlock) {
 
   return (
     text.toLowerCase().includes("workshop") ||
+    text.toLocaleLowerCase("tr-TR").includes("atölye") ||
     text.toLowerCase().includes("karavanını tasarla") ||
     text.toLowerCase().includes("design your own caravan")
   );
@@ -637,7 +638,7 @@ function HeroBlock({
             subtext:
               "Skyvan; rota, yaşam düzeni, teknik risk ve üretim hazırlığını kontrollü bir karavan karar yolculuğuna dönüştürür.",
             body:
-              "Workshop yalnızca bir modüldür. Skyvan, karar başlamadan önce bağlamı, sınırları ve üretime hazırlığı görünür kılan sakin bir platformdur.",
+              "Atölye yalnızca bir modüldür. Skyvan, karar başlamadan önce bağlamı, sınırları ve üretime hazırlığı görünür kılan sakin bir platformdur.",
           }
         : {
             heading: "Confidence is engineered before the journey begins.",
@@ -920,7 +921,7 @@ function FeatureListBlock({
               </div>
               <p className="mt-8 max-w-md text-sm leading-7 text-[var(--public-muted)]">
                 {page.locale === "tr"
-                  ? "Workshop yakında araç, yaşam tercihleri ve teknik değerlendirmeyi daha rehberli bir başlangıçta bir araya getirecek."
+                  ? "Atölye yakında araç, yaşam tercihleri ve teknik değerlendirmeyi daha rehberli bir başlangıçta bir araya getirecek."
                   : "Workshop will soon bring vehicle context, living preferences, and technical review together in a more guided beginning."}
               </p>
             </div>

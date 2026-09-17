@@ -28,7 +28,7 @@ export type PublicLaunchCopy = {
 
 export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
   tr: {
-    nav: { home: "Ana sayfa", discover: "Keşfet", workshop: "Workshop", engineering: "Mühendislik", about: "Hakkımızda" },
+    nav: { home: "Ana sayfa", discover: "Keşfet", workshop: "Atölye", engineering: "Mühendislik", about: "Hakkımızda" },
     project: "Proje Başlat", upcoming: "Yakında", concept: "Konsept tasarım",
     conceptNote: "Görseller Skyvan tasarım vizyonunu gösterir. Yerleşim ve donanım, araç özelinde teknik değerlendirme ve onayla netleşir.",
     hero: {
@@ -44,7 +44,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
         { id: "lightweight-decisions", title: "Hafiflik, tek bir malzemeden daha büyük bir karardır.", body: "Karavana eklenen her malzeme kullanılabilir taşıma kapasitesini, aracın davranışını ve diğer seçimler için kalan payı etkiler. Skyvan, malzeme kararlarını görünüş kadar proje bütünü içindeki ağırlık etkisiyle ele alır.", linkLabel: "Deneyimimizi tanıyın", slug: "hakkimizda" },
         { id: "buildable-design", title: "Görünen şey, üretilebilir olmalı.", body: "Yerleşim, dolaşım, kapı ve pencere açıklıkları, teknik sistemler ve bakım erişimi birbirinden kopmadan çözülmelidir.", linkLabel: "Mühendislik yaklaşımı", slug: "muhendislik" },
         { id: "service-access", title: "Bugünün düzeni, yarının bakımını engellememeli.", body: "Su, elektrik, depolama ve mobilya kararları; bağlantılara, koruma elemanlarına ve kontrol noktalarına erişimi korumalıdır.", linkLabel: "Proje nasıl ilerler?", slug: "nasil-calisir" },
-        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Workshop’u tanıyın", slug: "workshop" },
+        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Atölye’yi tanıyın", slug: "workshop" },
       ],
     },
     product: {
@@ -61,15 +61,15 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
       ],
     },
     workshop: {
-      eyebrow: "Skyvan Workshop", heading: "Sizin yolculuğunuz,\nbirlikte düşünülen planınız.",
-      body: "Hazırladığımız Workshop deneyimi; araç seçimini, yaşam düzenini ve teknik ihtiyaçları adım adım birlikte ele alacak.",
+      eyebrow: "Skyvan Atölye", heading: "Sizin yolculuğunuz,\nbirlikte düşünülen planınız.",
+      body: "Hazırladığımız Atölye deneyimi; araç seçimini, yaşam düzenini ve teknik ihtiyaçları adım adım birlikte ele alacak.",
       steps: [
         { title: "Araç seçimi", body: "Marka, model ve gövde varyantından başlayarak aracın gerçek ölçülerini anlamak." },
         { title: "Yaşam düzeni", body: "Oturma, uyku, mutfak ve depolama ihtiyaçlarını rotanıza göre düşünmek." },
         { title: "Teknik değerlendirme", body: "Yerleşim ve bileşen uyumluluğunu, doğrulanmış araç ve ürün verileriyle incelemek." },
       ],
       note: "Planlanan deneyimde yapay zekâ seçimleri açıklayacak; doğrulanmış kurallar uyumsuz seçimlerde uyaracak ve gerektiğinde ilerlemeyi durduracak. Nihai karar insan onayında kalacak.",
-      cta: "Workshop’u tanıyın",
+      cta: "Atölye’yi tanıyın",
     },
     engineering: {
       eyebrow: "Mühendislik", heading: "Görünen şey,\nüretilebilir olmalı.",
@@ -92,13 +92,13 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
       ],
       cta: "Skyvan yaklaşımını keşfedin.",
     },
-    coming: { eyebrow: "Skyvan Workshop", heading: "Sizin rotanız.\nSizin yaşam alanınız.", body: "Projenizi adım adım ele alabileceğiniz Workshop deneyimini hazırlıyoruz. Araçtan yaşam düzenine, her seçimi anlamlı bir bütün içinde düşünmek için.", next: "Sizi neler bekliyor?", cta: "Workshop yaklaşımını keşfet" },
+    coming: { eyebrow: "Skyvan Atölye", heading: "Sizin rotanız.\nSizin yaşam alanınız.", body: "Projenizi adım adım ele alabileceğiniz Atölye deneyimini hazırlıyoruz. Araçtan yaşam düzenine, her seçimi anlamlı bir bütün içinde düşünmek için.", next: "Sizi neler bekliyor?", cta: "Atölye yaklaşımını keşfet" },
     faq: {
       eyebrow: "Sık sorulan sorular",
       items: [
-        { title: "Workshop bugün kullanılabiliyor mu?", body: "Workshop ve proje başlatma deneyimi hazırlanıyor. Şu anda yaklaşımımızı ve konsept tasarımlarımızı keşfedebilirsiniz. Açılış tarihi henüz açıklanmadı." },
+        { title: "Atölye bugün kullanılabiliyor mu?", body: "Atölye ve proje başlatma deneyimi hazırlanıyor. Şu anda yaklaşımımızı ve konsept tasarımlarımızı keşfedebilirsiniz. Açılış tarihi henüz açıklanmadı." },
         { title: "Görsellerdeki araç ve donanımlar satışa hazır mı?", body: "Bu görseller Skyvan’ın tasarım vizyonuna ait konseptlerdir. Sunulacak araçlar, donanımlar ve yerleşimler; teknik değerlendirme ve onaylanan proje kapsamıyla netleşecektir." },
-        { title: "Teknik seçimlere kim karar verecek?", body: "Planlanan Workshop deneyiminde yapay zekâ açıklama ve yönlendirme sağlayacak, doğrulanmış kurallar uyumluluk kontrolünü destekleyecek. Nihai teknik ve ticari kararlar insan onayında kalacak." },
+        { title: "Teknik seçimlere kim karar verecek?", body: "Planlanan Atölye deneyiminde yapay zekâ açıklama ve yönlendirme sağlayacak, doğrulanmış kurallar uyumluluk kontrolünü destekleyecek. Nihai teknik ve ticari kararlar insan onayında kalacak." },
       ],
     },
     final: { eyebrow: "Daha geniş bir yarın için", heading: "Projenizin nasıl ele alınacağını keşfedin." },

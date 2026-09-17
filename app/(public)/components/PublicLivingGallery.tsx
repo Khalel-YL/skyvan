@@ -30,13 +30,16 @@ export function PublicLivingGallery({ copy, concept, locale, editorial = false }
 
   return <div className="sv-living-gallery">
     <figure>
-      <PublicConceptMedia name={selected.asset} alt={editorial ? editorialAlt : asset.alt[locale]} className="sv-lounge-frame" sizes="(max-width: 767px) 100vw, 92vw" />
+      <PublicConceptMedia key={selected.asset} name={selected.asset} alt={editorial ? editorialAlt : asset.alt[locale]} className="sv-lounge-frame" sizes="(max-width: 767px) 100vw, 92vw" />
       <figcaption className="sv-gallery-caption">
-        <div role="group" aria-label={editorial ? locale === "tr" ? "Yaşam alanı konsept durumu" : "Living-space concept state" : copy.galleryLabel} className="sv-layout-switch">
-          {states.map((item) => {
-            const Icon = item.icon;
-            return <button key={item.id} type="button" aria-pressed={state === item.id} onClick={() => setState(item.id)}><Icon size={16} aria-hidden="true" />{item.label}</button>;
-          })}
+        <div className="sv-gallery-control-row">
+          <div role="group" aria-label={editorial ? locale === "tr" ? "Yaşam alanı konsept durumu" : "Living-space concept state" : copy.galleryLabel} className="sv-layout-switch">
+            {states.map((item) => {
+              const Icon = item.icon;
+              return <button key={item.id} type="button" aria-pressed={state === item.id} onClick={() => setState(item.id)}><Icon size={16} aria-hidden="true" /><span>{item.label}</span></button>;
+            })}
+          </div>
+          <span className="sv-gallery-counter" aria-hidden="true">{String(states.findIndex((item) => item.id === state) + 1).padStart(2, "0")} / {String(states.length).padStart(2, "0")}</span>
         </div>
         <span className="sv-concept-label">{editorial ? locale === "tr" ? "Skyvan konsept çalışması" : "Skyvan concept study" : `${copy.model} · ${concept}`}</span>
       </figcaption>

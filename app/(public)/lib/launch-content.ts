@@ -193,19 +193,19 @@ const trPages: Record<string, FallbackInput> = {
     blocks: [
       { type: "hero", heading: "Üretim, iyi hazırlanmış kararla başlar.", subtext: "Skyvan üretim yolculuğunu acele satıştan çok doğru hazırlık üzerine kurar." },
       { type: "feature-list", heading: "Yolculuk", items: ["İhtiyaç ve kullanım profili anlaşılır.", "Araç ve düzen beklentileri belirlenir.", "Teknik riskler ve eksikler değerlendirilir.", "Onaylı anlatım public sitede güvenle yayınlanır."] },
-      { type: "text", heading: "Workshop teaser", body: "Kendi Karavanını Tasarla deneyimi çok yakında. Bu public sayfa gerçek configurator, fiyatlandırma veya lead akışı başlatmaz." },
+      { type: "text", heading: "Atölye tanıtımı", body: "Kendi Karavanını Tasarla deneyimi çok yakında. Bu public sayfa gerçek configurator, fiyatlandırma veya lead akışı başlatmaz." },
       { type: "cta", heading: "Sık soruları incele", ctaLabel: "SSS", ctaHref: "/tr/sss" },
     ],
   },
   sss: {
     slug: "sss",
     title: "Sık Sorulan Sorular",
-    description: "Skyvan hakkında public site, AI rolü, workshop teaser ve proje başlatma yaklaşımı.",
+    description: "Skyvan hakkında public site, AI rolü, Atölye tanıtımı ve proje başlatma yaklaşımı.",
     seoTitle: "Skyvan SSS | Sık Sorulan Sorular",
-    seoDescription: "Skyvan SSS; AI rolü, public site, admin yayın sistemi, workshop teaser ve güvenli proje niyeti hakkında yanıtlar sunar.",
+    seoDescription: "Skyvan SSS; AI rolü, public site, admin yayın sistemi, Atölye tanıtımı ve güvenli proje niyeti hakkında yanıtlar sunar.",
     blocks: [
       { type: "hero", heading: "Sık sorulan sorular", subtext: "Skyvan'ın ne yaptığı kadar ne yapmadığı da bilinçli olarak tanımlıdır." },
-      { type: "feature-list", heading: "Kısa yanıtlar", items: ["Public site DB'ye yazmaz; yalnızca güvenli içerik okur.", "Workshop şimdilik tanıtım seviyesindedir.", "AI chatbot değildir ve final karar vermez.", "Proje başlat sayfası form veya lead kaydı oluşturmaz."] },
+      { type: "feature-list", heading: "Kısa yanıtlar", items: ["Public site DB'ye yazmaz; yalnızca güvenli içerik okur.", "Atölye şimdilik tanıtım seviyesindedir.", "AI chatbot değildir ve final karar vermez.", "Proje başlat sayfası form veya lead kaydı oluşturmaz."] },
       { type: "cta", heading: "İletişim niyetini güvenli şekilde incele", ctaLabel: "İletişim", ctaHref: "/tr/iletisim" },
     ],
   },
