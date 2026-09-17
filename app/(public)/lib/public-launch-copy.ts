@@ -44,7 +44,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
         { id: "lightweight-decisions", title: "Hafiflik, tek bir malzemeden daha büyük bir karardır.", body: "Karavana eklenen her malzeme kullanılabilir taşıma kapasitesini, aracın davranışını ve diğer seçimler için kalan payı etkiler. Skyvan, malzeme kararlarını görünüş kadar proje bütünü içindeki ağırlık etkisiyle ele alır.", linkLabel: "Deneyimimizi tanıyın", slug: "hakkimizda" },
         { id: "buildable-design", title: "Görünen şey, üretilebilir olmalı.", body: "Yerleşim, dolaşım, kapı ve pencere açıklıkları, teknik sistemler ve bakım erişimi birbirinden kopmadan çözülmelidir.", linkLabel: "Mühendislik yaklaşımı", slug: "muhendislik" },
         { id: "service-access", title: "Bugünün düzeni, yarının bakımını engellememeli.", body: "Su, elektrik, depolama ve mobilya kararları; bağlantılara, koruma elemanlarına ve kontrol noktalarına erişimi korumalıdır.", linkLabel: "Proje nasıl ilerler?", slug: "nasil-calisir" },
-        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Atölye’yi tanıyın", slug: "workshop" },
+        { id: "connected-choices", title: "Bileşenler bağımsız alışverişler değildir.", body: "Güneş paneli, şarj kontrolörü, akü, inverter, yükler, kullanılabilir alan ve koruma gereksinimleri aynı bağlamda değerlendirilir.", linkLabel: "Atölyeyi tanıyın", slug: "workshop" },
       ],
     },
     product: {
@@ -69,7 +69,7 @@ export const publicLaunchContent: Record<PublicLocale, PublicLaunchCopy> = {
         { title: "Teknik değerlendirme", body: "Yerleşim ve bileşen uyumluluğunu, doğrulanmış araç ve ürün verileriyle incelemek." },
       ],
       note: "Planlanan deneyimde yapay zekâ seçimleri açıklayacak; doğrulanmış kurallar uyumsuz seçimlerde uyaracak ve gerektiğinde ilerlemeyi durduracak. Nihai karar insan onayında kalacak.",
-      cta: "Atölye’yi tanıyın",
+      cta: "Atölyeyi tanıyın",
     },
     engineering: {
       eyebrow: "Mühendislik", heading: "Görünen şey,\nüretilebilir olmalı.",

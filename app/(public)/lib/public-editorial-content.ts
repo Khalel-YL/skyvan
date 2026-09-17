@@ -191,7 +191,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
   },
   "proje-baslat": {
     title: "Proje Başlat", seoTitle: "Proje Başlat | Skyvan", seoDescription: "Yaklaşan proje başlatma deneyimi öncesinde araç, yaşam ve teknik sorularınızı hazırlayın.", eyebrow: "Proje Başlat", status: "Yakında",
-    heading: "Kendi yolculuğunuza yer açın.", body: "Araç fikrinizi, yaşam önceliklerinizi ve yerleşim tercihlerinizi birlikte ele alabileceğiniz başlangıç deneyimini hazırlıyoruz. Bu sırada size yakın gelen yaşam düzenini keşfedebilirsiniz.",
+    heading: "Kendi yolculuğunuza yer açın.", body: "Araç fikrinizi, yaşam önceliklerinizi ve yerleşim tercihlerinizi birlikte ele alabileceğiniz başlangıç deneyimini hazırlıyoruz. Bu sırada size yakın gelen yaşam düzenini keşfedebilir, Atölye yaklaşımının proje kararlarını nasıl bağladığını inceleyebilirsiniz.",
     sections: [
       { id: "vehicle-question", heading: "Hangi araçla yol almak istiyorsunuz?", body: "Mevcut aracınızın bilgilerini veya düşündüğünüz seçenekleri not edin. Bir varyant ya da ölçüden emin değilseniz, bunu açık bir soru olarak bırakabilirsiniz." },
       { id: "life-question", heading: "Günün hangi anlarına daha çok yer ayırırsınız?", body: "Birlikte yemek, dinlenme, çalışma veya kişisel alan: sizin için en önemli kullanımları belirleyin. Öncelikler, yerleşim seçeneklerini anlamayı kolaylaştırır." },
