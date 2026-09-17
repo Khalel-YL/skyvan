@@ -98,16 +98,16 @@ function LoadBalanceDiagram({ nodes, ariaLabel, axisLabel }: { nodes: string[]; 
 
 function FlowDiagram({ nodes, ariaLabel, captions }: { nodes: string[]; ariaLabel: string; captions: { top: string; bottom: string } }) {
   return (
-    <svg viewBox="0 20 720 205" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg">
+    <svg viewBox="0 0 720 300" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg">
       <defs><marker id="sv-technical-arrow-flow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" className="sv-technical-diagram-arrow" /></marker></defs>
-      <path d="M94 126 H626" className="sv-technical-diagram-track" />
+      <path d="M94 152 H626" className="sv-technical-diagram-track" />
       {nodes.map((node, index) => {
         const x = 24 + index * 174;
-        return <DiagramNode key={node} x={x} y={99} width={150} label={node} index={index} />;
+        return <DiagramNode key={node} x={x} y={125} width={150} label={node} index={index} />;
       })}
-      {nodes.slice(0, -1).map((node, index) => <Arrow key={`${node}-arrow`} markerId="sv-technical-arrow-flow" x1={174 + index * 174} y1={126} x2={198 + index * 174} y2={126} />)}
-      <text x="24" y="48" className="sv-technical-diagram-caption">{captions.top}</text>
-      <text x="24" y="216" className="sv-technical-diagram-caption">{captions.bottom}</text>
+      {nodes.slice(0, -1).map((node, index) => <Arrow key={`${node}-arrow`} markerId="sv-technical-arrow-flow" x1={174 + index * 174} y1={152} x2={198 + index * 174} y2={152} />)}
+      <text x="24" y="77" className="sv-technical-diagram-caption">{captions.top}</text>
+      <text x="24" y="260" className="sv-technical-diagram-caption">{captions.bottom}</text>
     </svg>
   );
 }
