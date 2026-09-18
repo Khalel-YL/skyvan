@@ -980,3 +980,164 @@
     transform: none;
   }
 }
+
+/* Responsive quality pass: keep the editorial stage deliberate at laptop
+   widths and turn technical studies into one consistent touch rail on phones. */
+.sv-public [data-sv-motion-root].is-ready [data-sv-reveal] {
+  transition-delay: var(--sv-reveal-delay, 0ms);
+}
+
+.sv-public .sv-editorial-muhendislik .sv-editorial-page-hero-image {
+  background: #111416;
+}
+
+.sv-public .sv-editorial-muhendislik .sv-editorial-page-hero-image img {
+  object-fit: contain;
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .sv-public .sv-editorial-page-hero {
+    padding-block: 3.5rem 3.25rem;
+  }
+
+  .sv-public .sv-editorial-page-hero-grid {
+    width: min(92%, 1120px);
+    gap: 3rem;
+  }
+
+  .sv-public .sv-editorial-page-hero h1 {
+    max-width: 11ch;
+    font-size: clamp(3.25rem, 7vw, 5.6rem);
+  }
+
+  .sv-public .sv-editorial-section {
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+    gap: 3rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-header-row {
+    min-height: 66px;
+  }
+
+  .sv-public .sv-brand > span {
+    font-size: .75rem;
+    letter-spacing: .16em;
+  }
+
+  .sv-public .sv-mobile-menu {
+    background: color-mix(in srgb, var(--public-bg) 96%, transparent);
+    box-shadow: 0 1.25rem 2rem rgba(0, 0, 0, .08);
+  }
+
+  .sv-public .sv-mobile-menu nav a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.5rem;
+    border-bottom: 1px solid var(--public-border);
+    font-size: 1rem;
+  }
+
+  .sv-public .sv-mobile-menu nav a::after {
+    content: "↗";
+    color: var(--public-muted);
+    font-size: .9rem;
+  }
+
+  .sv-public .sv-mobile-menu nav a[aria-current="page"] {
+    color: var(--public-text);
+  }
+
+  .sv-public .sv-editorial-page-hero {
+    padding-block: 2.75rem 2.25rem;
+  }
+
+  .sv-public .sv-editorial-page-hero-grid {
+    gap: 1.75rem;
+  }
+
+  .sv-public .sv-editorial-page-hero h1 {
+    max-width: 11ch;
+    font-size: clamp(2.85rem, 12.5vw, 4.25rem);
+    line-height: .98;
+  }
+
+  .sv-public .sv-editorial-page-hero .sv-editorial-copy > p {
+    max-width: 34rem;
+    margin-top: 1.15rem;
+    font-size: .98rem;
+    line-height: 1.65;
+  }
+
+  .sv-public .sv-editorial-page-hero-image,
+  .sv-public .sv-editorial-karavan-deneyimi .sv-editorial-page-hero-image {
+    aspect-ratio: 1.14;
+    border-radius: 16px;
+  }
+
+  .sv-public .sv-editorial-section {
+    gap: 1.5rem;
+    padding-block: 3rem;
+  }
+
+  .sv-public .sv-editorial-section-copy h2 {
+    font-size: clamp(1.8rem, 8vw, 2.45rem);
+    line-height: 1.05;
+  }
+
+  .sv-public .sv-editorial-visual-stack {
+    margin-top: .25rem;
+  }
+
+  /* One visible card plus a deliberate next-card glimpse signals touch
+     interaction without turning the page into a dense vertical catalogue. */
+  .sv-public .sv-engineering-visual-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: .9rem;
+    margin-inline: -5vw;
+    padding-inline: 5vw;
+    padding-bottom: .5rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .sv-public .sv-engineering-visual-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sv-public .sv-engineering-visual-card,
+  .sv-public .sv-engineering-visual-rail-3 .sv-engineering-visual-card:first-child {
+    flex: 0 0 min(82vw, 21rem);
+    scroll-snap-align: start;
+  }
+
+  .sv-public .sv-engineering-visual-frame {
+    aspect-ratio: 1.24;
+    border-radius: 14px;
+  }
+
+  .sv-public .sv-engineering-visual-card figcaption {
+    min-height: 7.2rem;
+  }
+
+  .sv-public .sv-technical-diagram {
+    border-radius: 16px;
+  }
+
+  .sv-public .sv-technical-diagram-meta {
+    padding: .9rem .9rem .65rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading {
+    align-items: flex-start;
+    padding: .8rem .9rem .25rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading span:last-child {
+    max-width: 8rem;
+    line-height: 1.35;
+  }
+}

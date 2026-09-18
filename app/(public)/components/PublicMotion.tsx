@@ -27,7 +27,10 @@ export function PublicMotion({ children, className = "" }: { children: React.Rea
       });
     }, { rootMargin: "0px 0px -10%", threshold: 0.08 });
 
-    items.forEach((item) => observer.observe(item));
+    items.forEach((item, index) => {
+      item.style.setProperty("--sv-reveal-delay", `${Math.min(index, 5) * 70}ms`);
+      observer.observe(item);
+    });
     return () => observer.disconnect();
   }, []);
 
