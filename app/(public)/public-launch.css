@@ -1216,3 +1216,277 @@
     min-height: 0;
   }
 }
+
+/* Technical studies need the same breathing room as the rest of the Skyvan
+   editorial system. A full-width engineering plate keeps the explanation and
+   the drawing in one deliberate composition instead of trapping the plate in
+   a narrow right-hand column. */
+.sv-public .sv-editorial-section-technical-study {
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2rem, 4vw, 4rem);
+  padding-block: clamp(3.5rem, 7vw, 7rem);
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy {
+  order: 0 !important;
+  grid-template-columns: 3rem minmax(0, .85fr) minmax(0, 1.15fr);
+  column-gap: clamp(1.5rem, 5vw, 6rem);
+  width: 100%;
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-section-index {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy h2 {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  max-width: 13em;
+  font-size: clamp(2rem, 3.1vw, 3.25rem);
+  line-height: 1.02;
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy p {
+  grid-column: 3;
+  grid-row: 1;
+  max-width: 44rem;
+  margin-top: .15rem;
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy ul {
+  grid-column: 3;
+  grid-row: 2;
+  max-width: 44rem;
+  margin-top: 1.25rem;
+}
+
+.sv-public .sv-editorial-section-technical-study .sv-editorial-visual-stack {
+  width: 100%;
+  margin-top: 0;
+}
+
+.sv-public .sv-technical-diagram {
+  position: relative;
+  width: 100%;
+  border-radius: 24px;
+  background: radial-gradient(circle at 76% 8%, rgba(211, 184, 135, .13), transparent 25%), linear-gradient(145deg, #14181a 0%, #0d1011 72%);
+  box-shadow: 0 2rem 4.5rem rgba(0, 0, 0, .14), inset 0 1px rgba(255, 255, 255, .04);
+}
+
+.sv-public .sv-technical-diagram::before {
+  content: "";
+  position: absolute;
+  inset: .8rem;
+  border: 1px solid rgba(244, 241, 233, .055);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.sv-public .sv-technical-diagram-meta {
+  position: relative;
+  z-index: 1;
+  padding: 1.35rem 1.55rem .9rem;
+  border-bottom: 1px solid rgba(244, 241, 233, .1);
+}
+
+.sv-public .sv-technical-diagram-heading {
+  position: relative;
+  z-index: 1;
+  align-items: flex-start;
+  padding: 1.35rem 1.55rem 1rem;
+}
+
+.sv-public .sv-technical-diagram-heading-copy {
+  display: grid;
+  gap: .55rem;
+  min-width: 0;
+}
+
+.sv-public .sv-technical-diagram-heading-copy > span {
+  color: var(--diagram-accent);
+  font-size: .68rem;
+  font-weight: 650;
+  letter-spacing: .2em;
+}
+
+.sv-public .sv-technical-diagram-heading-copy > strong {
+  max-width: 34rem;
+  color: var(--diagram-text);
+  font-size: clamp(1.15rem, 2vw, 1.7rem);
+  font-weight: 520;
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.sv-public .sv-technical-diagram-heading > span:last-child {
+  padding-top: .2rem;
+  color: var(--diagram-muted);
+  font-size: .56rem;
+  letter-spacing: .17em;
+  line-height: 1.4;
+}
+
+.sv-public .sv-technical-diagram-svg {
+  position: relative;
+  z-index: 1;
+  padding: .3rem 1.25rem 0;
+}
+
+.sv-public .sv-technical-diagram-frame {
+  stroke: rgba(244, 241, 233, .2);
+  stroke-width: 1.2;
+}
+
+.sv-public .sv-technical-diagram-node {
+  fill: rgba(25, 30, 32, .92);
+  stroke: rgba(244, 241, 233, .27);
+  stroke-width: 1.1;
+}
+
+.sv-public .sv-technical-diagram-station:hover .sv-technical-diagram-node {
+  fill: rgba(38, 44, 45, .98);
+  stroke: rgba(211, 184, 135, .58);
+}
+
+.sv-public .sv-technical-diagram-node-rule {
+  stroke: var(--diagram-accent);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.sv-public .sv-technical-diagram-callout-line {
+  stroke: rgba(211, 184, 135, .8);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.sv-public .sv-technical-diagram-callout-point {
+  fill: var(--diagram-accent);
+}
+
+.sv-public .sv-technical-diagram-vehicle {
+  fill: rgba(21, 26, 28, .98);
+  stroke: rgba(244, 241, 233, .42);
+  stroke-width: 1.7;
+}
+
+.sv-public .sv-technical-diagram-vehicle-cab {
+  fill: rgba(42, 49, 50, .84);
+  stroke: rgba(244, 241, 233, .22);
+}
+
+.sv-public .sv-technical-diagram-vehicle-rule {
+  stroke: rgba(244, 241, 233, .18);
+  stroke-width: 1.1;
+}
+
+.sv-public .sv-technical-diagram-vehicle-zone {
+  fill: rgba(211, 184, 135, .08);
+  stroke: rgba(211, 184, 135, .33);
+  stroke-width: 1;
+}
+
+.sv-public .sv-technical-diagram-vehicle-zone-wide {
+  fill: rgba(244, 241, 233, .045);
+  stroke: rgba(244, 241, 233, .23);
+}
+
+.sv-public .sv-technical-diagram-vehicle-zone-label,
+.sv-public .sv-technical-diagram-orientation {
+  fill: var(--diagram-muted);
+  font-size: 9px;
+  letter-spacing: .14em;
+}
+
+.sv-public .sv-technical-diagram-orientation {
+  fill: rgba(244, 241, 233, .44);
+  font-size: 8px;
+}
+
+.sv-public .sv-technical-diagram figcaption {
+  position: relative;
+  z-index: 1;
+  min-height: 3.6rem;
+  align-items: center;
+  padding: 1rem 1.55rem 1.2rem;
+  border-top: 1px solid rgba(244, 241, 233, .1);
+  background: transparent;
+}
+
+.sv-public .sv-technical-diagram figcaption span {
+  max-width: 66rem;
+  font-size: .78rem;
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-editorial-section-technical-study {
+    gap: 1.5rem;
+    padding-block: 3.25rem;
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    column-gap: 1rem;
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-section-index {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy h2,
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy p,
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy ul {
+    grid-column: 2;
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy h2 {
+    grid-row: 1;
+    max-width: 14ch;
+    font-size: clamp(1.9rem, 8vw, 2.5rem);
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy p {
+    grid-row: 2;
+    margin-top: 1.15rem;
+  }
+
+  .sv-public .sv-editorial-section-technical-study .sv-editorial-section-copy ul {
+    grid-row: 3;
+  }
+
+  .sv-public .sv-technical-diagram {
+    border-radius: 18px;
+  }
+
+  .sv-public .sv-technical-diagram-meta {
+    padding: .95rem .95rem .7rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading {
+    padding: .95rem .95rem .8rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading-copy > span {
+    font-size: .6rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading-copy > strong {
+    font-size: 1.05rem;
+  }
+
+  .sv-public .sv-technical-diagram-heading > span:last-child {
+    max-width: 7.5rem;
+    font-size: .5rem;
+  }
+
+  .sv-public .sv-technical-diagram figcaption {
+    min-height: 0;
+    padding: .9rem .95rem 1.05rem;
+  }
+
+  .sv-public .sv-technical-diagram figcaption span {
+    font-size: .72rem;
+  }
+}

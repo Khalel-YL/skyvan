@@ -321,7 +321,7 @@ function SectionBody({ section, index, slug, page }: { section: EditorialSection
   const hasVisual = resolvedVisual !== "none";
   const mediaOnLeft = presentation?.layout === "media-left" || (!presentation?.layout && index % 2 === 1);
   const wideMedia = hasVisual && presentation?.layout === "wide-media";
-  return <section id={section.id} data-sv-reveal data-editorial-visual={presentation?.visual ?? "inherit"} className={`sv-editorial-section ${hasVisual ? "sv-editorial-section-with-media" : "sv-editorial-section-text-only"} ${mediaOnLeft ? "sv-editorial-section-reverse" : ""} ${wideMedia ? "sv-editorial-section-wide-media" : ""}`}>
+  return <section id={section.id} data-sv-reveal data-editorial-visual={presentation?.visual ?? "inherit"} className={`sv-editorial-section ${hasVisual ? "sv-editorial-section-with-media" : "sv-editorial-section-text-only"} ${mediaOnLeft ? "sv-editorial-section-reverse" : ""} ${wideMedia ? "sv-editorial-section-wide-media" : ""} ${technicalDiagram ? "sv-editorial-section-technical-study" : ""}`}>
     <div className="sv-editorial-section-copy">
       <span className="sv-section-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
       <h2>{section.heading}</h2>

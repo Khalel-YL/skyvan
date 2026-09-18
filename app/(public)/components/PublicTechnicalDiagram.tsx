@@ -81,7 +81,8 @@ function DiagramNode({
 }) {
   return (
     <g className={`sv-technical-diagram-station sv-technical-diagram-station-${tone}`}>
-      <rect x={x} y={y} width={width} height="58" rx="2" className="sv-technical-diagram-node" />
+      <rect x={x} y={y} width={width} height="58" rx="4" className="sv-technical-diagram-node" />
+      <line x1={x + 16} y1={y + 12} x2={x + 48} y2={y + 12} className="sv-technical-diagram-node-rule" />
       <text x={x + 16} y={y + 24} className="sv-technical-diagram-index">{String(index + 1).padStart(2, "0")}</text>
       <text x={x + 16} y={y + 45} className="sv-technical-diagram-label">{label}</text>
     </g>
@@ -95,36 +96,44 @@ function Arrow({ x1, y1, x2, y2, markerId }: { x1: number; y1: number; x2: numbe
 function LoadBalanceDiagram({ nodes, ariaLabel, axisLabel }: { nodes: string[]; ariaLabel: string; axisLabel: string }) {
   return (
     <>
-      <svg viewBox="0 0 760 320" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg sv-technical-diagram-svg-desktop">
+      <svg viewBox="0 0 920 390" role="img" aria-label={ariaLabel} className="sv-technical-diagram-svg sv-technical-diagram-svg-desktop">
         <title>{ariaLabel}</title>
         <defs>
           <marker id="sv-technical-arrow-load" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" className="sv-technical-diagram-arrow" /></marker>
         </defs>
-        <rect x="18" y="18" width="724" height="284" rx="10" className="sv-technical-diagram-frame" />
-        <text x="36" y="46" className="sv-technical-diagram-micro-label">VEHICLE PLAN / BALANCE STUDY</text>
-        <text x="724" y="46" textAnchor="end" className="sv-technical-diagram-micro-label">SCHEMATIC / 01</text>
+        <rect x="20" y="18" width="880" height="354" rx="16" className="sv-technical-diagram-frame" />
+        <text x="46" y="50" className="sv-technical-diagram-micro-label">VEHICLE PLAN / BALANCE STUDY</text>
+        <text x="874" y="50" textAnchor="end" className="sv-technical-diagram-micro-label">REFERENCE / 01</text>
+        <text x="460" y="66" textAnchor="middle" className="sv-technical-diagram-orientation">REFERENCE FRONT</text>
+        <text x="460" y="356" textAnchor="middle" className="sv-technical-diagram-orientation">REFERENCE REAR</text>
 
-        <path d="M304 72 H456 C488 72 515 96 522 130 L531 213 C534 239 517 257 488 260 H272 C243 257 226 239 229 213 L238 130 C245 96 272 72 304 72 Z" className="sv-technical-diagram-vehicle" />
-        <path d="M272 91 Q360 67 448 91 L469 126 H251 Z" className="sv-technical-diagram-vehicle-cab" />
-        <path d="M252 148 H468 M252 202 H468" className="sv-technical-diagram-vehicle-rule" />
-        <path d="M252 148 V202 M468 148 V202" className="sv-technical-diagram-vehicle-rule" />
-        <rect x="226" y="105" width="14" height="42" rx="7" className="sv-technical-diagram-wheel" />
-        <rect x="520" y="105" width="14" height="42" rx="7" className="sv-technical-diagram-wheel" />
-        <rect x="226" y="199" width="14" height="42" rx="7" className="sv-technical-diagram-wheel" />
-        <rect x="520" y="199" width="14" height="42" rx="7" className="sv-technical-diagram-wheel" />
-        <path d="M252 176 H508" className="sv-technical-diagram-axis" />
-        <circle cx="360" cy="176" r="6" className="sv-technical-diagram-centre" />
-        <text x="360" y="169" textAnchor="middle" className="sv-technical-diagram-axis-label">{axisLabel}</text>
+        <path d="M394 78 H526 C572 78 604 112 607 154 L614 264 C616 298 596 322 560 326 H360 C324 322 304 298 306 264 L313 154 C316 112 348 78 394 78 Z" className="sv-technical-diagram-vehicle" />
+        <path d="M350 101 Q460 72 570 101 L586 143 H334 Z" className="sv-technical-diagram-vehicle-cab" />
+        <path d="M337 163 H583 M337 281 H583" className="sv-technical-diagram-vehicle-rule" />
+        <path d="M337 163 V281 M583 163 V281" className="sv-technical-diagram-vehicle-rule" />
+        <rect x="304" y="112" width="15" height="46" rx="7.5" className="sv-technical-diagram-wheel" />
+        <rect x="601" y="112" width="15" height="46" rx="7.5" className="sv-technical-diagram-wheel" />
+        <rect x="304" y="238" width="15" height="46" rx="7.5" className="sv-technical-diagram-wheel" />
+        <rect x="601" y="238" width="15" height="46" rx="7.5" className="sv-technical-diagram-wheel" />
+        <rect x="356" y="177" width="82" height="41" rx="5" className="sv-technical-diagram-vehicle-zone" />
+        <rect x="482" y="177" width="82" height="41" rx="5" className="sv-technical-diagram-vehicle-zone" />
+        <rect x="356" y="231" width="208" height="32" rx="5" className="sv-technical-diagram-vehicle-zone sv-technical-diagram-vehicle-zone-wide" />
+        <text x="397" y="201" textAnchor="middle" className="sv-technical-diagram-vehicle-zone-label">LOAD ZONE</text>
+        <text x="523" y="201" textAnchor="middle" className="sv-technical-diagram-vehicle-zone-label">LOAD ZONE</text>
+        <text x="460" y="251" textAnchor="middle" className="sv-technical-diagram-vehicle-zone-label">LIVING / SERVICE FIELD</text>
+        <path d="M337 222 H583" className="sv-technical-diagram-axis" />
+        <circle cx="460" cy="222" r="7" className="sv-technical-diagram-centre" />
+        <text x="460" y="214" textAnchor="middle" className="sv-technical-diagram-axis-label">{axisLabel}</text>
 
-        <DiagramNode x={30} y={72} width={166} label={nodes[0]} index={0} tone="load" />
-        <DiagramNode x={564} y={72} width={166} label={nodes[1]} index={1} tone="load" />
-        <DiagramNode x={30} y={194} width={166} label={nodes[2]} index={2} tone="load" />
-        <DiagramNode x={564} y={194} width={166} label={nodes[3]} index={3} tone="load" />
-        <path d="M196 101 H244 M564 101 H516 M196 223 H244 M564 223 H516" className="sv-technical-diagram-callout-line" />
-        <circle cx="244" cy="101" r="3" className="sv-technical-diagram-callout-point" />
-        <circle cx="516" cy="101" r="3" className="sv-technical-diagram-callout-point" />
-        <circle cx="244" cy="223" r="3" className="sv-technical-diagram-callout-point" />
-        <circle cx="516" cy="223" r="3" className="sv-technical-diagram-callout-point" />
+        <DiagramNode x={48} y={92} width={220} label={nodes[0]} index={0} tone="load" />
+        <DiagramNode x={652} y={92} width={220} label={nodes[1]} index={1} tone="load" />
+        <DiagramNode x={48} y={238} width={220} label={nodes[2]} index={2} tone="load" />
+        <DiagramNode x={652} y={238} width={220} label={nodes[3]} index={3} tone="load" />
+        <path d="M268 121 H306 M652 121 H614 M268 267 H306 M652 267 H614" className="sv-technical-diagram-callout-line" />
+        <circle cx="306" cy="121" r="3.5" className="sv-technical-diagram-callout-point" />
+        <circle cx="614" cy="121" r="3.5" className="sv-technical-diagram-callout-point" />
+        <circle cx="306" cy="267" r="3.5" className="sv-technical-diagram-callout-point" />
+        <circle cx="614" cy="267" r="3.5" className="sv-technical-diagram-callout-point" />
       </svg>
       <div className="sv-technical-diagram-mobile-balance" role="img" aria-label={ariaLabel}>
         <span className="sv-technical-diagram-mobile-axis">{axisLabel}</span>
@@ -199,11 +208,14 @@ export function PublicTechnicalDiagram({ kind, locale }: { kind: PublicTechnical
   return (
     <figure className="sv-technical-diagram" data-diagram-kind={kind}>
       <div className="sv-technical-diagram-meta"><span>SKYVAN / ENGINEERING</span><span>CONCEPT / CONCEPT STUDY</span></div>
-      <div className="sv-technical-diagram-heading"><span>{item.label}</span><span>EXPLANATORY SCHEMATIC</span></div>
+      <div className="sv-technical-diagram-heading">
+        <div className="sv-technical-diagram-heading-copy"><span>{item.label}</span><strong>{item.title}</strong></div>
+        <span>EXPLANATORY SCHEMATIC</span>
+      </div>
       {kind === "load-aero"
         ? <LoadBalanceDiagram nodes={item.nodes} ariaLabel={ariaLabel} axisLabel={axisLabel} />
         : <FlowDiagram nodes={item.nodes} ariaLabel={ariaLabel} captions={captions} kind={kind} tone={flowTone} />}
-      <figcaption><strong>{item.title}</strong><span>{item.note}</span></figcaption>
+      <figcaption><span>{item.note}</span></figcaption>
     </figure>
   );
 }
