@@ -766,6 +766,23 @@
   text-transform: uppercase;
 }
 .sv-workshop-architecture ol { margin-top: clamp(2.25rem, 4vw, 3.75rem); }
+.sv-workshop-architecture ol li,
+.sv-workshop-authority article { position: relative; }
+.sv-workshop-architecture ol li > span { font-variant-numeric: tabular-nums; }
+.sv-workshop-architecture ol li h3 { min-height: 2.5em; }
+.sv-workshop-architecture ol li::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--public-border-strong);
+  border-radius: 50%;
+  background: var(--public-bg);
+}
+.sv-workshop-architecture ol li + li::before { left: -4px; }
+.sv-workshop-architecture-motion { overflow: clip; }
 
 @media (prefers-reduced-motion: no-preference) {
   .sv-public { scroll-behavior: smooth; }
@@ -1139,5 +1156,63 @@
   .sv-public .sv-technical-diagram-heading span:last-child {
     max-width: 8rem;
     line-height: 1.35;
+  }
+
+  .sv-public .sv-editorial-workshop .sv-editorial-page-hero h1 {
+    max-width: 14ch;
+    font-size: clamp(2.65rem, 11.5vw, 4rem);
+  }
+
+  .sv-public .sv-workshop-architecture ol {
+    position: relative;
+    grid-template-columns: 1fr;
+    margin-left: .25rem;
+    padding-left: 1.25rem;
+    border-top: 0;
+  }
+
+  .sv-public .sv-workshop-architecture ol::before {
+    content: "";
+    position: absolute;
+    top: .7rem;
+    bottom: .7rem;
+    left: 0;
+    width: 1px;
+    background: var(--public-border-strong);
+  }
+
+  .sv-public .sv-workshop-architecture ol li,
+  .sv-public .sv-workshop-architecture ol li + li {
+    min-height: 0;
+    padding: 1.2rem 0 1.3rem .8rem;
+    border-top: 1px solid var(--public-border);
+    border-left: 0;
+  }
+
+  .sv-public .sv-workshop-architecture ol li:first-child {
+    padding-top: .35rem;
+    border-top: 0;
+  }
+
+  .sv-public .sv-workshop-architecture ol li::before,
+  .sv-public .sv-workshop-architecture ol li + li::before {
+    top: .95rem;
+    left: -1.55rem;
+    width: 8px;
+    height: 8px;
+    border-color: var(--public-text);
+    background: var(--public-bg-soft);
+  }
+
+  .sv-public .sv-workshop-architecture ol li:first-child::before {
+    top: .15rem;
+  }
+
+  .sv-public .sv-workshop-architecture ol li > span {
+    margin-bottom: .7rem;
+  }
+
+  .sv-public .sv-workshop-architecture ol li h3 {
+    min-height: 0;
   }
 }

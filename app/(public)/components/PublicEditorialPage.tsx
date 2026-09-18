@@ -358,8 +358,8 @@ function WorkshopDecisionArchitecture({ copy, status }: {
     <div className="sv-workshop-architecture">
       <div className="sv-workshop-architecture-geometry" aria-hidden="true"><span /><span /><span /></div>
       <header><div><p className="sv-eyebrow">{copy.eyebrow}</p><h2 id="workshop-decision-title">{copy.heading}</h2></div><div><p>{copy.body}</p>{status ? <span className="sv-status">{status}</span> : null}</div></header>
-      <ol>{copy.stages.map((stage, index) => <li key={stage.title}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h3>{stage.title}</h3><p>{stage.body}</p></li>)}</ol>
-      <div className="sv-workshop-authority">{copy.authority.map((item) => <article key={item.title}><h3>{item.title}</h3><p>{item.body}</p></article>)}</div>
+      <ol>{copy.stages.map((stage, index) => <li data-sv-reveal key={stage.title}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h3>{stage.title}</h3><p>{stage.body}</p></li>)}</ol>
+      <div className="sv-workshop-authority">{copy.authority.map((item) => <article data-sv-reveal key={item.title}><h3>{item.title}</h3><p>{item.body}</p></article>)}</div>
       <p className="sv-workshop-architecture-note">{copy.note}</p>
     </div>
   </section>;
@@ -431,7 +431,7 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
 
     <div className="sv-container"><EditorialChapterNav copy={copy} slug={slug} locale={page.locale} /></div>
 
-    {slug === "workshop" && copy.decisionArchitecture ? <WorkshopDecisionArchitecture copy={copy.decisionArchitecture} status={copy.status} /> : null}
+    {slug === "workshop" && copy.decisionArchitecture ? <PublicMotion className="sv-workshop-architecture-motion"><WorkshopDecisionArchitecture copy={copy.decisionArchitecture} status={copy.status} /></PublicMotion> : null}
 
     {slug === "karavan-deneyimi" ? <section id="living" className="sv-container sv-section sv-editorial-gallery" aria-labelledby="living-gallery-title">
       <p className="sv-eyebrow">{launchCopy.product.eyebrow}</p>
