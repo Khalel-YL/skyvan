@@ -183,7 +183,13 @@ const engineeringVisualsBySection: Record<string, readonly EngineeringVisualCard
   ],
 };
 
-const chapterNavSlugs = new Set<CuratedPublicSlug>(["muhendislik", "workshop", "karavan-deneyimi"]);
+const chapterNavSlugs = new Set<CuratedPublicSlug>([
+  "muhendislik",
+  "workshop",
+  "karavan-deneyimi",
+  "nasil-calisir",
+  "uretim-sureci",
+]);
 
 const heroAssets: Partial<Record<CuratedPublicSlug, PublicLaunchAssetId>> = {
   hakkimizda: "lounge",

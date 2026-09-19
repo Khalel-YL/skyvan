@@ -1490,3 +1490,126 @@
     font-size: .72rem;
   }
 }
+
+/* Process pages use a typographic first frame instead of a forced stock
+   image. The eyebrow sits on its own rail while the title and introduction
+   share one measured column; this keeps the page intentional at laptop
+   widths and gives the sections below a clear starting line. */
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text {
+  padding-block: clamp(4.5rem, 9vw, 8rem) clamp(3.25rem, 6vw, 5.5rem);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--public-accent) 54%, transparent), transparent 68%),
+    var(--public-bg);
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-grid,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-grid {
+  width: min(90%, 1180px);
+  justify-items: stretch;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy {
+  display: grid;
+  grid-template-columns: minmax(7rem, .24fr) minmax(0, 1.25fr);
+  column-gap: clamp(2rem, 7vw, 7.5rem);
+  align-items: start;
+  max-width: 74rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--public-border-strong);
+  text-align: left;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-kicker,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-kicker {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding-top: .35rem;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text h1,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text h1 {
+  grid-column: 2;
+  grid-row: 1;
+  max-width: 11ch;
+  margin-inline: 0;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p {
+  grid-column: 2;
+  max-width: 46rem;
+  margin-inline: 0;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p:first-of-type,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p:first-of-type {
+  grid-row: 2;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p + p,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p + p {
+  grid-row: 3;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-section-text-only,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-section-text-only {
+  min-height: clamp(18rem, 30vw, 26rem);
+  align-items: center;
+}
+
+.sv-public .sv-editorial-nasil-calisir .sv-editorial-section-text-only .sv-editorial-section-copy,
+.sv-public .sv-editorial-uretim-sureci .sv-editorial-section-text-only .sv-editorial-section-copy {
+  padding-top: .35rem;
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text {
+    padding-block: 3.6rem 2.75rem;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+    column-gap: 0;
+    padding-top: .95rem;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-kicker,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-kicker,
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text h1,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text h1,
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p {
+    grid-column: 1;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-kicker,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-kicker {
+    grid-row: auto;
+    padding-top: 0;
+    margin-bottom: 1.15rem;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text h1,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text h1 {
+    grid-row: auto;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p:first-of-type,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p:first-of-type,
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-page-hero-text .sv-editorial-copy > p + p,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-page-hero-text .sv-editorial-copy > p + p {
+    grid-row: auto;
+  }
+
+  .sv-public .sv-editorial-nasil-calisir .sv-editorial-section-text-only,
+  .sv-public .sv-editorial-uretim-sureci .sv-editorial-section-text-only {
+    min-height: 0;
+  }
+}
