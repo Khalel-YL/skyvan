@@ -1998,3 +1998,241 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* Brand rail and editorial hero finish. The page-level header needs a clear
+   identity of its own; a small system descriptor and a restrained media mark
+   make the public experience feel authored without adding dashboard chrome. */
+.sv-public .sv-brand {
+  gap: .8rem;
+}
+
+.sv-public .sv-brand-copy {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+  font-family: var(--font-skyvan), Arial, sans-serif;
+  letter-spacing: .16em;
+}
+
+.sv-public .sv-brand-copy > span {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sv-public .sv-brand-copy > small {
+  overflow: hidden;
+  color: var(--public-muted);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: .48rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-public .sv-desktop-nav a {
+  position: relative;
+  border-bottom: 0;
+}
+
+.sv-public .sv-desktop-nav a::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: .3rem;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(.35);
+  transform-origin: left;
+  transition: opacity .25s ease, transform .35s cubic-bezier(.2, .7, .2, 1);
+}
+
+.sv-public .sv-desktop-nav a:hover::after,
+.sv-public .sv-desktop-nav a:focus-visible::after,
+.sv-public .sv-desktop-nav a[aria-current]::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.sv-public .sv-editorial-page-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background:
+    radial-gradient(circle at 84% 18%, color-mix(in srgb, var(--public-border-strong) 16%, transparent), transparent 27rem),
+    var(--public-bg);
+}
+
+.sv-public .sv-editorial-page-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--public-border) 24%, transparent) 50%, transparent 100%);
+  opacity: .42;
+  pointer-events: none;
+}
+
+.sv-public .sv-editorial-page-hero-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.sv-public .sv-editorial-hero-figure {
+  position: relative;
+}
+
+.sv-public .sv-editorial-hero-media {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--public-text) 16%, transparent);
+  border-radius: clamp(16px, 2vw, 28px);
+  background: #111416;
+  box-shadow: 0 1.8rem 4rem color-mix(in srgb, var(--public-text) 12%, transparent);
+}
+
+.sv-public .sv-editorial-hero-media > .sv-image {
+  z-index: 0;
+  border-radius: 0;
+}
+
+.sv-public .sv-editorial-hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(5, 7, 8, .18), transparent 34%, rgba(5, 7, 8, .24));
+  pointer-events: none;
+}
+
+.sv-public .sv-editorial-page-hero-image {
+  border-radius: 0;
+  transition: transform 1.2s cubic-bezier(.2, .7, .2, 1), filter .8s ease;
+}
+
+.sv-public .sv-editorial-hero-media-mark,
+.sv-public .sv-editorial-hero-media-index {
+  position: absolute;
+  z-index: 2;
+  color: rgba(255, 255, 255, .76);
+  font-size: .56rem;
+  letter-spacing: .18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .42);
+}
+
+.sv-public .sv-editorial-hero-media-mark {
+  top: 1rem;
+  left: 1.1rem;
+}
+
+.sv-public .sv-editorial-hero-media-index {
+  right: 1.1rem;
+  bottom: 1rem;
+  color: rgba(255, 255, 255, .62);
+}
+
+.sv-public .sv-editorial-hero-caption {
+  min-height: 2rem;
+  margin-top: .7rem;
+  padding-top: .7rem;
+}
+
+.sv-public .sv-editorial-hero-caption .sv-concept-label {
+  font-size: .62rem;
+  letter-spacing: .16em;
+}
+
+.sv-public .sv-editorial-chapter-nav {
+  border-top: 1px solid var(--public-border);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--public-bg) 94%, transparent), color-mix(in srgb, var(--public-surface) 48%, transparent));
+}
+
+.sv-public .sv-editorial-section-text-only {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--public-surface) 42%, transparent) 72%, transparent 100%);
+}
+
+.sv-public .sv-editorial-section-text-only::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(38vw, 34rem);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--public-border-strong));
+  opacity: .7;
+}
+
+.sv-public .sv-editorial-section-text-only .sv-section-index {
+  position: relative;
+  padding-top: .25rem;
+  color: var(--public-muted);
+  font-size: .66rem;
+  letter-spacing: .16em;
+}
+
+.sv-public .sv-editorial-section-text-only .sv-editorial-section-copy h2::after {
+  content: "";
+  display: block;
+  width: 3.2rem;
+  height: 1px;
+  margin-top: 1.45rem;
+  background: var(--public-border-strong);
+}
+
+.sv-public .sv-editorial-section-with-media .sv-editorial-figure,
+.sv-public .sv-editorial-section-with-media .sv-engineering-visual-rail,
+.sv-public .sv-editorial-section-with-media .sv-technical-diagram,
+.sv-public .sv-editorial-section-with-media .sv-living-studies {
+  filter: drop-shadow(0 1.2rem 2.4rem color-mix(in srgb, var(--public-text) 8%, transparent));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sv-public .sv-editorial-hero-media:hover .sv-editorial-page-hero-image {
+    transform: scale(1.018);
+  }
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-brand {
+    gap: .55rem;
+  }
+
+  .sv-public .sv-brand-copy > span {
+    font-size: .76rem;
+    letter-spacing: .15em;
+  }
+
+  .sv-public .sv-brand-copy > small {
+    display: none;
+  }
+
+  .sv-public .sv-editorial-hero-media-mark {
+    top: .8rem;
+    left: .85rem;
+    font-size: .48rem;
+  }
+
+  .sv-public .sv-editorial-hero-media-index {
+    right: .85rem;
+    bottom: .8rem;
+    font-size: .5rem;
+  }
+
+  .sv-public .sv-editorial-section-text-only {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--public-surface) 34%, transparent));
+  }
+
+  .sv-public .sv-editorial-section-text-only::before {
+    width: 50vw;
+  }
+}

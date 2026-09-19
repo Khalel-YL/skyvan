@@ -196,6 +196,11 @@ const heroAssets: Partial<Record<CuratedPublicSlug, PublicLaunchAssetId>> = {
   "karavan-deneyimi": "lounge",
   muhendislik: "electrical-rear-service",
   workshop: "exterior-landscape",
+  "nasil-calisir": "interior-first-view",
+  "uretim-sureci": "engineering-insulation-service",
+  sss: "control-centre",
+  iletisim: "exterior-landscape",
+  "proje-baslat": "exterior-dark",
 };
 
 const heroRoles: Partial<Record<CuratedPublicSlug, PublicLaunchMediaRole>> = {
@@ -420,16 +425,20 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
           <p>{page.editorialPage?.introduction ? copy.body : cmsHero?.subtext || copy.body}</p>
           {page.editorialPage?.introduction ? null : cmsHero?.body ? <p>{cmsHero.body}</p> : null}
         </div>
-        {heroAsset && !isCompact ? <figure className="sv-editorial-hero-figure">
-          <PublicConceptMedia
-            name={heroAsset}
-            alt={getAssetAlt(heroAsset, page.locale)}
-            className={`sv-editorial-page-hero-image ${heroAsset === "engineering-connectors" ? "sv-image-contain" : ""}`}
-            sizes="(max-width: 767px) 100vw, 52vw"
-            priority
-            media={launchHero.media}
-            mediaRole={heroRole ? { role: heroRole } : undefined}
-          />
+        {heroAsset ? <figure className="sv-editorial-hero-figure">
+          <div className="sv-editorial-hero-media">
+            <PublicConceptMedia
+              name={heroAsset}
+              alt={getAssetAlt(heroAsset, page.locale)}
+              className={`sv-editorial-page-hero-image ${heroAsset === "engineering-connectors" ? "sv-image-contain" : ""}`}
+              sizes="(max-width: 767px) 100vw, 52vw"
+              priority
+              media={launchHero.media}
+              mediaRole={heroRole ? { role: heroRole } : undefined}
+            />
+            <span className="sv-editorial-hero-media-mark" aria-hidden="true">SKYVAN / CONCEPT STUDY</span>
+            <span className="sv-editorial-hero-media-index" aria-hidden="true">01 / {String(copy.sections.length || copy.faqGroups?.length || 1).padStart(2, "0")}</span>
+          </div>
           <figcaption className="sv-editorial-hero-caption"><span className="sv-concept-label">{launchCopy.concept}</span><span aria-hidden="true">01 / {page.locale === "tr" ? "Sahne" : "Scene"}</span></figcaption>
         </figure> : null}
       </div>
