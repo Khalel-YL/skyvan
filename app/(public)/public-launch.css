@@ -1648,6 +1648,19 @@
   background: #090b0c;
 }
 
+.sv-public .sv-hero-sequence::before {
+  content: "SKYVAN / CONCEPT STUDY";
+  position: absolute;
+  top: 1.45rem;
+  right: 5%;
+  z-index: 4;
+  color: rgba(255, 255, 255, .56);
+  font-size: .58rem;
+  letter-spacing: .2em;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
 .sv-public .sv-hero-sequence-slide {
   opacity: 0;
   transform: scale(1.045);
@@ -1670,6 +1683,34 @@
   object-fit: cover;
   object-position: center;
   filter: saturate(.82) contrast(1.04);
+  will-change: transform;
+}
+
+.sv-public .sv-hero-sequence-slide.is-active img {
+  animation-duration: 5.2s;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-timing-function: cubic-bezier(.16, .68, .22, 1);
+}
+
+.sv-public .sv-hero-sequence-slide.is-active[data-motion="push-right"] img {
+  animation-name: sv-hero-scene-push-right;
+}
+
+.sv-public .sv-hero-sequence-slide.is-active[data-motion="push-left"] img {
+  animation-name: sv-hero-scene-push-left;
+}
+
+.sv-public .sv-hero-sequence-slide.is-active[data-motion="rise"] img {
+  animation-name: sv-hero-scene-rise;
+}
+
+.sv-public .sv-hero-sequence-slide.is-active[data-motion="settle"] img {
+  animation-name: sv-hero-scene-settle;
+}
+
+.sv-public .sv-hero-sequence-slide.is-paused img {
+  animation-play-state: paused;
 }
 
 .sv-public .sv-hero-content {
@@ -1783,11 +1824,27 @@
 
 .sv-public .sv-hero-sequence-progress-item > span:first-child {
   display: block;
+  position: relative;
+  overflow: hidden;
   width: 3.2rem;
   height: 1px;
   background: rgba(255, 255, 255, .3);
   transition: background-color .35s ease, transform .35s ease;
   transform-origin: left;
+}
+
+.sv-public .sv-hero-sequence-progress-item.is-active > span:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #d3b887;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: sv-hero-sequence-progress 5.2s linear both;
+}
+
+.sv-public .sv-hero-sequence-progress-item.is-paused > span:first-child::after {
+  animation-play-state: paused;
 }
 
 .sv-public .sv-hero-sequence-progress-item.is-active {
@@ -1915,4 +1972,29 @@
   .sv-public .sv-hero-sequence-slide {
     transform: none;
   }
+}
+
+@keyframes sv-hero-scene-push-right {
+  from { transform: scale(1.09) translate3d(-2.2%, 0, 0); }
+  to { transform: scale(1.02) translate3d(1.2%, 0, 0); }
+}
+
+@keyframes sv-hero-scene-push-left {
+  from { transform: scale(1.09) translate3d(2.2%, 0, 0); }
+  to { transform: scale(1.02) translate3d(-1.2%, 0, 0); }
+}
+
+@keyframes sv-hero-scene-rise {
+  from { transform: scale(1.08) translate3d(0, 1.8%, 0); }
+  to { transform: scale(1.02) translate3d(0, -1%, 0); }
+}
+
+@keyframes sv-hero-scene-settle {
+  from { transform: scale(1.07) translate3d(0, -1%, 0); }
+  to { transform: scale(1.01) translate3d(0, 0, 0); }
+}
+
+@keyframes sv-hero-sequence-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }

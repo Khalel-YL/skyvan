@@ -14,12 +14,14 @@ type HeroScene = {
   asset: PublicLaunchAssetId;
   label: Record<PublicLocale, string>;
   alt: Record<PublicLocale, string>;
+  motion: "push-right" | "push-left" | "rise" | "settle";
 };
 
 const heroScenes: readonly HeroScene[] = [
   {
     asset: "exterior-dark",
     label: { tr: "Dış görünüş", en: "Exterior" },
+    motion: "push-right",
     alt: {
       tr: "Skyvan amblemli antrasit alkovenli karavanın stüdyo dış görünüşü.",
       en: "Studio exterior view of an anthracite Skyvan overcab motorhome.",
@@ -28,6 +30,7 @@ const heroScenes: readonly HeroScene[] = [
   {
     asset: "interior-first-view",
     label: { tr: "İç yaşam", en: "Living space" },
+    motion: "settle",
     alt: {
       tr: "U oturum, mutfak, alkoven ve ön görüş ilişkisini gösteren Skyvan iç mekânı.",
       en: "Skyvan interior showing the U lounge, galley, overcab bed and forward view.",
@@ -36,6 +39,7 @@ const heroScenes: readonly HeroScene[] = [
   {
     asset: "lounge-table",
     label: { tr: "Günlük dönüşüm", en: "Daily transformation" },
+    motion: "rise",
     alt: {
       tr: "Skyvan U oturumunda yükseltilmiş elektrikli masa ve yaşam alanı konsepti.",
       en: "Skyvan U lounge concept with a raised electric table and living space.",
@@ -44,6 +48,7 @@ const heroScenes: readonly HeroScene[] = [
   {
     asset: "electrical-rear-service",
     label: { tr: "Mühendislik", en: "Engineering" },
+    motion: "push-left",
     alt: {
       tr: "Skyvan arka elektrik servis bölmesinde inverter, MPPT ve akü yerleşimi konsepti.",
       en: "Skyvan rear electrical service concept with inverter, MPPT and battery layout.",
@@ -81,8 +86,9 @@ export function PublicHeroSequence({ locale }: { locale: PublicLocale }): React.
 
           return (
             <div
-              className={`sv-hero-sequence-slide ${index === activeIndex ? "is-active" : ""}`}
+              className={`sv-hero-sequence-slide ${index === activeIndex ? "is-active" : ""} ${paused ? "is-paused" : ""}`}
               key={scene.asset}
+              data-motion={scene.motion}
               aria-hidden={index !== activeIndex}
             >
               <Image
@@ -99,19 +105,18 @@ export function PublicHeroSequence({ locale }: { locale: PublicLocale }): React.
       </div>
 
       <div className="sv-hero-sequence-caption" aria-live="polite">
-        <span>{String(activeIndex + 1).padStart(2, "0")} / {String(heroScenes.length).padStart(2, "0")}</span>
+        <span>{locale === "tr" ? "Sahne" : "Scene"} {String(activeIndex + 1).padStart(2, "0")} / {String(heroScenes.length).padStart(2, "0")}</span>
         <strong>{activeScene.label[locale]}</strong>
       </div>
 
       <div className="sv-hero-sequence-controls">
-        <div className="sv-hero-sequence-progress" role="tablist" aria-label={locale === "tr" ? "Sahneler" : "Scenes"}>
+        <div className="sv-hero-sequence-progress" role="group" aria-label={locale === "tr" ? "Sahneler" : "Scenes"}>
           {heroScenes.map((scene, index) => (
             <button
               type="button"
-              role="tab"
-              aria-selected={index === activeIndex}
+              aria-pressed={index === activeIndex}
               aria-label={`${String(index + 1).padStart(2, "0")} — ${scene.label[locale]}`}
-              className={`sv-hero-sequence-progress-item ${index === activeIndex ? "is-active" : ""}`}
+              className={`sv-hero-sequence-progress-item ${index === activeIndex ? "is-active" : ""} ${paused ? "is-paused" : ""}`}
               key={scene.asset}
               onClick={() => setActiveIndex(index)}
             >
