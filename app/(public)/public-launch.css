@@ -1613,3 +1613,306 @@
     min-height: 0;
   }
 }
+
+/* Cinematic launch frame: a controlled sequence of approved Skyvan concept
+   stills gives the home entry the pace of a film without inventing a video
+   asset. The first frame remains useful when JavaScript is unavailable. */
+.sv-public .sv-hero-cinematic {
+  height: clamp(40rem, calc(100svh - 74px), 54rem);
+  min-height: 40rem;
+  aspect-ratio: auto;
+  padding-bottom: 0;
+  color: #fff;
+  border-radius: 0;
+  background: #090b0c;
+}
+
+.sv-public .sv-hero-cinematic::after {
+  z-index: -1;
+  display: block;
+  background:
+    linear-gradient(180deg, rgba(5, 7, 8, .24) 0%, rgba(5, 7, 8, .04) 30%, rgba(5, 7, 8, .52) 70%, rgba(5, 7, 8, .94) 100%),
+    linear-gradient(90deg, rgba(5, 7, 8, .22), transparent 58%);
+}
+
+.sv-public .sv-hero-sequence,
+.sv-public .sv-hero-sequence-scenes,
+.sv-public .sv-hero-sequence-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.sv-public .sv-hero-sequence {
+  z-index: -2;
+  overflow: hidden;
+  background: #090b0c;
+}
+
+.sv-public .sv-hero-sequence-slide {
+  opacity: 0;
+  transform: scale(1.045);
+  transition: opacity 1.15s ease, transform 6s cubic-bezier(.16, .68, .22, 1);
+}
+
+.sv-public .sv-hero-sequence-slide.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.sv-public .sv-hero-sequence-slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, .18));
+}
+
+.sv-public .sv-hero-sequence-slide img {
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(.82) contrast(1.04);
+}
+
+.sv-public .sv-hero-content {
+  z-index: 2;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: clamp(4rem, 7vw, 7rem);
+  padding-bottom: clamp(9rem, 16vh, 12rem);
+  text-align: center;
+}
+
+.sv-public .sv-hero-cinematic .sv-eyebrow {
+  margin-bottom: 1.3rem;
+  color: rgba(255, 255, 255, .72);
+}
+
+.sv-public .sv-hero-cinematic .sv-hero-content h1 {
+  max-width: 14ch;
+  color: #fff;
+  font-size: clamp(3.35rem, 7.4vw, 7.4rem);
+  line-height: .93;
+  letter-spacing: -.075em;
+  text-wrap: balance;
+}
+
+.sv-public .sv-hero-cinematic .sv-hero-description {
+  width: auto;
+  max-width: 39rem;
+  color: rgba(255, 255, 255, .82);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.65;
+}
+
+.sv-public .sv-hero-cinematic .sv-hero-body {
+  width: auto;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, .64);
+}
+
+.sv-public .sv-hero-cinematic .sv-actions {
+  justify-content: center;
+  max-width: none;
+}
+
+.sv-public .sv-hero-cinematic .sv-button:not(.sv-button-outline) {
+  border-color: #fff;
+  background: #fff;
+  color: #141618;
+}
+
+.sv-public .sv-hero-cinematic .sv-button-outline {
+  border-color: rgba(255, 255, 255, .54);
+  background: rgba(0, 0, 0, .12);
+  color: #fff;
+}
+
+.sv-public .sv-hero-cinematic .sv-status {
+  border-color: rgba(255, 255, 255, .38);
+  color: rgba(255, 255, 255, .72);
+}
+
+.sv-public .sv-hero-sequence-caption {
+  position: absolute;
+  bottom: 5.8rem;
+  left: 5%;
+  z-index: 3;
+  display: flex;
+  align-items: baseline;
+  gap: .9rem;
+  color: rgba(255, 255, 255, .72);
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-hero-sequence-caption strong {
+  color: #fff;
+  font-size: .74rem;
+  font-weight: 500;
+}
+
+.sv-public .sv-hero-sequence-controls {
+  position: absolute;
+  right: 5%;
+  bottom: 5.45rem;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sv-public .sv-hero-sequence-progress {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+
+.sv-public .sv-hero-sequence-progress-item {
+  display: grid;
+  gap: .38rem;
+  min-width: 3.2rem;
+  color: rgba(255, 255, 255, .58);
+  font-size: .6rem;
+  letter-spacing: .1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-hero-sequence-progress-item > span:first-child {
+  display: block;
+  width: 3.2rem;
+  height: 1px;
+  background: rgba(255, 255, 255, .3);
+  transition: background-color .35s ease, transform .35s ease;
+  transform-origin: left;
+}
+
+.sv-public .sv-hero-sequence-progress-item.is-active {
+  color: #fff;
+}
+
+.sv-public .sv-hero-sequence-progress-item.is-active > span:first-child {
+  background: #fff;
+  transform: scaleX(1.22);
+}
+
+.sv-public .sv-hero-sequence-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, .16);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+
+.sv-public .sv-hero-sequence-toggle:hover,
+.sv-public .sv-hero-sequence-toggle:focus-visible {
+  border-color: #fff;
+  background: rgba(0, 0, 0, .34);
+}
+
+.sv-public .sv-hero-cinematic .sv-hero-bottom {
+  z-index: 3;
+  color: rgba(255, 255, 255, .66);
+}
+
+.sv-public .sv-hero-cinematic .sv-hero-bottom > span:last-child {
+  background: rgba(0, 0, 0, .18);
+  box-shadow: none;
+  color: rgba(255, 255, 255, .72);
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-hero-cinematic {
+    height: calc(100svh - 66px);
+    min-height: 38rem;
+  }
+
+  .sv-public .sv-hero-content {
+    width: 90%;
+    padding-top: 3.5rem;
+    padding-bottom: 10rem;
+  }
+
+  .sv-public .sv-hero-cinematic .sv-hero-content h1 {
+    max-width: 10ch;
+    font-size: clamp(3rem, 13vw, 4.8rem);
+  }
+
+  .sv-public .sv-hero-cinematic .sv-hero-description {
+    max-width: 22rem;
+    font-size: .96rem;
+    line-height: 1.6;
+  }
+
+  .sv-public .sv-hero-cinematic .sv-hero-body {
+    max-width: 20rem;
+    font-size: .8rem;
+    line-height: 1.55;
+  }
+
+  .sv-public .sv-hero-sequence-caption {
+    bottom: 7.35rem;
+    left: 5%;
+  }
+
+  .sv-public .sv-hero-sequence-controls {
+    right: 5%;
+    bottom: 4.6rem;
+    left: 5%;
+    justify-content: space-between;
+    gap: .6rem;
+  }
+
+  .sv-public .sv-hero-sequence-progress {
+    min-width: 0;
+    flex: 1;
+    justify-content: space-between;
+    gap: .35rem;
+  }
+
+  .sv-public .sv-hero-sequence-progress-item {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .sv-public .sv-hero-sequence-progress-item > span:first-child {
+    width: 100%;
+  }
+
+  .sv-public .sv-hero-sequence-progress-item > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sv-public .sv-hero-cinematic .sv-hero-bottom {
+    right: 5%;
+    bottom: 1rem;
+    left: 5%;
+    width: auto;
+    margin: 0;
+    font-size: .6rem;
+  }
+
+  .sv-public .sv-hero-cinematic .sv-hero-bottom > span:first-child {
+    max-width: 48%;
+  }
+
+  .sv-public .sv-hero-sequence-slide img {
+    object-position: 58% center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-public .sv-hero-sequence-slide {
+    transform: none;
+  }
+}

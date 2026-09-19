@@ -5,9 +5,10 @@ import { publicLaunchAssets } from "../lib/public-launch-media";
 import { getDefinitionBlock, getLaunchHero } from "../lib/public-launch-selection";
 import { getPublicMediaForSlot, resolvePublicMediaSurfaces } from "../lib/public-media-surface";
 import { getLocalizedPath } from "../lib/public-routing";
-import { PublicConceptMedia, PublicVehicleMedia } from "./PublicConceptMedia";
+import { PublicConceptMedia } from "./PublicConceptMedia";
 import { PublicLivingGallery } from "./PublicLivingGallery";
 import { PublicProjectAction } from "./PublicProjectAction";
+import { PublicHeroSequence } from "./PublicHeroSequence";
 
 export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.JSX.Element {
   const copy = publicLaunchContent[page.locale];
@@ -17,8 +18,8 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
   const engineeringMedia = getPublicMediaForSlot(surfaces, "homepage.visualTrust.media");
   return (
     <div className="sv-launch">
-      <section className="sv-hero" aria-labelledby="launch-title">
-        <PublicVehicleMedia alt={copy.media.vehicle} media={hero.media} />
+      <section className="sv-hero sv-hero-cinematic" aria-labelledby="launch-title">
+        <PublicHeroSequence locale={page.locale} />
         <div className="sv-container sv-hero-content">
           <p className="sv-eyebrow">{copy.hero.eyebrow}</p>
           <h1 id="launch-title">{hero.copy?.heading || copy.hero.heading}</h1>
