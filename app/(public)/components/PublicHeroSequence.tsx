@@ -19,12 +19,12 @@ type HeroScene = {
 
 const heroScenes: readonly HeroScene[] = [
   {
-    asset: "exterior-dark",
-    label: { tr: "Dış görünüş", en: "Exterior" },
+    asset: "exterior-landscape",
+    label: { tr: "Ufuk çizgisi", en: "Horizon" },
     motion: "push-right",
     alt: {
-      tr: "Skyvan amblemli antrasit alkovenli karavanın stüdyo dış görünüşü.",
-      en: "Studio exterior view of an anthracite Skyvan overcab motorhome.",
+      tr: "Manzarada konumlanan Skyvan amblemli alkovenli karavan konsepti.",
+      en: "Skyvan overcab motorhome concept placed in a landscape.",
     },
   },
   {

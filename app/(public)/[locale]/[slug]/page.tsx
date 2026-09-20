@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { JsonLd } from "../../components/JsonLd";
+import { PublicExplorePage } from "../../components/PublicExplorePage";
 import { PublicPageRenderer } from "../../components/PublicPageRenderer";
 import {
   buildPublicMetadata,
@@ -62,6 +63,15 @@ export default async function PublicSlugPage({
 
   if (!page) {
     notFound();
+  }
+
+  if (page.slug === "karavan-deneyimi") {
+    return (
+      <>
+        <JsonLd data={buildWebsiteJsonLd(page)} />
+        <PublicExplorePage page={page} />
+      </>
+    );
   }
 
   return (
