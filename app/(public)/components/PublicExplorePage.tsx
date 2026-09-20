@@ -39,7 +39,7 @@ export function PublicExplorePage({ page }: { page: PublicPageContent }): React.
 
       <section className={styles.rhythm} data-sv-reveal aria-labelledby="explore-rhythm-title">
         <div className={`sv-container ${styles.rhythmHeading}`}><div><span>02</span><p className="sv-eyebrow">{locale === "tr" ? "Gündüzden geceye" : "From day into night"}</p><h2 id="explore-rhythm-title">{sleep.heading}</h2></div><p>{sleep.body}</p></div>
-        <div className="sv-container"><PubliLivingGallery copy={launchCopy.product} concept={launchCopy.product} locale={locale} editorial /></div>
+        <div className="sv-container"><PublicLivingGallery copy={launchCopy.product} concept={launchCopy.concept} locale={locale} editorial /></div>
       </section>
 
       <section className={`sv-container ${styles.kitchen}`} data-sv-reveal aria-labelledby="explore-kitchen-title">
@@ -53,7 +53,7 @@ export function PublicExplorePage({ page }: { page: PublicPageContent }): React.
       </section>
 
       <section className={`sv-container ${styles.quiet}`} data-sv-reveal aria-labelledby="explore-storage-title">
-        <span>05</span><div><p className="sv-eyebrow">{locale === "tr" ? "Sonraki bölüm" : "Next chapter"}</p><h2 id="explore-storage-title">{storage.heading}</h2></div><div><p>{storage.body}</p><Link className="sv-text-link" href={getLocalizedPath(locale, "muhendislik")}>{locale === "tr" ? "Mühendislik yaklışımını inceleyin" : "Explore the engineering approach"}<ArrowUpRight size={17} aria-hidden="true" /></Link></div>
+        <span>05</span><div><p className="sv-eyebrow">{locale === "tr" ? "Sonraki bölüm" : "Next chapter"}</p><h2 id="explore-storage-title">{storage.heading}</h2></div><div><p>{storage.body}</p><Link className="sv-text-link" href={getLocalizedPath(locale, "muhendislik")}>{locale === "tr" ? "Mühendislik yaklaşımını inceleyin" : "Explore the engineering approach"}<ArrowUpRight size={17} aria-hidden="true" /></Link></div>
       </section>
     </PublicMotion>
 
