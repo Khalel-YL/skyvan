@@ -2992,3 +2992,235 @@
   .sv-public .sv-workshop-validation-visual-clean li { grid-template-columns: 1.8rem minmax(0, 1fr); }
   .sv-public .sv-workshop-validation-visual-clean li small { grid-column: 2; }
 }
+
+/* Workshop decision boards: compact enough for a laptop viewport, detailed
+   enough to explain the system without turning the page into a fake schematic. */
+.sv-public .sv-workshop-selection-visual,
+.sv-public .sv-workshop-calculation-visual {
+  min-width: 0;
+  padding: 1.15rem 1.25rem 1.25rem;
+  border: 1px solid var(--public-border-strong);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 84% 0%, color-mix(in srgb, var(--workshop-accent) 10%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--public-surface) 78%, var(--public-bg)), var(--public-bg-soft));
+  box-shadow: 0 1.5rem 3.5rem color-mix(in srgb, var(--public-text) 7%, transparent);
+}
+
+.sv-public .sv-workshop-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 1.7rem;
+  border: 1px solid var(--public-border);
+  background: var(--public-border);
+}
+
+.sv-public .sv-workshop-selection-grid article {
+  min-width: 0;
+  min-height: 12.5rem;
+  padding: 1.05rem;
+  background: color-mix(in srgb, var(--public-bg-soft) 88%, var(--public-surface));
+}
+
+.sv-public .sv-workshop-selection-grid article:nth-child(2),
+.sv-public .sv-workshop-selection-grid article:nth-child(3) {
+  background: color-mix(in srgb, var(--public-surface) 64%, var(--public-bg));
+}
+
+.sv-public .sv-workshop-selection-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--workshop-line);
+  border-radius: .7rem;
+  background: var(--workshop-accent-soft);
+}
+
+.sv-public .sv-workshop-selection-icon::before {
+  content: "";
+  width: .7rem;
+  height: .7rem;
+  border: 1px solid var(--workshop-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 .25rem color-mix(in srgb, var(--workshop-accent) 12%, transparent);
+}
+
+.sv-public .sv-workshop-selection-grid h3 {
+  margin-top: 1rem;
+  color: var(--public-text);
+  font-size: .98rem;
+  font-weight: 560;
+}
+
+.sv-public .sv-workshop-selection-grid p {
+  margin-top: .45rem;
+  color: var(--public-muted);
+  font-size: .72rem;
+  line-height: 1.55;
+}
+
+.sv-public .sv-workshop-selection-grid ul {
+  display: grid;
+  gap: .45rem;
+  margin: 1rem 0 0;
+  padding: .85rem 0 0;
+  list-style: none;
+  border-top: 1px solid var(--public-border);
+}
+
+.sv-public .sv-workshop-selection-grid li {
+  display: flex;
+  align-items: flex-start;
+  gap: .42rem;
+  color: var(--public-muted);
+  font-size: .65rem;
+  line-height: 1.4;
+}
+
+.sv-public .sv-workshop-selection-grid li svg {
+  flex: none;
+  margin-top: .08rem;
+  color: var(--workshop-accent);
+}
+
+.sv-public .sv-workshop-calculation-visual {
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+.sv-public .sv-workshop-calculation-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.75rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--public-border);
+}
+
+.sv-public .sv-workshop-calculation-head > div {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  color: var(--workshop-accent);
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-workshop-calculation-head strong {
+  color: var(--public-text);
+  font-size: clamp(1.1rem, 2.3vw, 1.65rem);
+  font-weight: 540;
+  letter-spacing: -.04em;
+}
+
+.sv-public .sv-workshop-calculation-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--public-border);
+  background: var(--public-border);
+}
+
+.sv-public .sv-workshop-calculation-steps li {
+  min-width: 0;
+  min-height: 12.8rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--public-bg-soft) 88%, var(--public-surface));
+}
+
+.sv-public .sv-workshop-calculation-steps li:nth-child(2),
+.sv-public .sv-workshop-calculation-steps li:nth-child(4) {
+  background: color-mix(in srgb, var(--public-surface) 70%, var(--public-bg));
+}
+
+.sv-public .sv-workshop-calculation-steps li > span {
+  color: var(--workshop-accent);
+  font-size: .58rem;
+  letter-spacing: .15em;
+}
+
+.sv-public .sv-workshop-calculation-steps small {
+  display: block;
+  margin-top: 1.2rem;
+  color: var(--public-muted);
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-workshop-calculation-steps strong {
+  display: block;
+  margin-top: .45rem;
+  color: var(--public-text);
+  font-size: .83rem;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.sv-public .sv-workshop-calculation-steps p {
+  margin-top: .55rem;
+  color: var(--public-muted);
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+.sv-public .sv-workshop-calculation-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  margin-top: 1rem;
+  color: var(--public-muted);
+  font-size: .7rem;
+  line-height: 1.55;
+}
+
+.sv-public .sv-workshop-calculation-footer svg {
+  flex: none;
+  margin-top: .1rem;
+  color: var(--workshop-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sv-public .sv-workshop-selection-visual,
+  .sv-public .sv-workshop-calculation-visual {
+    transition: transform .45s cubic-bezier(.2, .7, .2, 1), border-color .35s ease, box-shadow .45s ease;
+  }
+
+  .sv-public .sv-workshop-selection-visual:hover,
+  .sv-public .sv-workshop-calculation-visual:hover {
+    transform: translateY(-3px);
+    border-color: var(--workshop-line);
+    box-shadow: 0 1.8rem 4rem color-mix(in srgb, var(--public-text) 11%, transparent);
+  }
+}
+
+@media (max-width: 900px) {
+  .sv-public .sv-workshop-calculation-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-workshop-selection-grid,
+  .sv-public .sv-workshop-calculation-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sv-public .sv-workshop-selection-grid article,
+  .sv-public .sv-workshop-calculation-steps li {
+    min-height: 0;
+  }
+
+  .sv-public .sv-workshop-calculation-head {
+    display: grid;
+    align-items: start;
+  }
+}

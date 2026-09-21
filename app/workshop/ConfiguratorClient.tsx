@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Box,
+  Check,
   ChevronDown,
   ExternalLink,
   FileText,
@@ -85,9 +86,33 @@ type WorkshopCartItem = {
 };
 
 type AiInsight = {
-  type: "info" | "critical";
+  type: "info" | "warning" | "critical";
   title: string;
   message: string;
+};
+
+type MpptCandidate = {
+  product: WorkshopProduct;
+  chargeCurrentA: number;
+  maxPvVoltageV: number;
+  maxPvCurrentA: number;
+  isSelected: boolean;
+};
+
+type SolarWiringMode = "parallel" | "series" | "series_parallel";
+
+type WorkshopCompatibilityRule = {
+  id: string;
+  sourceProductId: string;
+  targetProductId: string;
+  ruleType: "requires" | "excludes" | "recommends" | string;
+  severity: "hard_block" | "soft_warning" | string;
+  priority: number;
+  message?: string | null;
+  conditions?: Array<{
+    conditionType: "model" | "package" | "scenario" | string;
+    targetId: string;
+  }>;
 };
 
 type SaveEngineeringBuildSuccessResult = Extract<
@@ -400,6 +425,109 @@ function getWorkshopSourceDocument(product: WorkshopProduct) {
   }
 
   return documents[0] ?? null;
+}
+
+function normalizeSignalKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+function getProductSignalValue(product: WorkshopProduct, aliases: string[]) {
+  const normalizedAliases = aliases.map(normalizeSignalKey);
+  const candidates: number[] = [];
+
+  for (const spec of product.productSpecs ?? []) {
+    const normalizedKey = normalizeSignalKey(spec.specKey);
+
+    if (!normalizedAliases.some((alias) => normalizedKey.includes(alias))) {
+      continue;
+    }
+
+    const value = Number(spec.specValue);
+    if (Number.isFinite(value)) {
+      candidates.push(value);
+    }
+  }
+
+  for (const [key, rawValue] of Object.entries(product.technicalSpecs ?? {})) {
+    const normalizedKey = normalizeSignalKey(key);
+
+    if (!normalizedAliases.some((alias) => normalizedKey.includes(alias))) {
+      continue;
+    }
+
+    const value = Number(rawValue);
+    if (Number.isFinite(value)) {
+      candidates.push(value);
+    }
+  }
+
+  return candidates.length > 0 ? Math.max(...candidates) : null;
+}
+
+function getProductSignalText(product: WorkshopProduct) {
+  return [
+    product.title,
+    product.name,
+    product.sku,
+    product.productType,
+    product.productSubType,
+    product.categorySlug,
+    product.categoryName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isSolarPanelProduct(product: WorkshopProduct) {
+  const text = getProductSignalText(product);
+
+  if (/mppt|şarj kontrol|charge controller|inverter|regulator/.test(text)) {
+    return false;
+  }
+
+  const explicitlySolar = /solar panel|güneş panel|monokristal|polikristal|half[\s-]?cut|photovoltaic|\bpv\b/.test(
+    text,
+  );
+
+  if (explicitlySolar) {
+    return true;
+  }
+
+  const hasPvElectricalSignal =
+    Number(product.powerSupplyWatts) > 0 ||
+    ["max_power_w", "peak_power_w", "pmax", "voc", "vmp", "isc", "imp"].some(
+      (alias) => getProductSignalValue(product, [alias]) !== null,
+    );
+
+  // A material/interior panel must not enter the PV calculation just because
+  // its name contains the word "panel".
+  return (
+    /\bpanel\b/.test(text) &&
+    hasPvElectricalSignal &&
+    !/marin|mdf|ahşap|ahsap|wood|plywood|mobilya|interior|duvar|tavan/.test(text)
+  );
+}
+
+function isMpptProduct(product: WorkshopProduct) {
+  return /mppt|şarj kontrol|charge controller|solar controller/.test(
+    getProductSignalText(product),
+  );
+}
+
+function isBatteryProduct(product: WorkshopProduct) {
+  return /akü|battery|lifepo4|lithium|jel|agm|service battery|house battery/.test(
+    getProductSignalText(product),
+  );
+}
+
+function isTankProduct(product: WorkshopProduct) {
+  return /tank|depo|water|su|grey|gri/.test(getProductSignalText(product));
+}
+
+function getTitleNumericSignal(product: WorkshopProduct, pattern: RegExp) {
+  const match = getProductSignalText(product).match(pattern);
+  return match ? Number(match[1]) : 0;
 }
 
 function getModelSeriesLabel(model: WorkshopModel) {
@@ -979,11 +1107,13 @@ function getIsometricSceneLayers(input: {
 export default function ConfiguratorClient({
   dbProducts,
   dbModels,
+  compatibilityRules,
   workshopAssetReadinessByModel,
   workshopAssetsByModel,
 }: {
   dbProducts: WorkshopProduct[];
   dbModels: WorkshopModel[];
+  compatibilityRules?: WorkshopCompatibilityRule[];
   workshopAssetReadinessByModel?: Record<string, WorkshopAssetReadinessSummary>;
   workshopAssetsByModel?: Record<string, WorkshopAssetLayerMetadata[]>;
 }) {
@@ -1000,6 +1130,8 @@ export default function ConfiguratorClient({
   const [hasAiDecisionBundleError, setHasAiDecisionBundleError] = useState(false);
   const [activeVehicleGroupId, setActiveVehicleGroupId] = useState<string | null>(null);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [solarWiringMode, setSolarWiringMode] = useState<SolarWiringMode>("parallel");
+  const [solarSeriesCount, setSolarSeriesCount] = useState(2);
   const [selectedCameraView] = useState("");
   const [activeVisualLayers, setActiveVisualLayers] = useState<Record<string, boolean>>({});
   const [activeMaterials, setActiveMaterials] = useState<{
@@ -1099,89 +1231,344 @@ export default function ConfiguratorClient({
   const stats = useMemo(() => {
     let weight = activeVehicle ? Number(activeVehicle.baseWeightKg || 2100) : 0;
     let solarW = 0;
+    let panelCount = 0;
+    let panelVocV = 0;
+    let panelVmpV = 0;
+    let panelIscA = 0;
+    let panelImpA = 0;
     let dcdcA = 0;
     let batteryAh = 0;
+    let batteryVoltageV = 0;
+    let batteryMaxChargeA = 0;
     let inverterW = 0;
     let totalPowerSupplyWatts = 0;
     let totalPowerDrawWatts = 0;
     let mpptA = 0;
+    let mpptMaxPvVoltageV = 0;
+    let mpptMaxPvCurrentA = 0;
+    let tankLitres = 0;
+    const panelProductIds = new Set<string>();
     const acdcA = 0;
     const genW = 0;
 
     cart.forEach((item) => {
       const product = item.product;
       const quantity = item.quantity;
-      const text = (product.title || product.name || product.sku || "").toLowerCase();
+      const text = getProductSignalText(product);
 
       weight += Number(product.weightKg || 0) * quantity;
       totalPowerSupplyWatts += Number(product.powerSupplyWatts || 0) * quantity;
       totalPowerDrawWatts += Number(product.powerDrawWatts || 0) * quantity;
 
-      if (/solar|panel|monokristal|polikristal|güneş|pv|-bs-/i.test(text)) {
-        solarW += (Number(text.match(/(\d+)\s*w/i)?.[1]) || 0) * quantity;
+      if (isSolarPanelProduct(product)) {
+        const panelPower =
+          getProductSignalValue(product, [
+            "max_power_w",
+            "peak_power_w",
+            "rated_power_w",
+            "nominal_power_w",
+            "pmax",
+            "wattage",
+          ]) ||
+          Number(product.powerSupplyWatts || 0) ||
+          getTitleNumericSignal(product, /(\d{2,4})\s*w/);
+        const voc = getProductSignalValue(product, ["voc", "open_circuit_voltage"]);
+        const vmp = getProductSignalValue(product, ["vmp", "vmpp", "maximum_power_voltage"]);
+        const isc = getProductSignalValue(product, ["isc", "short_circuit_current"]);
+        const imp = getProductSignalValue(product, ["imp", "impp", "maximum_power_current"]);
+
+        solarW += panelPower * quantity;
+        panelCount += quantity;
+        panelProductIds.add(product.id);
+        panelVocV = Math.max(panelVocV, voc ?? 0);
+        panelVmpV = Math.max(panelVmpV, vmp ?? 0);
+        panelIscA = Math.max(panelIscA, isc ?? 0);
+        panelImpA = Math.max(panelImpA, imp ?? 0);
       }
-      if (/dcdc|orion|dc to dc|alternatör/i.test(text)) {
-        dcdcA += (Number(text.match(/(\d+)\s*a/i)?.[1]) || 0) * quantity;
+
+      if (/dcdc|orion|dc to dc|alternatör/.test(text)) {
+        dcdcA +=
+          (getProductSignalValue(product, ["output_current", "charge_current", "rated_current"]) ??
+            getTitleNumericSignal(product, /(\d{1,3})\s*a/)) * quantity;
       }
-      if (/mppt|şarj kontrol/i.test(text)) {
-        mpptA += (Number(text.match(/(\d+)\s*a/i)?.[1]) || 0) * quantity;
+
+      if (isMpptProduct(product)) {
+        const mpptMatch = text.match(/(\d{2,3})\s*[/|-]\s*(\d{2,3})/);
+        const chargeCurrent =
+          getProductSignalValue(product, ["max_charge_current", "charge_current", "rated_current", "output_current"]) ??
+          (mpptMatch ? Number(mpptMatch[2]) : getTitleNumericSignal(product, /(\d{1,3})\s*a/));
+        const pvVoltage =
+          getProductSignalValue(product, ["max_pv_voltage", "pv_voltage_max", "maximum_pv_voltage", "max_input_voltage"]) ??
+          (mpptMatch ? Number(mpptMatch[1]) : 0);
+        const pvCurrent = getProductSignalValue(product, ["max_pv_current", "pv_input_current", "maximum_pv_current"]);
+
+        mpptA += chargeCurrent * quantity;
+        mpptMaxPvVoltageV = Math.max(mpptMaxPvVoltageV, pvVoltage);
+        mpptMaxPvCurrentA = Math.max(mpptMaxPvCurrentA, pvCurrent ?? 0);
       }
-      if (/akü|lifepo4|lithium|jel|battery/i.test(text)) {
-        batteryAh += (Number(text.match(/(\d+)\s*ah/i)?.[1]) || 0) * quantity;
+
+      if (isBatteryProduct(product)) {
+        batteryAh +=
+          (getProductSignalValue(product, ["capacity_ah", "battery_capacity_ah", "nominal_capacity"]) ??
+            getTitleNumericSignal(product, /(\d{2,4})\s*ah/)) * quantity;
+        batteryVoltageV = Math.max(
+          batteryVoltageV,
+          getProductSignalValue(product, ["nominal_voltage", "battery_voltage", "system_voltage"]) ??
+            getTitleNumericSignal(product, /(\d{1,2})\s*v/),
+        );
+        batteryMaxChargeA = Math.max(
+          batteryMaxChargeA,
+          getProductSignalValue(product, ["max_charge_current", "charge_current_max", "recommended_charge_current"]) ?? 0,
+        );
       }
-      if (/inverter|multiplus|phoenix/i.test(text)) {
+
+      if (isTankProduct(product)) {
+        tankLitres +=
+          (getProductSignalValue(product, ["tank_capacity_l", "capacity_l", "volume_l", "litres", "liters"]) ??
+            getTitleNumericSignal(product, /(\d{2,4})\s*l/)) * quantity;
+      }
+
+      if (/inverter|multiplus|phoenix|inverter\/charger/.test(text)) {
         inverterW +=
-          (Number(text.match(/(\d{3,4})\s*w/i)?.[1]) ||
-            Number(text.match(/(\d{3,4})\s*va/i)?.[1]) ||
-            0) * quantity;
+          (getProductSignalValue(product, ["rated_power_w", "continuous_power_w", "power_w"]) ??
+            (getTitleNumericSignal(product, /(\d{3,4})\s*w/) ||
+              getTitleNumericSignal(product, /(\d{3,4})\s*va/))) * quantity;
       }
     });
+
+    const systemVoltage = batteryVoltageV || 12;
+    const normalizedSeriesCount = Math.max(1, Math.min(solarSeriesCount, panelCount || 1));
+    const isSeriesParallelValid =
+      solarWiringMode !== "series_parallel" ||
+      (panelCount > 0 && panelCount % normalizedSeriesCount === 0);
+    const stringCount = solarWiringMode === "series_parallel"
+      ? Math.max(Math.floor(panelCount / normalizedSeriesCount), 1)
+      : 1;
+    const seriesMultiplier = solarWiringMode === "parallel"
+      ? 1
+      : solarWiringMode === "series"
+        ? panelCount
+        : normalizedSeriesCount;
+    const parallelMultiplier = solarWiringMode === "parallel"
+      ? panelCount
+      : solarWiringMode === "series"
+        ? 1
+        : stringCount;
 
     return {
       weight,
       solarW,
+      panelCount,
+      panelProductCount: panelProductIds.size,
+      panelVocV,
+      panelVmpV,
+      panelIscA,
+      panelImpA,
+      arrayVocV: panelVocV * seriesMultiplier,
+      arrayVmpV: panelVmpV * seriesMultiplier,
+      arrayIscA: panelIscA * parallelMultiplier,
+      arrayImpA: panelImpA * parallelMultiplier,
+      isSeriesParallelValid,
       dcdcA,
       acdcA,
       genW,
       batteryAh,
+      batteryVoltageV: systemVoltage,
+      batteryMaxChargeA,
       inverterW,
       mpptA,
+      mpptMaxPvVoltageV,
+      mpptMaxPvCurrentA,
+      tankLitres,
+      approxChargeCurrentA: solarW > 0 ? solarW / systemVoltage : 0,
+      estimatedDailyEnergyKwh: solarW > 0 ? (solarW * 4 * 0.75) / 1000 : 0,
       totalPowerSupplyWatts,
       totalPowerDrawWatts,
     };
-  }, [cart, activeVehicle]);
+  }, [cart, activeVehicle, solarSeriesCount, solarWiringMode]);
+
+  const ruleInsights = useMemo(() => {
+    const selectedIds = new Set(cart.map((item) => item.product.id));
+    const productNames = new Map(
+      dbProducts.map((product) => [product.id, product.title || product.name || product.sku || "Ürün"]),
+    );
+
+    return (compatibilityRules ?? [])
+      .filter((rule) => {
+        const conditions = rule.conditions ?? [];
+        if (conditions.length === 0) return true;
+
+        const modelConditions = conditions.filter((condition) => condition.conditionType === "model");
+        const unsupportedConditions = conditions.filter((condition) => condition.conditionType !== "model");
+        if (unsupportedConditions.length > 0) return false;
+        return Boolean(activeVehicle && modelConditions.some((condition) => condition.targetId === activeVehicle.id));
+      })
+      .flatMap((rule): AiInsight[] => {
+        const sourceSelected = selectedIds.has(rule.sourceProductId);
+        const targetSelected = selectedIds.has(rule.targetProductId);
+        const sourceName = productNames.get(rule.sourceProductId) ?? "Kaynak ürün";
+        const targetName = productNames.get(rule.targetProductId) ?? "Hedef ürün";
+        const message = rule.message || `${sourceName} ve ${targetName} birlikte değerlendirilmelidir.`;
+        const type = rule.severity === "hard_block" ? "critical" : "warning";
+
+        if (rule.ruleType === "excludes" && sourceSelected && targetSelected) {
+          return [{ type, title: "Uyumluluk kuralı", message }];
+        }
+
+        if (rule.ruleType === "requires" && sourceSelected && !targetSelected) {
+          return [{ type, title: "Eksik zorunlu bileşen", message }];
+        }
+
+        if (rule.ruleType === "recommends" && sourceSelected && !targetSelected) {
+          return [{ type: "info", title: "Önerilen bileşen", message }];
+        }
+
+        return [];
+      });
+  }, [activeVehicle, cart, compatibilityRules, dbProducts]);
 
   const aiInsights = useMemo(() => {
-    const insights: AiInsight[] = [];
+    const insights: AiInsight[] = [...ruleInsights];
 
     if (!activeVehicle) {
       return insights;
     }
 
-    const systemVoltage = 12;
-
     if (stats.inverterW > 0) {
-      const maxDrawAmps = Math.ceil(stats.inverterW / systemVoltage);
+      const maxDrawAmps = Math.ceil(stats.inverterW / stats.batteryVoltageV);
       const cableRecommendation =
         maxDrawAmps > 200 ? "2x 50mm²" : maxDrawAmps > 100 ? "50mm²" : "35mm²";
 
       insights.push({
         type: "info",
-        title: "Kablolama Reçetesi",
-        message: `${stats.inverterW}W yük için minimum ${cableRecommendation} DC kablo kullanılmalıdır.`,
+        title: "Kablolama için inceleme",
+        message: `${stats.inverterW}W yükte yaklaşık ${maxDrawAmps}A DC akım oluşur; kesit, hat uzunluğu ve izin verilen gerilim düşümü birlikte doğrulanır. Başlangıç sinyali: ${cableRecommendation}.`,
       });
     }
 
     if (stats.solarW > 0 && stats.mpptA === 0) {
       insights.push({
         type: "critical",
-        title: "Eksik Bileşen: MPPT",
-        message: `${stats.solarW}W güneş paneli tespit edildi ancak sistemi yönetecek MPPT seçilmedi.`,
+        title: "Eksik bileşen: MPPT",
+        message: `${stats.solarW}W panel seçildi ancak sistemi yönetecek MPPT seçilmedi.`,
+      });
+    }
+
+    if (
+      stats.solarW > 0 &&
+      [stats.panelVocV, stats.panelVmpV, stats.panelIscA, stats.panelImpA].some((value) => value <= 0)
+    ) {
+      insights.push({
+        type: "critical",
+        title: "Panel datasheet verisi eksik",
+        message: "Voc, Vmp, Isc ve Imp değerlerinin tamamı doğrulanmadan PV–MPPT uyumluluğu kesinleştirilemez.",
+      });
+    }
+
+    if (stats.solarW > 0 && stats.mpptA > 0 && stats.approxChargeCurrentA > stats.mpptA) {
+      insights.push({
+        type: "critical",
+        title: "MPPT şarj akımı yetersiz",
+        message: `${stats.solarW}W dizi, ${stats.batteryVoltageV}V nominal sistemde yaklaşık ${Math.ceil(stats.approxChargeCurrentA)}A seviyesine karşılık gelir; seçili MPPT ${stats.mpptA}A ile sınırlı.`,
+      });
+    }
+
+    if (stats.mpptMaxPvVoltageV > 0 && stats.arrayVocV > stats.mpptMaxPvVoltageV) {
+      insights.push({
+        type: "critical",
+        title: "PV gerilimi sınırı aşılıyor",
+        message: `Dizi Voc yaklaşık ${stats.arrayVocV}V, seçili MPPT PV sınırı ${stats.mpptMaxPvVoltageV}V. Seri/paralel düzeni ve soğuk hava Voc değeri yeniden kontrol edilmeli.`,
+      });
+    }
+
+    if (stats.mpptMaxPvCurrentA > 0 && stats.arrayIscA > stats.mpptMaxPvCurrentA) {
+      insights.push({
+        type: "critical",
+        title: "PV giriş akımı sınırı aşılıyor",
+        message: `Dizi Isc yaklaşık ${stats.arrayIscA}A, seçili MPPT PV giriş sınırı ${stats.mpptMaxPvCurrentA}A.`,
+      });
+    }
+
+    if (stats.panelProductCount > 1) {
+      insights.push({
+        type: "warning",
+        title: "Farklı panel kayıtları seçildi",
+        message: "Panel türü veya datasheet değerleri farklı ürünler aynı diziye alınmadan önce seri/paralel eşleşmesi ayrıca doğrulanmalı.",
+      });
+    }
+
+    if (!stats.isSeriesParallelValid) {
+      insights.push({
+        type: "critical",
+        title: "Dizi adedi bağlantıya bölünmüyor",
+        message: `${stats.panelCount} panel, seçilen ${solarSeriesCount}S karma bağlantıya tam bölünmüyor. Seri kol adedini veya panel sayısını değiştirin.`,
+      });
+    }
+
+    if (stats.batteryMaxChargeA > 0 && stats.mpptA > stats.batteryMaxChargeA) {
+      insights.push({
+        type: "warning",
+        title: "Akü şarj kabulü kontrol edilmeli",
+        message: `MPPT ${stats.mpptA}A, akü kaydındaki ${stats.batteryMaxChargeA}A üst sınırıyla karşılaştırılmalı.`,
       });
     }
 
     return insights;
-  }, [stats, activeVehicle]);
+  }, [activeVehicle, ruleInsights, solarSeriesCount, stats]);
+
+  const mpptCandidates = useMemo<MpptCandidate[]>(() => {
+    if (
+      !activeVehicle ||
+      stats.solarW <= 0 ||
+      [stats.panelVocV, stats.panelVmpV, stats.panelIscA, stats.panelImpA].some((value) => value <= 0)
+    ) {
+      return [];
+    }
+
+    const selectedIds = new Set(cart.map((item) => item.product.id));
+    const requiredChargeCurrentA = Math.ceil(stats.approxChargeCurrentA);
+
+    return dbProducts
+      .filter(isMpptProduct)
+      .map((product): MpptCandidate | null => {
+        const titleMatch = getProductSignalText(product).match(/(\d{2,3})\s*[/|-]\s*(\d{2,3})/);
+        const chargeCurrentA =
+          getProductSignalValue(product, ["max_charge_current", "charge_current", "rated_current", "output_current"]) ??
+          (titleMatch ? Number(titleMatch[2]) : getTitleNumericSignal(product, /(\d{1,3})\s*a/));
+        const maxPvVoltageV =
+          getProductSignalValue(product, ["max_pv_voltage", "pv_voltage_max", "maximum_pv_voltage", "max_input_voltage"]) ??
+          (titleMatch ? Number(titleMatch[1]) : 0);
+        const maxPvCurrentA = getProductSignalValue(product, ["max_pv_current", "pv_input_current", "maximum_pv_current"]) ?? 0;
+        const hasDatasheet = Boolean(
+          product.datasheetUrl || product.productDocuments?.some((document) => document.status !== "inactive"),
+        );
+
+        if (!hasDatasheet || chargeCurrentA < requiredChargeCurrentA || maxPvVoltageV < stats.arrayVocV) {
+          return null;
+        }
+
+        if (maxPvCurrentA > 0 && maxPvCurrentA < stats.arrayIscA) {
+          return null;
+        }
+
+        return {
+          product,
+          chargeCurrentA,
+          maxPvVoltageV,
+          maxPvCurrentA,
+          isSelected: selectedIds.has(product.id),
+        };
+      })
+      .filter((candidate): candidate is MpptCandidate => candidate !== null)
+      .sort((left, right) => {
+        if (left.isSelected !== right.isSelected) {
+          return left.isSelected ? -1 : 1;
+        }
+
+        return left.chargeCurrentA - right.chargeCurrentA;
+      })
+      .slice(0, 3);
+  }, [activeVehicle, cart, dbProducts, stats]);
 
   const maxAllowedWeight = activeVehicle
     ? Number(activeVehicle.baseWeightKg) + Number(activeVehicle.maxPayloadKg || 1400)
@@ -1572,6 +1959,8 @@ export default function ConfiguratorClient({
     setActiveFocusTargetId(null);
     setFailedSceneAssets({});
     setIs3dFallbackActive(false);
+    setSolarWiringMode("parallel");
+    setSolarSeriesCount(2);
   };
 
   return (
@@ -2317,6 +2706,133 @@ export default function ConfiguratorClient({
                               ? "Hazır"
                               : "Kontrol ediliyor"}
                           </span>
+                        </div>
+                      ) : null}
+
+                      {stats.solarW > 0 || stats.tankLitres > 0 || aiInsights.length > 0 ? (
+                        <div className="shrink-0 border-b border-white/6 bg-black/20 px-4 py-3">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[9px] font-medium tracking-[0.2em] text-zinc-500">
+                                Teknik karar özeti
+                              </p>
+                              <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
+                                Ürün kaydı, dizi hesabı ve araç sınırları birlikte okunur.
+                              </p>
+                            </div>
+                            {stats.solarW > 0 ? (
+                              <div className="flex flex-wrap items-center gap-1.5 text-[9px]">
+                                <span className="rounded-full border border-amber-300/20 bg-amber-300/[0.06] px-2 py-1 text-amber-100">
+                                  {stats.solarW.toLocaleString("tr-TR")} W panel
+                                </span>
+                                <span className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1 text-zinc-300">
+                                  ≈ {stats.estimatedDailyEnergyKwh.toLocaleString("tr-TR", { maximumFractionDigits: 2 })} kWh/gün örnek
+                                </span>
+                                <span className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1 text-zinc-300">
+                                  ≈ {Math.ceil(stats.approxChargeCurrentA)} A nominal
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {stats.solarW > 0 ? (
+                            <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(13rem,16rem)]">
+                              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                                <div className="rounded-[0.65rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                  <p className="text-[8px] tracking-[0.12em] text-zinc-600">PANEL</p>
+                                  <p className="mt-1 text-[10px] text-zinc-200">{stats.panelCount} adet · {stats.panelVocV || "—"} Voc</p>
+                                  <p className="mt-0.5 text-[8px] text-zinc-500">{stats.panelVmpV || "—"} Vmp · {stats.panelIscA || "—"} Isc · {stats.panelImpA || "—"} Imp</p>
+                                </div>
+                                <div className="rounded-[0.65rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                  <p className="text-[8px] tracking-[0.12em] text-zinc-600">DİZİ</p>
+                                  <p className="mt-1 text-[10px] text-zinc-200">{stats.arrayVocV || "—"} Voc · {stats.arrayIscA || "—"} Isc</p>
+                                  <p className="mt-0.5 text-[8px] text-zinc-500">{stats.arrayVmpV || "—"} Vmp · {stats.arrayImpA || "—"} Imp</p>
+                                </div>
+                                <div className="rounded-[0.65rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                  <p className="text-[8px] tracking-[0.12em] text-zinc-600">AKÜ</p>
+                                  <p className="mt-1 text-[10px] text-zinc-200">{stats.batteryVoltageV} V · {stats.batteryAh || "—"} Ah</p>
+                                </div>
+                                <div className="rounded-[0.65rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                  <p className="text-[8px] tracking-[0.12em] text-zinc-600">MPPT</p>
+                                  <p className="mt-1 text-[10px] text-zinc-200">{stats.mpptA || "—"} A · {stats.mpptMaxPvVoltageV || "—"} V PV</p>
+                                </div>
+                              </div>
+
+                              <div className="rounded-[0.75rem] border border-white/6 bg-white/[0.025] p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-[8px] font-medium tracking-[0.14em] text-zinc-500">PANEL BAĞLANTISI</p>
+                                  {solarWiringMode === "series_parallel" ? (
+                                    <select
+                                      value={solarSeriesCount}
+                                      onChange={(event) => setSolarSeriesCount(Number(event.target.value))}
+                                      className="rounded-md border border-white/8 bg-black/30 px-1.5 py-1 text-[9px] text-zinc-200 outline-none"
+                                      aria-label="Seri kolundaki panel sayısı"
+                                    >
+                                      {Array.from({ length: Math.max(stats.panelCount, 1) }, (_, index) => index + 1).map((count) => (
+                                        <option key={count} value={count}>{count}S</option>
+                                      ))}
+                                    </select>
+                                  ) : null}
+                                </div>
+                                <div className="mt-1.5 grid grid-cols-3 gap-1">
+                                  {([
+                                    ["parallel", "Paralel"],
+                                    ["series", "Seri"],
+                                    ["series_parallel", "Seri + paralel"],
+                                  ] as const).map(([mode, label]) => (
+                                    <button
+                                      key={mode}
+                                      type="button"
+                                      onClick={() => setSolarWiringMode(mode)}
+                                      className={`rounded-md border px-1.5 py-1.5 text-[8px] transition-colors ${solarWiringMode === mode ? "border-blue-300/40 bg-blue-400/10 text-blue-100" : "border-white/6 bg-black/20 text-zinc-500 hover:border-white/12 hover:text-zinc-300"}`}
+                                    >
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {aiInsights.length > 0 ? (
+                            <div className="mt-2 grid gap-1.5">
+                              {aiInsights.slice(0, 4).map((insight, index) => (
+                                <div
+                                  key={`${insight.title}-${index}`}
+                                  className={`rounded-[0.65rem] border px-2.5 py-2 text-[9px] leading-relaxed ${insight.type === "critical" ? "border-red-400/20 bg-red-400/[0.06] text-red-100" : insight.type === "warning" ? "border-amber-300/20 bg-amber-300/[0.05] text-amber-100" : "border-white/6 bg-white/[0.025] text-zinc-300"}`}
+                                >
+                                  <strong className="font-medium">{insight.title}: </strong>{insight.message}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          {stats.solarW > 0 && (stats.mpptA === 0 || stats.approxChargeCurrentA > stats.mpptA) ? (
+                            <div className="mt-2 rounded-[0.75rem] border border-blue-300/15 bg-blue-300/[0.035] p-2.5">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-[8px] font-medium tracking-[0.16em] text-blue-200/70">DATASHEET’Lİ MPPT ADAYLARI</p>
+                                  <p className="mt-1 text-[9px] leading-relaxed text-zinc-400">Akım, PV gerilimi ve varsa PV giriş akımı sınırını karşılayan gerçek ürün kayıtları.</p>
+                                </div>
+                                <span className="rounded-full border border-blue-300/15 bg-blue-300/[0.06] px-2 py-1 text-[8px] text-blue-100/80">Öneri · onay değil</span>
+                              </div>
+                              {mpptCandidates.length > 0 ? (
+                                <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
+                                  {mpptCandidates.map((candidate) => (
+                                    <div key={candidate.product.id} className="rounded-[0.65rem] border border-white/8 bg-black/20 px-2.5 py-2">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <strong className="min-w-0 text-[9px] leading-relaxed text-zinc-200">{candidate.product.title || candidate.product.name || candidate.product.sku || "MPPT ürünü"}</strong>
+                                        {candidate.isSelected ? <Check size={13} className="shrink-0 text-emerald-300" aria-label="Seçili" /> : null}
+                                      </div>
+                                      <p className="mt-1 text-[8px] leading-relaxed text-zinc-500">{candidate.chargeCurrentA} A · {candidate.maxPvVoltageV} V PV{candidate.maxPvCurrentA > 0 ? ` · ${candidate.maxPvCurrentA} A PV` : ""}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-2 rounded-[0.6rem] border border-amber-300/15 bg-amber-300/[0.04] px-2.5 py-2 text-[9px] leading-relaxed text-amber-100/80">Bu dizi için datasheet’i doğrulanmış bir MPPT adayı bulunamadı. Yeni ürün önermek yerine gereken ürün datasheet’i bekletilir.</p>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
 

@@ -1,7 +1,15 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
-import { categories, models, productDocuments, productSpecs, products } from "@/db/schema";
+import {
+  categories,
+  compatibilityRules,
+  models,
+  productDocuments,
+  productSpecs,
+  products,
+  ruleConditions,
+} from "@/db/schema";
 import ConfiguratorClient from "@/app/workshop/ConfiguratorClient";
 import { getLayerFromCategory } from "@/app/workshop/focusTargets";
 import {
@@ -67,6 +75,43 @@ export default async function DesignPage() {
       ),
     );
   const productIds = dbProductRows.map((product) => product.id);
+  const compatibilityRuleRows = productIds.length
+    ? await db
+        .select({
+          id: compatibilityRules.id,
+          sourceProductId: compatibilityRules.sourceProductId,
+          targetProductId: compatibilityRules.targetProductId,
+          ruleType: compatibilityRules.ruleType,
+          severity: compatibilityRules.severity,
+          priority: compatibilityRules.priority,
+          message: compatibilityRules.message,
+        })
+        .from(compatibilityRules)
+        .where(inArray(compatibilityRules.sourceProductId, productIds))
+    : [];
+  const compatibilityRuleIds = compatibilityRuleRows.map((rule) => rule.id);
+  const compatibilityConditionRows = compatibilityRuleIds.length
+    ? await db
+        .select({
+          ruleId: ruleConditions.ruleId,
+          conditionType: ruleConditions.conditionType,
+          targetId: ruleConditions.targetId,
+        })
+        .from(ruleConditions)
+        .where(inArray(ruleConditions.ruleId, compatibilityRuleIds))
+    : [];
+  const conditionsByRuleId = new Map<string, typeof compatibilityConditionRows>();
+
+  compatibilityConditionRows.forEach((condition) => {
+    const current = conditionsByRuleId.get(condition.ruleId) ?? [];
+    current.push(condition);
+    conditionsByRuleId.set(condition.ruleId, current);
+  });
+
+  const workshopCompatibilityRules = compatibilityRuleRows.map((rule) => ({
+    ...rule,
+    conditions: conditionsByRuleId.get(rule.id) ?? [],
+  }));
   const documentRows = productIds.length
     ? await db
         .select({
@@ -149,6 +194,7 @@ export default async function DesignPage() {
       <ConfiguratorClient
         dbProducts={dbProducts}
         dbModels={dbModels}
+        compatibilityRules={workshopCompatibilityRules}
         workshopAssetReadinessByModel={workshopAssetReadinessByModel}
         workshopAssetsByModel={workshopAssetsByModel}
       />

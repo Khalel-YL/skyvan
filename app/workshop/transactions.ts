@@ -9,10 +9,12 @@ import {
   builds,
   buildSelectedProducts,
   buildVersions,
+  compatibilityRules,
   models,
   packages,
   products,
   publicSessions,
+  ruleConditions,
 } from "@/db/schema";
 
 import { getPublicWorkshopSessionExpiresAt } from "./identity";
@@ -21,6 +23,7 @@ import type { ParsedWorkshopBuildInput } from "./validation";
 
 type WorkshopBuildProductRow = {
   id: string;
+  name: string;
   status: "draft" | "active" | "archived";
   workshopVisibility: string;
   basePrice: string;
@@ -199,6 +202,7 @@ async function assertEligibleProducts(
   const productRows = (await tx
     .select({
       id: products.id,
+      name: products.name,
       status: products.status,
       workshopVisibility: products.workshopVisibility,
       basePrice: products.basePrice,
@@ -225,6 +229,86 @@ async function assertEligibleProducts(
   }
 
   return productRows;
+}
+
+async function assertSelectionCompatibility(
+  tx: TransactionClient,
+  modelId: string,
+  input: ParsedWorkshopBuildInput,
+  productRows: WorkshopBuildProductRow[],
+) {
+  if (input.productIds.length === 0) {
+    return;
+  }
+
+  const rules = await tx
+    .select({
+      id: compatibilityRules.id,
+      sourceProductId: compatibilityRules.sourceProductId,
+      targetProductId: compatibilityRules.targetProductId,
+      ruleType: compatibilityRules.ruleType,
+      severity: compatibilityRules.severity,
+      message: compatibilityRules.message,
+    })
+    .from(compatibilityRules)
+    .where(inArray(compatibilityRules.sourceProductId, input.productIds));
+
+  if (rules.length === 0) {
+    return;
+  }
+
+  const conditionRows = await tx
+    .select({
+      ruleId: ruleConditions.ruleId,
+      conditionType: ruleConditions.conditionType,
+      targetId: ruleConditions.targetId,
+    })
+    .from(ruleConditions)
+    .where(inArray(ruleConditions.ruleId, rules.map((rule) => rule.id)));
+  const conditionsByRuleId = new Map<string, typeof conditionRows>();
+
+  for (const condition of conditionRows) {
+    const current = conditionsByRuleId.get(condition.ruleId) ?? [];
+    current.push(condition);
+    conditionsByRuleId.set(condition.ruleId, current);
+  }
+
+  const selectedIds = new Set(input.productIds);
+  const productNames = new Map(productRows.map((product) => [product.id, product.name]));
+
+  for (const rule of rules) {
+    const conditions = conditionsByRuleId.get(rule.id) ?? [];
+    const modelConditions = conditions.filter((condition) => condition.conditionType === "model");
+    const unsupportedConditions = conditions.filter((condition) => condition.conditionType !== "model");
+
+    // Public Workshop does not yet collect package/scenario answers in this
+    // mutation. Conditional rules stay unresolved until their context exists.
+    if (unsupportedConditions.length > 0) {
+      continue;
+    }
+
+    if (modelConditions.length > 0 && !modelConditions.some((condition) => condition.targetId === modelId)) {
+      continue;
+    }
+
+    const sourceSelected = selectedIds.has(rule.sourceProductId);
+    const targetSelected = selectedIds.has(rule.targetProductId);
+    const isExcludedPair = rule.ruleType === "excludes" && sourceSelected && targetSelected;
+    const isMissingRequirement = rule.ruleType === "requires" && sourceSelected && !targetSelected;
+
+    if (rule.severity !== "hard_block" || (!isExcludedPair && !isMissingRequirement)) {
+      continue;
+    }
+
+    const sourceName = productNames.get(rule.sourceProductId) ?? "Seçilen ürün";
+    const targetName = productNames.get(rule.targetProductId) ?? "gerekli hedef ürün";
+    throw new PublicWorkshopBuildMutationError(
+      rule.message ||
+        (isExcludedPair
+          ? `${sourceName} ile ${targetName} birlikte kullanılamaz.`
+          : `${sourceName} seçimi için ${targetName} gereklidir.`),
+    );
+  }
 }
 
 function computeTotals(input: {
@@ -441,6 +525,7 @@ export async function persistPublicWorkshopBuild(
     const model = await assertActiveModel(tx, input.vehicleId);
     const customPackage = await assertCustomEngineeringPackage(tx, input.vehicleId);
     const productRows = await assertEligibleProducts(tx, input);
+    await assertSelectionCompatibility(tx, input.vehicleId, input, productRows);
     const computed = computeTotals({
       model,
       products: productRows,
