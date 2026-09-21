@@ -162,14 +162,41 @@ function WorkshopVehicleVisual({ locale }: { locale: WorkshopLocale }): JSX.Elem
   ];
   return <div className="sv-workshop-vehicle-visual" role="img" aria-label={locale === "tr" ? "Araç bağlamı için kavramsal bilgi paneli" : "Concept information panel for vehicle context"}>
     <div className="sv-workshop-visual-topline"><span>{ui.vehicleMeta}</span><span>01 / 03</span></div>
-    <div className="sv-workshop-vehicle-outline" aria-hidden="true">
-      <span className="sv-workshop-vehicle-roof" />
-      <span className="sv-workshop-vehicle-window" />
-      <span className="sv-workshop-vehicle-cabin" />
-      <span className="sv-workshop-vehicle-wheel sv-workshop-vehicle-wheel-front" />
-      <span className="sv-workshop-vehicle-wheel sv-workshop-vehicle-wheel-rear" />
-      <span className="sv-workshop-vehicle-baseline" />
-    </div>
+    <svg className="sv-workshop-atlas-svg sv-workshop-vehicle-svg" viewBox="0 0 760 330" role="presentation" aria-hidden="true">
+      <text x="40" y="30" className="sv-workshop-svg-overline">VEHICLE CONTEXT / REFERENCE</text>
+      <text x="720" y="30" textAnchor="end" className="sv-workshop-svg-overline">01 / 03</text>
+      <path className="sv-workshop-svg-grid-line" d="M40 72H720M40 132H720M40 192H720M40 252H720" />
+      <path className="sv-workshop-svg-grid-line" d="M140 48V278M260 48V278M380 48V278M500 48V278M620 48V278" />
+      <text x="380" y="54" textAnchor="middle" className="sv-workshop-svg-caption">REFERENCE FRONT</text>
+      <path className="sv-workshop-svg-vehicle-shell" d="M284 64H476C523 64 551 91 558 133L571 248C574 270 558 284 523 289H237C202 284 186 270 189 248L202 133C209 91 237 64 284 64Z" />
+      <path className="sv-workshop-svg-vehicle-cab" d="M228 105Q380 62 532 105L548 151H212Z" />
+      <path className="sv-workshop-svg-vehicle-rule" d="M216 177H544M216 238H544M216 177V238M544 177V238" />
+      <path className="sv-workshop-svg-vehicle-axis" d="M244 207H516" />
+      <text x="380" y="212" textAnchor="middle" className="sv-workshop-svg-axis-label">LAYOUT AXIS</text>
+      <g className="sv-workshop-svg-zone">
+        <rect x="250" y="184" width="94" height="37" rx="5" />
+        <text x="297" y="200" textAnchor="middle">LIVING</text>
+        <text x="297" y="213" textAnchor="middle" className="sv-workshop-svg-zone-detail">VISIBLE LAYER</text>
+      </g>
+      <g className="sv-workshop-svg-zone sv-workshop-svg-zone-accent">
+        <rect x="416" y="184" width="94" height="37" rx="5" />
+        <text x="463" y="200" textAnchor="middle">SERVICE</text>
+        <text x="463" y="213" textAnchor="middle" className="sv-workshop-svg-zone-detail">ACCESS LAYER</text>
+      </g>
+      <g className="sv-workshop-svg-callout">
+        <path d="M189 144H92V116" />
+        <circle cx="189" cy="144" r="4" />
+        <text x="40" y="105" className="sv-workshop-svg-index">01</text>
+        <text x="40" y="121" className="sv-workshop-svg-callout-label">USE THE VEHICLE</text>
+      </g>
+      <g className="sv-workshop-svg-callout">
+        <path d="M571 144H668V116" />
+        <circle cx="571" cy="144" r="4" />
+        <text x="720" y="105" textAnchor="end" className="sv-workshop-svg-index">02</text>
+        <text x="720" y="121" textAnchor="end" className="sv-workshop-svg-callout-label">DEFINE THE ENVELOPE</text>
+      </g>
+      <text x="380" y="311" textAnchor="middle" className="sv-workshop-svg-footnote">A LAYOUT STARTS WITH A REAL VEHICLE CONTEXT</text>
+    </svg>
     <dl className="sv-workshop-vehicle-fields">
       {fields.map((field) => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}</dd></div>)}
     </dl>
@@ -196,16 +223,28 @@ function WorkshopLivingVisual({ locale }: { locale: WorkshopLocale }): JSX.Eleme
     : ["Lounge", "Galley", "Sleep", "Bathroom", "Storage"];
   return <div className="sv-workshop-living-visual" role="img" aria-label={locale === "tr" ? "Görünür yaşam alanının kavramsal planı" : "Concept plan of the visible living space"}>
     <div className="sv-workshop-visual-topline"><span>{ui.livingMeta}</span><span>03 / 03</span></div>
-    <div className="sv-workshop-plan-board">
-      <div className="sv-workshop-plan-cab" aria-hidden="true"><span className="sv-workshop-plan-cab-window" /><span className="sv-workshop-plan-door" /></div>
-      <div className="sv-workshop-plan-zone sv-workshop-plan-lounge"><span>01</span>{zones[0]}</div>
-      <div className="sv-workshop-plan-zone sv-workshop-plan-galley"><span>02</span>{zones[1]}</div>
-      <div className="sv-workshop-plan-zone sv-workshop-plan-sleep"><span>03</span>{zones[2]}</div>
-      <div className="sv-workshop-plan-zone sv-workshop-plan-bath"><span>04</span>{zones[3]}</div>
-      <div className="sv-workshop-plan-zone sv-workshop-plan-storage"><span>05</span>{zones[4]}</div>
-      <div className="sv-workshop-plan-route" aria-hidden="true"><i /><i /><i /></div>
-      <span className="sv-workshop-plan-axis" aria-hidden="true">{locale === "tr" ? "DOLAŞIM" : "CIRCULATION"}</span>
-    </div>
+    <svg className="sv-workshop-atlas-svg sv-workshop-living-svg" viewBox="0 0 760 370" role="presentation" aria-hidden="true">
+      <text x="40" y="30" className="sv-workshop-svg-overline">VISIBLE LIVING / PLAN STUDY</text>
+      <text x="720" y="30" textAnchor="end" className="sv-workshop-svg-overline">03 / 03</text>
+      <path className="sv-workshop-svg-grid-line" d="M40 72H720M40 132H720M40 192H720M40 252H720M40 312H720" />
+      <path className="sv-workshop-svg-grid-line" d="M140 48V332M260 48V332M380 48V332M500 48V332M620 48V332" />
+      <rect x="145" y="78" width="470" height="238" rx="24" className="sv-workshop-svg-plan-shell" />
+      <path className="sv-workshop-svg-plan-cab" d="M195 78Q380 48 565 78L588 131H172Z" />
+      <path className="sv-workshop-svg-plan-door" d="M615 155V243H590" />
+      <rect x="210" y="188" width="150" height="82" rx="12" className="sv-workshop-svg-plan-zone" />
+      <rect x="424" y="150" width="118" height="120" rx="12" className="sv-workshop-svg-plan-zone sv-workshop-svg-plan-zone-accent" />
+      <rect x="280" y="113" width="154" height="47" rx="10" className="sv-workshop-svg-plan-zone" />
+      <rect x="363" y="181" width="56" height="65" rx="8" className="sv-workshop-svg-plan-zone sv-workshop-svg-plan-zone-soft" />
+      <rect x="280" y="277" width="154" height="18" rx="5" className="sv-workshop-svg-plan-zone" />
+      <text x="228" y="211" className="sv-workshop-svg-index">01</text><text x="228" y="231" className="sv-workshop-svg-zone-label">{zones[0]}</text>
+      <text x="442" y="174" className="sv-workshop-svg-index">02</text><text x="442" y="194" className="sv-workshop-svg-zone-label">{zones[1]}</text>
+      <text x="298" y="133" className="sv-workshop-svg-index">03</text><text x="298" y="151" className="sv-workshop-svg-zone-label">{zones[2]}</text>
+      <text x="391" y="206" textAnchor="middle" className="sv-workshop-svg-index">04</text><text x="391" y="225" textAnchor="middle" className="sv-workshop-svg-zone-detail">{zones[3]}</text>
+      <text x="298" y="290" className="sv-workshop-svg-index">05</text><text x="324" y="290" className="sv-workshop-svg-zone-detail">{zones[4]}</text>
+      <path className="sv-workshop-svg-route sv-workshop-svg-route-living" pathLength="1" d="M238 171C264 167 275 174 296 182S343 195 371 198S430 194 455 216S497 246 535 242" />
+      <circle className="sv-workshop-svg-route-node" cx="238" cy="171" r="5" /><circle className="sv-workshop-svg-route-node" cx="535" cy="242" r="5" />
+      <text x="380" y="349" textAnchor="middle" className="sv-workshop-svg-footnote">{locale === "tr" ? "DOLAŞIM, GÜNLÜK KULLANIMI OKUNUR KILAR" : "CIRCULATION MAKES DAILY USE READABLE"}</text>
+    </svg>
     <p className="sv-workshop-visual-note">{ui.livingNote}</p>
   </div>;
 }
@@ -214,13 +253,25 @@ function WorkshopRelationshipVisual({ locale }: { locale: WorkshopLocale }): JSX
   const ui = workshopUi[locale];
   return <div className="sv-workshop-relationship-visual" role="img" aria-label={locale === "tr" ? "Bir kararın yaşam, enerji ve su başlıklarıyla ilişkisi" : "Relationship between one decision, living, energy and water"}>
     <div className="sv-workshop-visual-topline"><span>{ui.relationMeta}</span><span>04 / 05</span></div>
-    <div className="sv-workshop-relationship-map">
-      <span className="sv-workshop-relationship-route sv-workshop-relationship-route-one" aria-hidden="true" />
-      <span className="sv-workshop-relationship-route sv-workshop-relationship-route-two" aria-hidden="true" />
-      <span className="sv-workshop-relationship-route sv-workshop-relationship-route-three" aria-hidden="true" />
-      <div className="sv-workshop-relation-core"><span>01</span><strong>{ui.relationCenter}</strong><small>{locale === "tr" ? "etkisi incelenir" : "impact is reviewed"}</small></div>
-      {ui.relationNodes.map((node, index) => <div className={`sv-workshop-relation-node sv-workshop-relation-node-${index + 1}`} key={node}><span>0{index + 2}</span><strong>{node}</strong><small>{locale === "tr" ? "bağlantılı başlık" : "connected subject"}</small></div>)}
-    </div>
+    <svg className="sv-workshop-atlas-svg sv-workshop-relationship-svg" viewBox="0 0 760 330" role="presentation" aria-hidden="true">
+      <text x="40" y="30" className="sv-workshop-svg-overline">DECISION RELATION / IMPACT MAP</text>
+      <text x="720" y="30" textAnchor="end" className="sv-workshop-svg-overline">04 / 05</text>
+      <path className="sv-workshop-svg-grid-line" d="M40 72H720M40 132H720M40 192H720M40 252H720" />
+      <path className="sv-workshop-svg-relationship-route" d="M380 166C324 125 260 106 188 100" />
+      <path className="sv-workshop-svg-relationship-route" d="M380 166C436 125 500 106 572 100" />
+      <path className="sv-workshop-svg-relationship-route" d="M380 166C380 214 380 245 380 278" />
+      <circle className="sv-workshop-svg-relationship-orbit" cx="380" cy="166" r="56" />
+      <circle className="sv-workshop-svg-relationship-core" cx="380" cy="166" r="43" />
+      <text x="380" y="158" textAnchor="middle" className="sv-workshop-svg-index">01</text>
+      <text x="380" y="176" textAnchor="middle" className="sv-workshop-svg-node-label">{ui.relationCenter}</text>
+      <text x="380" y="191" textAnchor="middle" className="sv-workshop-svg-zone-detail">{locale === "tr" ? "etkisi incelenir" : "impact is reviewed"}</text>
+      {[{ x: 188, y: 100, index: "02", label: ui.relationNodes[0] }, { x: 572, y: 100, index: "03", label: ui.relationNodes[1] }, { x: 380, y: 278, index: "04", label: ui.relationNodes[2] }].map((node) => <g className="sv-workshop-svg-relationship-node" key={node.index}>
+        <circle cx={node.x} cy={node.y} r="30" />
+        <text x={node.x} y={node.y - 6} textAnchor="middle" className="sv-workshop-svg-index">{node.index}</text>
+        <text x={node.x} y={node.y + 12} textAnchor="middle" className="sv-workshop-svg-node-label">{node.label}</text>
+      </g>)}
+      <text x="40" y="312" className="sv-workshop-svg-footnote">{locale === "tr" ? "BİR DEĞİŞİKLİK, BAĞLI BAŞLIKLARI YENİDEN AÇAR" : "ONE CHANGE REOPENS THE CONNECTED SUBJECTS"}</text>
+    </svg>
     <p className="sv-workshop-visual-note">{ui.relationNote}</p>
   </div>;
 }

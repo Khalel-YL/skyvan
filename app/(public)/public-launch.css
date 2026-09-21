@@ -1396,6 +1396,59 @@
 .sv-public .sv-workshop-final-note { padding-top: 1rem; border-top: 1px solid var(--public-border); font-size: .78rem; line-height: 1.6; }
 .sv-public .sv-workshop-story-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1rem 1.5rem; }
 
+/* Atölye atlas: replace CSS-shaped boxes with one restrained vector language.
+   The drawings explain the decision model without pretending to be a live
+   vehicle measurement or a finished configurator screen. */
+.sv-public .sv-workshop-hero-board,
+.sv-public .sv-workshop-vehicle-visual,
+.sv-public .sv-workshop-brief-visual,
+.sv-public .sv-workshop-living-visual,
+.sv-public .sv-workshop-relationship-visual,
+.sv-public .sv-workshop-boundary-visual,
+.sv-public .sv-workshop-validation-visual,
+.sv-public .sv-workshop-scope-visual {
+  border-radius: 16px;
+  box-shadow: none;
+  background: var(--public-bg-soft);
+}
+.sv-public .sv-workshop-atlas-svg { display: block; width: calc(100% - 2.5rem); height: auto; margin: 1rem 1.25rem .2rem; overflow: visible; }
+.sv-public .sv-workshop-atlas-svg text { font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, monospace); }
+.sv-public .sv-workshop-svg-overline,
+.sv-public .sv-workshop-svg-footnote,
+.sv-public .sv-workshop-svg-caption { fill: var(--public-muted); font-size: 8px; letter-spacing: .16em; }
+.sv-public .sv-workshop-svg-footnote { font-size: 7.5px; letter-spacing: .12em; }
+.sv-public .sv-workshop-svg-grid-line { fill: none; stroke: var(--public-border); stroke-width: 1; opacity: .48; }
+.sv-public .sv-workshop-svg-vehicle-shell,
+.sv-public .sv-workshop-svg-plan-shell { fill: color-mix(in srgb, var(--public-surface) 74%, transparent); stroke: var(--workshop-line); stroke-width: 1.5; }
+.sv-public .sv-workshop-svg-vehicle-cab,
+.sv-public .sv-workshop-svg-plan-cab { fill: color-mix(in srgb, var(--public-surface-strong) 82%, transparent); stroke: var(--public-border-strong); stroke-width: 1; }
+.sv-public .sv-workshop-svg-vehicle-rule,
+.sv-public .sv-workshop-svg-vehicle-axis,
+.sv-public .sv-workshop-svg-plan-door { fill: none; stroke: var(--public-border-strong); stroke-width: 1; }
+.sv-public .sv-workshop-svg-vehicle-axis { stroke: var(--workshop-line); stroke-dasharray: 4 5; }
+.sv-public .sv-workshop-svg-axis-label { fill: var(--workshop-accent); font-size: 7px; letter-spacing: .12em; }
+.sv-public .sv-workshop-svg-zone rect,
+.sv-public .sv-workshop-svg-plan-zone { fill: color-mix(in srgb, var(--public-surface-strong) 82%, transparent); stroke: var(--public-border-strong); stroke-width: 1; }
+.sv-public .sv-workshop-svg-zone-accent rect,
+.sv-public .sv-workshop-svg-plan-zone-accent { fill: var(--workshop-accent-soft); stroke: var(--workshop-line); }
+.sv-public .sv-workshop-svg-plan-zone-soft { fill: color-mix(in srgb, var(--workshop-accent-soft) 60%, var(--public-surface)); stroke: var(--public-border-strong); }
+.sv-public .sv-workshop-svg-zone > text:first-of-type,
+.sv-public .sv-workshop-svg-zone-label,
+.sv-public .sv-workshop-svg-node-label { fill: var(--public-text); font-size: 11px; font-weight: 500; letter-spacing: -.01em; }
+.sv-public .sv-workshop-svg-zone-detail { fill: var(--public-muted); font-size: 7px; letter-spacing: .1em; }
+.sv-public .sv-workshop-svg-index { fill: var(--workshop-accent); font-size: 8px; letter-spacing: .12em; }
+.sv-public .sv-workshop-svg-callout path { fill: none; stroke: var(--workshop-line); stroke-width: 1; }
+.sv-public .sv-workshop-svg-callout circle,
+.sv-public .sv-workshop-svg-route-node { fill: var(--workshop-accent); stroke: var(--public-bg-soft); stroke-width: 3; }
+.sv-public .sv-workshop-svg-callout-label { fill: var(--public-text); font-size: 8px; letter-spacing: .1em; }
+.sv-public .sv-workshop-svg-route-living { fill: none; stroke: var(--workshop-accent); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: .035 .02; animation: sv-workshop-route-drift 5s linear infinite; }
+.sv-public .sv-workshop-svg-relationship-route { fill: none; stroke: var(--workshop-line); stroke-width: 1; stroke-dasharray: 4 6; }
+.sv-public .sv-workshop-svg-relationship-orbit { fill: none; stroke: var(--workshop-line); stroke-width: 1; stroke-dasharray: 2 8; opacity: .8; }
+.sv-public .sv-workshop-svg-relationship-core { fill: color-mix(in srgb, var(--workshop-accent-soft) 58%, var(--public-surface)); stroke: var(--workshop-line); stroke-width: 1.4; }
+.sv-public .sv-workshop-svg-relationship-node circle { fill: var(--public-surface-strong); stroke: var(--public-border-strong); stroke-width: 1; }
+
+@keyframes sv-workshop-route-drift { to { stroke-dashoffset: -.11; } }
+
 @media (prefers-reduced-motion: no-preference) {
   .sv-public .sv-workshop-hero-board,
   .sv-public .sv-workshop-vehicle-visual,
@@ -1492,7 +1545,7 @@
   .sv-public .sv-workshop-authority-grid article + article { min-height: 0; padding: 1rem 0; border-left: 0; }
   .sv-public .sv-workshop-authority-grid article + article { border-top: 1px solid var(--public-border); }
   .sv-public .sv-workshop-story-final-grid { display: grid; align-items: start; gap: 2rem; }
-  .sv-public .sv-workshop-story-actions { justify-content: flex-start; }
+.sv-public .sv-workshop-story-actions { justify-content: flex-start; }
 }
 
 @media (max-width: 767px) {
