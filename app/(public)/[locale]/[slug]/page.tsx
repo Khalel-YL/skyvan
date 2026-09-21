@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { JsonLd } from "../../components/JsonLd";
+import { PublicEngineeringPage } from "../../components/PublicEngineeringPage";
 import { PublicExplorePage } from "../../components/PublicExplorePage";
 import { PublicPageRenderer } from "../../components/PublicPageRenderer";
 import {
@@ -70,6 +71,15 @@ export default async function PublicSlugPage({
       <>
         <JsonLd data={buildWebsiteJsonLd(page)} />
         <PublicExplorePage page={page} />
+      </>
+    );
+  }
+
+  if (page.slug === "muhendislik") {
+    return (
+      <>
+        <JsonLd data={buildWebsiteJsonLd(page)} />
+        <PublicEngineeringPage page={page} />
       </>
     );
   }

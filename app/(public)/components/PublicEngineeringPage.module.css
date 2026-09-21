@@ -1,0 +1,51 @@
+.engineering { overflow: clip; background: var(--public-bg); }
+.hero { position: relative; isolation: isolate; min-height: min(44rem, calc(100svh - 74px)); overflow: hidden; color: #fff; background: #0c0e0f; }
+.heroMedia, .heroMedia :global(.sv-image) { position: absolute; inset: 0; z-index: -2; }
+.heroMedia img { object-position: center 52%; filter: saturate(.78) contrast(1.08) brightness(.62); }
+.hero::after { position: absolute; inset: 0; z-index: -1; content: ""; background: linear-gradient(92deg, rgba(5, 7, 8, .9) 0%, rgba(5, 7, 8, .64) 40%, rgba(5, 7, 8, .08) 79%), linear-gradient(0deg, rgba(5, 7, 8, .62), transparent 44%); pointer-events: none; }
+.heroFrame { display: flex; min-height: inherit; flex-direction: column; justify-content: space-between; padding-block: clamp(3rem, 7vw, 6.75rem) 1.5rem; }
+.heroCopy { max-width: 45rem; padding-top: clamp(1rem, 7vw, 6rem); }
+.hero :global(.sv-eyebrow) { margin-bottom: 1.1rem; color: rgba(255,255,255,.7); }
+.hero h1 { max-width: 10ch; color: #fff; font-size: clamp(3.85rem, 7.2vw, 7.2rem); font-weight: 460; line-height: .92; letter-spacing: -.077em; text-wrap: balance; }
+.heroCopy > p:last-child { max-width: 36rem; margin-top: 1.7rem; color: rgba(255,255,255,.82); font-size: clamp(1rem, 1.3vw, 1.16rem); line-height: 1.68; }
+.heroMeta { display: flex; justify-content: space-between; gap: 1rem; color: rgba(255,255,255,.59); font-size: .62rem; letter-spacing: .17em; text-transform: uppercase; }
+.story { padding-top: clamp(3.5rem, 8vw, 9.5rem); }
+.thesis { display: grid; grid-template-columns: minmax(10rem,.52fr) minmax(0,1.48fr); gap: clamp(2rem,9vw,12rem); align-items: start; padding-bottom: clamp(5rem,10vw,12rem); }
+.thesis :global(.sv-eyebrow) { margin: .5rem 0 0; }
+.thesis h2, .energy h2, .water h2, .envelope h2, .control h2, .closing h2 { font-size: clamp(2.45rem,4.6vw,5.15rem); font-weight: 450; line-height: .98; letter-spacing: -.07em; text-wrap: balance; }
+.thesis p:last-child { max-width: 42rem; margin-top: 1.7rem; color: var(--public-muted); font-size: clamp(1.02rem,1.35vw,1.22rem); line-height: 1.75; }
+.energy { display: grid; grid-template-columns: minmax(0,1.28fr) minmax(16rem,.72fr); gap: clamp(2.5rem,8vw,10rem); align-items: center; padding-bottom: clamp(5.5rem,10vw,12rem); }
+.energyMedia, .waterMedia, .waterDetail, .envelopeMedia, .controlMedia { margin: 0; }
+.energyMedia :global(.sv-image) { aspect-ratio: 1.22; border-radius: clamp(18px,2vw,28px); background: #1a1d1e; }
+.conceptCaption { margin-top: .8rem; color: var(--public-muted); font-size: .61rem; letter-spacing: .15em; text-transform: uppercase; }
+.energyCopy { max-width: 31rem; }
+.number { display: block; margin-bottom: 2.5rem; color: var(--public-muted); font-size: .68rem; letter-spacing: .18em; }
+.energy :global(.sv-eyebrow), .water :global(.sv-eyebrow), .envelope :global(.sv-eyebrow), .control :global(.sv-eyebrow), .closing :global(.sv-eyebrow) { margin-bottom: 1.15rem; }
+.energyCopy > p:not(:global(.sv-eyebrow)), .waterIntro > p:not(:global(.sv-eyebrow)), .envelopeCopy > p:not(:global(.sv-eyebrow)), .control > div > p:not(:global(.sv-eyebrow)), .closingFrame > div > p:not(:global(.sv-eyebrow)) { margin-top: 1.5rem; color: var(--public-muted); font-size: 1.02rem; line-height: 1.75; }
+.energyCopy ul { display: grid; gap: .75rem; margin: 2rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--public-border); }
+.energyCopy li { padding-top: .75rem; border-bottom: 1px solid var(--public-border); padding-bottom: .75rem; color: var(--public-text); font-size: .86rem; }
+.water { padding-block: clamp(4rem,8vw,9rem); background: var(--public-bg-soft); }
+.waterFrame { display: grid; grid-template-columns: minmax(15rem,.78fr) minmax(0,1.22fr); gap: clamp(2.5rem,7vw,9rem); align-items: center; }
+.waterIntro { max-width: 31rem; }
+.waterIntro ol { display: grid; gap: .7rem; margin: 2rem 0 0; padding: 0; list-style: none; }
+.waterIntro li { display: flex; gap: 1rem; align-items: baseline; padding-bottom: .75rem; border-bottom: 1px solid var(--public-border); color: var(--public-text); font-size: .88rem; }
+.waterIntro li span { color: var(--public-muted); font-size: .64rem; letter-spacing: .15em; }
+.waterMedia { grid-column: 2; grid-row: 1 / span 2; }
+.waterMedia :global(.sv-image) { aspect-ratio: 1.22; border-radius: clamp(18px,2vw,28px); }
+.waterDetail { width: min(100%, 28rem); }
+.waterDetail :global(.sv-image) { aspect-ratio: 1.28; border-radius: 16px; background: #17191b; }
+.waterDetail img { object-fit: cover; object-position: center; }
+.envelope { display: grid; grid-template-columns: minmax(15rem,.62fr) minmax(0,1.38fr); gap: clamp(2.5rem,8vw,10rem); align-items: center; padding-block: clamp(5.5rem,11vw,13rem); }
+.envelopeCopy { max-width: 30rem; }
+.envelopeMedia :global(.sv-image) { aspect-ratio: 1.42; border-radius: clamp(18px,2vw,28px); background: #17191b; }
+.envelopeMedia img { object-fit: cover; }
+.control { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(15rem,.7fr); gap: clamp(2.5rem,8vw,10rem); align-items: center; padding-block: clamp(4.5rem,9vw,11rem); border-top: 1px solid var(--public-border); }
+.controlMedia :global(.sv-image) { aspect-ratio: 1.18; border-radius: clamp(18px,2vw,28px); background: #17191b; }
+.control > div:last-child { max-width: 31rem; }
+.closing { padding-block: clamp(4rem,8vw,9rem); background: var(--public-surface); }
+.closingFrame { display: grid; grid-template-columns: minmax(0,1.12fr) minmax(16rem,.68fr); gap: clamp(2.5rem,9vw,11rem); align-items: start; }
+.closingFrame > div:last-child { padding-top: .5rem; }.closingFrame :global(.sv-text-link) { margin-top: 1.6rem; }
+.disclaimer { margin-top: clamp(3rem,7vw,7rem); padding-top: 1rem; border-top: 1px solid var(--public-border); color: var(--public-muted); font-size: .75rem !important; line-height: 1.6 !important; }
+@media (prefers-reduced-motion: no-preference) { .heroMedia img { animation: engineering-breathe 15s cubic-bezier(.2,.7,.2,1) both; }.energyMedia img, .waterMedia img, .envelopeMedia img, .controlMedia img { transition: transform 1s cubic-bezier(.2,.7,.2,1); }.energyMedia:hover img, .waterMedia:hover img, .envelopeMedia:hover img, .controlMedia:hover img { transform: scale(1.015); } }
+@keyframes engineering-breathe { from { transform: scale(1.035); } to { transform: scale(1.005); } }
+@media (max-width: 767px) { .hero { min-height: calc(100svh - 66px); }.heroMedia img { object-position: 59% center; }.heroFrame { padding-block: 2rem 1.15rem; }.heroCopy { padding-top: 9rem; }.hero h1 { max-width: 8ch; font-size: clamp(3.4rem,14vw,4.9rem); }.heroCopy > p:last-child { max-width: 22rem; margin-top: 1.2rem; font-size: .95rem; line-height: 1.6; }.thesis, .energy, .waterFrame, .envelope, .control, .closingFrame { grid-template-columns: 1fr; gap: 1.5rem; }.thesis { padding-bottom: 4.7rem; }.thesis :global(.sv-eyebrow) { margin: 0; }.thesis h2, .energy h2, .water h2, .envelope h2, .control h2, .closing h2 { font-size: clamp(2.45rem,11vw,3.85rem); }.thesis p:last-child { margin-top: 1.25rem; font-size: 1rem; line-height: 1.7; }.energy { padding-bottom: 5rem; }.energyMedia :global(.sv-image), .waterMedia :global(.sv-image), .controlMedia :global(.sv-image) { aspect-ratio: 1.08; }.energyCopy { max-width: none; }.number { margin-bottom: 1.6rem; }.water { padding-block: 4.5rem; }.waterMedia { grid-column: auto; grid-row: auto; order: -1; }.waterDetail { width: 100%; }.waterDetail :global(.sv-image) { aspect-ratio: 1.16; }.envelope { padding-block: 5rem; }.envelopeMedia { order: -1; }.envelopeMedia :global(.sv-image) { aspect-ratio: 1.02; }.control { padding-block: 4.5rem; }.closing { padding-block: 4.5rem; }.closingFrame > div:last-child { padding-top: 0; } }
