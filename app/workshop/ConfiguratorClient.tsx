@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   Box,
   ChevronDown,
+  ExternalLink,
+  FileText,
   Hammer,
   Minus,
   Plus,
@@ -22,7 +24,6 @@ import {
   type WorkshopAssetReadinessSummary,
 } from "./_lib/workshop-asset-selection";
 import {
-  buildWorkshopRenderDiagnostics,
   buildWorkshopRenderPlan,
 } from "./_lib/workshop-render-contract";
 
@@ -48,6 +49,22 @@ type WorkshopProduct = {
   meshKey?: string | null;
   materialKey?: string | null;
   technicalSpecs?: Record<string, unknown> | null;
+  shortDescription?: string | null;
+  description?: string | null;
+  datasheetUrl?: string | null;
+  productDocuments?: Array<{
+    type?: string | null;
+    title?: string | null;
+    url: string;
+    note?: string | null;
+    sortOrder?: number | null;
+    status?: string | null;
+  }>;
+  productSpecs?: Array<{
+    specKey: string;
+    specValue: string | number;
+    unit?: string | null;
+  }>;
   categoryId?: string | null;
   categorySlug?: string | null;
   categoryName?: string | null;
@@ -321,6 +338,68 @@ function getModelVariantLabel(model: WorkshopModel) {
   }
 
   return null;
+}
+
+function formatWorkshopSpecLabel(value: string) {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getWorkshopTechnicalRows(product: WorkshopProduct) {
+  const structuredRows = (product.productSpecs ?? [])
+    .map((spec) => ({
+      label: formatWorkshopSpecLabel(spec.specKey),
+      value: `${spec.specValue}${spec.unit ? ` ${spec.unit}` : ""}`,
+    }))
+    .filter((spec) => spec.label && spec.value.trim())
+    .slice(0, 6);
+
+  if (structuredRows.length > 0) {
+    return structuredRows;
+  }
+
+  return Object.entries(product.technicalSpecs ?? {})
+    .map(([key, value]) => {
+      if (
+        typeof value !== "string" &&
+        typeof value !== "number" &&
+        typeof value !== "boolean"
+      ) {
+        return null;
+      }
+
+      return {
+        label: formatWorkshopSpecLabel(key),
+        value: typeof value === "boolean" ? (value ? "Evet" : "Hayır") : String(value),
+      };
+    })
+    .filter((spec): spec is { label: string; value: string } => spec !== null)
+    .slice(0, 6);
+}
+
+function getWorkshopSourceDocument(product: WorkshopProduct) {
+  const documents = product.productDocuments ?? [];
+  const preferredDocument = documents.find((document) =>
+    ["datasheet", "manual", "kılavuz", "technical"].some((term) =>
+      `${document.type ?? ""} ${document.title ?? ""}`.toLowerCase().includes(term),
+    ),
+  );
+
+  if (preferredDocument) {
+    return preferredDocument;
+  }
+
+  if (product.datasheetUrl) {
+    return {
+      title: "Ürün datasheet’i",
+      url: product.datasheetUrl,
+    };
+  }
+
+  return documents[0] ?? null;
 }
 
 function getModelSeriesLabel(model: WorkshopModel) {
@@ -920,6 +999,7 @@ export default function ConfiguratorClient({
   >([]);
   const [hasAiDecisionBundleError, setHasAiDecisionBundleError] = useState(false);
   const [activeVehicleGroupId, setActiveVehicleGroupId] = useState<string | null>(null);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [selectedCameraView] = useState("");
   const [activeVisualLayers, setActiveVisualLayers] = useState<Record<string, boolean>>({});
   const [activeMaterials, setActiveMaterials] = useState<{
@@ -1022,6 +1102,8 @@ export default function ConfiguratorClient({
     let dcdcA = 0;
     let batteryAh = 0;
     let inverterW = 0;
+    let totalPowerSupplyWatts = 0;
+    let totalPowerDrawWatts = 0;
     let mpptA = 0;
     const acdcA = 0;
     const genW = 0;
@@ -1032,6 +1114,8 @@ export default function ConfiguratorClient({
       const text = (product.title || product.name || product.sku || "").toLowerCase();
 
       weight += Number(product.weightKg || 0) * quantity;
+      totalPowerSupplyWatts += Number(product.powerSupplyWatts || 0) * quantity;
+      totalPowerDrawWatts += Number(product.powerDrawWatts || 0) * quantity;
 
       if (/solar|panel|monokristal|polikristal|güneş|pv|-bs-/i.test(text)) {
         solarW += (Number(text.match(/(\d+)\s*w/i)?.[1]) || 0) * quantity;
@@ -1053,7 +1137,18 @@ export default function ConfiguratorClient({
       }
     });
 
-    return { weight, solarW, dcdcA, acdcA, genW, batteryAh, inverterW, mpptA };
+    return {
+      weight,
+      solarW,
+      dcdcA,
+      acdcA,
+      genW,
+      batteryAh,
+      inverterW,
+      mpptA,
+      totalPowerSupplyWatts,
+      totalPowerDrawWatts,
+    };
   }, [cart, activeVehicle]);
 
   const aiInsights = useMemo(() => {
@@ -1229,7 +1324,12 @@ export default function ConfiguratorClient({
     : null;
 
   const payloadReserveKg = Math.max(maxAllowedWeight - stats.weight, 0);
-  const visiblePowerW = stats.solarW > 0 ? stats.solarW : stats.inverterW;
+  const visiblePowerW =
+    stats.solarW > 0
+      ? stats.solarW
+      : stats.totalPowerSupplyWatts > 0
+        ? stats.totalPowerSupplyWatts
+        : stats.inverterW;
   const threeDModelUrl = "/models/skyvan/default-van.glb";
   const cartSummary = useMemo(() => {
     let totalQuantity = 0;
@@ -1347,22 +1447,6 @@ export default function ConfiguratorClient({
       }),
     [activeVehicle?.id, activeWorkshopLayerSelection],
   );
-  const activeWorkshopRenderDiagnostics = useMemo(
-    () => buildWorkshopRenderDiagnostics(activeWorkshopRenderPlan),
-    [activeWorkshopRenderPlan],
-  );
-  const workshopAssetCameraSummary = useMemo(() => {
-    const cameraViews = activeWorkshopLayerSelection.availableCameraViews;
-
-    if (cameraViews.length === 0) {
-      return "Görünüm bekleniyor";
-    }
-
-    const visibleViews = cameraViews.slice(0, 2).join(", ");
-    const remainingCount = cameraViews.length - 2;
-
-    return remainingCount > 0 ? `${visibleViews} +${remainingCount}` : visibleViews;
-  }, [activeWorkshopLayerSelection.availableCameraViews]);
   const totalBudget = cart.reduce(
     (sum, item) => sum + Number(item.product.basePrice || 0) * item.quantity,
     0,
@@ -1473,6 +1557,7 @@ export default function ConfiguratorClient({
 
   const resetBuildState = () => {
     setCart([]);
+    setExpandedProductId(null);
     setIsApproved(false);
     setIsSaving(false);
     setSavedAiDecisionAggregate(null);
@@ -1772,9 +1857,9 @@ export default function ConfiguratorClient({
           </div>
         </div>
       ) : (
-        <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.04),transparent_24%),linear-gradient(180deg,#050505,#020202)] text-white font-sans">
-          <div className="grid h-full grid-rows-[auto_1fr]">
-            <header className="border-b border-white/5 bg-black/65 px-2 py-0.5 backdrop-blur-sm lg:px-2.5">
+        <div className="min-h-dvh bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.04),transparent_24%),linear-gradient(180deg,#050505,#020202)] text-white font-sans">
+          <div className="grid min-h-dvh grid-rows-[auto_1fr]">
+            <header className="sticky top-0 z-30 border-b border-white/5 bg-black/75 px-2 py-0.5 backdrop-blur-sm lg:px-2.5">
               <div className="flex h-7 items-center gap-1.5">
                 <button
                   onClick={() => {
@@ -1810,9 +1895,9 @@ export default function ConfiguratorClient({
               </div>
             </header>
 
-            <main className="min-h-0 overflow-hidden p-2 pt-1 lg:p-2 lg:pt-1.5">
-              <div className="grid h-full grid-cols-[340px_minmax(0,1fr)] gap-2">
-                <aside className="min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(20,20,23,0.97),rgba(8,8,9,0.995))]">
+            <main className="min-h-0 overflow-visible p-2 pt-1 lg:min-h-[calc(100dvh-2.5rem)] lg:p-2 lg:pt-1.5">
+              <div className="grid min-h-0 grid-cols-1 gap-2 lg:min-h-[calc(100dvh-2.5rem)] lg:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)]">
+                <aside className="max-h-[32rem] min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(20,20,23,0.97),rgba(8,8,9,0.995))] lg:max-h-none">
                   <div className="border-b border-white/6 px-3 py-2">
                     <h2 className="text-[10px] font-medium tracking-[0.18em] text-zinc-500">
                       Malzemeler
@@ -1822,7 +1907,7 @@ export default function ConfiguratorClient({
                     </p>
                   </div>
 
-                  <div className="h-[calc(100%-57px)] overflow-y-auto px-1.5 py-1.5 custom-scrollbar">
+                  <div className="max-h-[calc(32rem-57px)] overflow-y-auto px-1.5 py-1.5 custom-scrollbar lg:h-[calc(100%-57px)] lg:max-h-none">
                     <div className="space-y-2 pb-1">
                       {groupedProducts.map((category) => (
                         <section
@@ -1887,6 +1972,18 @@ export default function ConfiguratorClient({
                                       : productAiDecision?.status === "ready"
                                         ? "bg-green-400"
                                         : null;
+                                const isProductExpanded = expandedProductId === product.id;
+                                const technicalRows = getWorkshopTechnicalRows(product);
+                                const sourceDocument = getWorkshopSourceDocument(product);
+                                const hasTechnicalRecord = technicalRows.length > 0;
+                                const hasSourceDocument = Boolean(sourceDocument);
+                                const evidenceLabel = hasSourceDocument
+                                  ? hasTechnicalRecord
+                                    ? "Kaynak + teknik"
+                                    : "Datasheet bağlı"
+                                  : hasTechnicalRecord
+                                    ? "Teknik kayıt"
+                                    : "Veri bekleniyor";
 
                                 return (
                                   <div
@@ -1954,7 +2051,114 @@ export default function ConfiguratorClient({
                                         <Zap className="h-3 w-3 text-amber-500" />
                                         {Number(product.basePrice || 0).toLocaleString("tr-TR")} ₺
                                       </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setExpandedProductId((current) =>
+                                            current === product.id ? null : product.id,
+                                          )
+                                        }
+                                        aria-expanded={isProductExpanded}
+                                        className="ml-auto inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.025] px-2 py-1 text-[9px] font-medium text-zinc-300 transition-colors hover:border-white/15 hover:bg-white/[0.06] hover:text-white"
+                                      >
+                                        Teknik detay
+                                        <ChevronDown
+                                          className={`h-3 w-3 transition-transform ${
+                                            isProductExpanded ? "rotate-180" : ""
+                                          }`}
+                                        />
+                                      </button>
                                     </div>
+
+                                    {isProductExpanded ? (
+                                      <div className="mt-2.5 rounded-[0.8rem] border border-white/8 bg-black/25 p-2.5">
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="min-w-0">
+                                            <p className="text-[9px] font-medium tracking-[0.12em] text-zinc-500">
+                                              TEKNİK KAYIT
+                                            </p>
+                                            <p className="mt-1 text-[11px] leading-relaxed text-zinc-300">
+                                              {product.shortDescription ||
+                                                product.description ||
+                                                "Ürün için açıklama kaydı bekleniyor."}
+                                            </p>
+                                          </div>
+                                          <span
+                                            className={`shrink-0 rounded-full border px-2 py-1 text-[8px] font-medium ${
+                                              hasSourceDocument || hasTechnicalRecord
+                                                ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-200"
+                                                : "border-amber-400/20 bg-amber-400/[0.06] text-amber-200"
+                                            }`}
+                                          >
+                                            {evidenceLabel}
+                                          </span>
+                                        </div>
+
+                                        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                                          <div className="rounded-[0.55rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                            <span className="block text-[8px] uppercase tracking-[0.1em] text-zinc-600">
+                                              Kütle
+                                            </span>
+                                            <strong className="mt-1 block text-[11px] font-medium text-zinc-200">
+                                              {product.weightKg || "—"} KG
+                                            </strong>
+                                          </div>
+                                          <div className="rounded-[0.55rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                            <span className="block text-[8px] uppercase tracking-[0.1em] text-zinc-600">
+                                              Güç çekişi
+                                            </span>
+                                            <strong className="mt-1 block text-[11px] font-medium text-zinc-200">
+                                              {product.powerDrawWatts || "—"} W
+                                            </strong>
+                                          </div>
+                                          <div className="rounded-[0.55rem] border border-white/6 bg-white/[0.025] px-2 py-1.5">
+                                            <span className="block text-[8px] uppercase tracking-[0.1em] text-zinc-600">
+                                              Güç kapasitesi
+                                            </span>
+                                            <strong className="mt-1 block text-[11px] font-medium text-zinc-200">
+                                              {product.powerSupplyWatts || "—"} W
+                                            </strong>
+                                          </div>
+                                        </div>
+
+                                        {technicalRows.length > 0 ? (
+                                          <dl className="mt-2 grid grid-cols-1 gap-x-3 gap-y-1 border-t border-white/6 pt-2 sm:grid-cols-2">
+                                            {technicalRows.map((spec) => (
+                                              <div
+                                                key={`${product.id}-${spec.label}`}
+                                                className="flex min-w-0 items-baseline justify-between gap-2 text-[10px]"
+                                              >
+                                                <dt className="truncate text-zinc-500">{spec.label}</dt>
+                                                <dd className="truncate text-right text-zinc-200">
+                                                  {spec.value}
+                                                </dd>
+                                              </div>
+                                            ))}
+                                          </dl>
+                                        ) : null}
+
+                                        <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/6 pt-2 text-[9px]">
+                                          <span className="inline-flex min-w-0 items-center gap-1.5 text-zinc-500">
+                                            <FileText className="h-3 w-3 shrink-0 text-zinc-600" />
+                                            <span className="truncate">
+                                              {sourceDocument?.title ||
+                                                "Datasheet / kılavuz kaydı bekleniyor"}
+                                            </span>
+                                          </span>
+                                          {sourceDocument ? (
+                                            <a
+                                              href={sourceDocument.url}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/8 px-2 py-1 text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                                            >
+                                              Aç
+                                              <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 );
                               })}
@@ -1966,7 +2170,7 @@ export default function ConfiguratorClient({
                   </div>
                 </aside>
 
-                <section className="grid min-h-0 grid-rows-[1fr_176px] gap-2">
+                <section className="grid min-h-0 grid-rows-[minmax(32rem,1fr)_auto] gap-2">
                   <section className="min-h-0 overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
                     <div className="flex h-full flex-col">
                       <div className="border-b border-white/6 px-4 py-1.5">
@@ -2005,106 +2209,12 @@ export default function ConfiguratorClient({
                         >
                           {is3dFallbackActive ? "2.5D Fallback" : "3D Preview"}
                         </div>
-                        <div className="absolute right-5 top-14 z-10 max-w-[24rem] rounded-[0.75rem] border border-white/8 bg-black/35 px-2.5 py-1.5 backdrop-blur-sm">
-                          <div className="flex items-center gap-1.5 overflow-hidden">
-                            <span className="shrink-0 text-[8px] font-medium tracking-[0.14em] text-blue-200">
-                              Renderer sözleşmesi
-                            </span>
-                            <span className="min-w-0 truncate text-[8px] text-zinc-400">
-                              {activeWorkshopRenderPlan.statusLabel}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Render katmanı: {activeWorkshopRenderPlan.imageLayerCount}
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Referans: {activeWorkshopRenderPlan.nonRenderableReferenceCount}
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Eksik ürün: {activeWorkshopRenderPlan.missingProductIds.length}
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-500">
-                              Gerçek 2.5D çizim sonraki sprintte.
-                            </span>
-                          </div>
-                          <details className="group mt-1">
-                            <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-white/6 bg-white/[0.04] px-1.5 py-0.5 text-[7px] text-zinc-300 transition hover:text-white [&::-webkit-details-marker]:hidden">
-                              Plan detayı
-                            </summary>
-                            <div className="mt-1.5 max-w-[24rem] rounded-[0.65rem] border border-white/8 bg-black/45 p-2 text-[7px] text-zinc-400 shadow-[0_14px_38px_rgba(0,0,0,0.28)]">
-                              <div className="grid grid-cols-2 gap-1">
-                                <span>Durum: {activeWorkshopRenderDiagnostics.statusLabel}</span>
-                                <span>Model: {activeWorkshopRenderPlan.modelId ? "Seçili" : "Bekliyor"}</span>
-                                <span>Kamera: {activeWorkshopRenderDiagnostics.cameraView}</span>
-                                <span>
-                                  Önizleme:{" "}
-                                  {activeWorkshopRenderDiagnostics.canRenderPreviewLabel}
-                                </span>
-                                <span>
-                                  Image katman:{" "}
-                                  {activeWorkshopRenderDiagnostics.modeCounts["image-layer"]}
-                                </span>
-                                <span>
-                                  GLB referans:{" "}
-                                  {
-                                    activeWorkshopRenderDiagnostics.modeCounts[
-                                      "model3d-reference"
-                                    ]
-                                  }
-                                </span>
-                                <span>
-                                  Video referans:{" "}
-                                  {
-                                    activeWorkshopRenderDiagnostics.modeCounts[
-                                      "video-reference"
-                                    ]
-                                  }
-                                </span>
-                                <span>
-                                  Link referans:{" "}
-                                  {activeWorkshopRenderDiagnostics.modeCounts["link-reference"]}
-                                </span>
-                                <span>Katman: {activeWorkshopRenderDiagnostics.layerCount}</span>
-                                <span>
-                                  Eksik ürün:{" "}
-                                  {activeWorkshopRenderDiagnostics.missingProductCount}
-                                </span>
-                                <span>
-                                  Eksik kayıt:{" "}
-                                  {activeWorkshopRenderDiagnostics.incompleteLayerCount}
-                                </span>
-                                <span>
-                                  Tekrar: {activeWorkshopRenderDiagnostics.duplicateLayerCount}
-                                </span>
-                              </div>
-                              <p className="mt-1 truncate text-zinc-500">
-                                {activeWorkshopRenderDiagnostics.note}
-                              </p>
-                              {activeWorkshopRenderDiagnostics.layerSummaries.length > 0 ? (
-                                <div className="mt-1 space-y-0.5 border-t border-white/6 pt-1">
-                                  {activeWorkshopRenderDiagnostics.layerSummaries.map(
-                                    (layer) => (
-                                      <div
-                                        key={`${layer.zIndexLayer}:${layer.renderMode}:${layer.cameraView}`}
-                                        className="flex items-center justify-between gap-2"
-                                      >
-                                        <span>Katman {layer.zIndexLayer}</span>
-                                        <span className="truncate">{layer.renderModeLabel}</span>
-                                        <span className="truncate">{layer.cameraView}</span>
-                                      </div>
-                                    ),
-                                  )}
-                                  {activeWorkshopRenderDiagnostics.extraLayerCount > 0 ? (
-                                    <p className="text-zinc-500">
-                                      +{activeWorkshopRenderDiagnostics.extraLayerCount} katman
-                                      daha
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          </details>
+                        <div className="absolute right-5 top-14 z-10 rounded-full border border-white/8 bg-black/35 px-3 py-1.5 text-[9px] font-medium tracking-[0.1em] text-zinc-300 backdrop-blur-sm">
+                          {activeWorkshopRenderPlan.canRenderPreview
+                            ? "Görsel katman hazır"
+                            : activeWorkshopRenderPlan.imageLayerCount > 0
+                              ? "Görsel katman hazırlanıyor"
+                              : "Temel önizleme"}
                         </div>
                         <div className="absolute inset-x-5 bottom-5 z-10 flex flex-wrap gap-2">
                           {selectedLayout.tags.map((tag) => (
@@ -2195,36 +2305,22 @@ export default function ConfiguratorClient({
                   <section className="overflow-hidden rounded-[1.1rem] border border-white/6 bg-[linear-gradient(180deg,rgba(18,18,20,0.96),rgba(8,8,9,0.99))]">
                     <div className="flex h-full flex-col">
                       {activeWorkshopAssetReadiness ? (
-                        <div className="flex h-7 shrink-0 items-center gap-2 border-b border-blue-400/10 bg-blue-500/[0.035] px-4">
+                        <div className="flex min-h-8 shrink-0 items-center gap-2 border-b border-blue-400/10 bg-blue-500/[0.035] px-4 py-1.5">
                           <span className="shrink-0 text-[8px] font-medium tracking-[0.16em] text-blue-200">
                             Görsel durum
                           </span>
                           <span className="min-w-0 flex-1 truncate text-[8px] text-zinc-400">
                             {activeWorkshopLayerSelection.readinessLabel}
                           </span>
-                          <div className="flex shrink-0 items-center gap-1 overflow-hidden">
-                            <span className="rounded-full border border-blue-300/15 bg-black/18 px-1.5 py-0.5 text-[7px] text-blue-100">
-                              {activeWorkshopAssetReadiness.totalAssets} varlık
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Katman: {activeWorkshopLayerSelection.selectedLayerCount}
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Eksik: {activeWorkshopLayerSelection.missingProductIds.length}
-                            </span>
-                            <span className="max-w-[9rem] truncate rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-400">
-                              Kamera:{" "}
-                              {activeWorkshopLayerSelection.cameraView ||
-                                workshopAssetCameraSummary}
-                            </span>
-                            <span className="rounded-full border border-white/6 bg-black/18 px-1.5 py-0.5 text-[7px] text-zinc-500">
-                              2.5D sonraki sprint
-                            </span>
-                          </div>
+                          <span className="shrink-0 rounded-full border border-white/6 bg-black/18 px-2 py-1 text-[8px] text-zinc-400">
+                            {activeWorkshopLayerSelection.canRenderPreview
+                              ? "Hazır"
+                              : "Kontrol ediliyor"}
+                          </span>
                         </div>
                       ) : null}
 
-                      <div className="flex min-h-0 flex-1 items-center justify-between gap-4 px-4">
+                      <div className="flex min-h-0 flex-1 flex-col items-stretch justify-between gap-4 px-4 py-3 lg:flex-row lg:items-center lg:py-0">
                         <div className="min-w-0 flex-1">
                         <div className="mb-2 flex items-center gap-2">
                           <span className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
@@ -2295,7 +2391,7 @@ export default function ConfiguratorClient({
                         </div>
                       </div>
 
-                        <div className="flex h-full w-[336px] shrink-0 flex-col items-end justify-between gap-2 border-l border-white/6 py-2 pl-4">
+                        <div className="flex h-full w-full shrink-0 flex-col items-stretch justify-between gap-2 border-l-0 border-white/6 py-2 pl-0 lg:w-[336px] lg:items-end lg:border-l lg:pl-4">
                           <div className="w-full">
                           <p className="text-[9px] font-medium tracking-[0.24em] text-zinc-500">
                             Bütçe
@@ -2344,11 +2440,11 @@ export default function ConfiguratorClient({
                           ) : null}
                         </div>
 
-                        <div className="flex w-full justify-end">
+                        <div className="flex w-full justify-end lg:w-auto">
                           <button
                             disabled={hasCriticalError || isSaving}
                             onClick={handleSaveProject}
-                            className={`min-w-[164px] rounded-[0.82rem] border px-5 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
+                            className={`w-full min-w-[164px] rounded-[0.82rem] border px-5 py-2.5 text-[11px] font-semibold transition-all duration-200 lg:w-auto ${
                               hasCriticalError
                                 ? "cursor-not-allowed border-red-900 bg-red-950/35 text-red-500"
                                 : isApproved

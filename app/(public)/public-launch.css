@@ -2751,3 +2751,244 @@
     width: 50vw;
   }
 }
+
+/* Atölye: one restrained product-story language. The public page explains the
+   decision model; it does not imitate the internal configurator or display
+   renderer diagnostics as if they were customer-facing content. */
+.sv-public .sv-workshop-story-hero-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .8rem;
+  align-items: start;
+  max-width: 31rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--public-border);
+}
+.sv-public .sv-workshop-story-hero-note > span {
+  color: var(--workshop-accent);
+  font-size: .58rem;
+  letter-spacing: .14em;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+.sv-public .sv-workshop-story-hero-note p {
+  margin: 0;
+  font-size: .84rem;
+  line-height: 1.6;
+}
+.sv-public .sv-workshop-hero-panel,
+.sv-public .sv-workshop-context-card,
+.sv-public .sv-workshop-evidence,
+.sv-public .sv-workshop-layer-visual,
+.sv-public .sv-workshop-validation-visual-clean,
+.sv-public .sv-workshop-review-visual {
+  border: 1px solid var(--public-border-strong);
+  border-radius: 18px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--public-surface-strong) 88%, transparent), var(--public-bg-soft));
+  box-shadow: 0 1.5rem 4rem color-mix(in srgb, var(--public-text) 7%, transparent);
+}
+.sv-public .sv-workshop-hero-panel {
+  position: relative;
+  width: min(100%, 37rem);
+  justify-self: end;
+  padding: 1.15rem 1.25rem 1.25rem;
+  overflow: hidden;
+}
+.sv-public .sv-workshop-hero-panel::after {
+  content: "";
+  position: absolute;
+  right: -5rem;
+  bottom: -7rem;
+  width: 17rem;
+  height: 17rem;
+  border: 1px solid color-mix(in srgb, var(--workshop-line) 45%, transparent);
+  border-radius: 50%;
+  opacity: .65;
+}
+.sv-public .sv-workshop-panel-topline,
+.sv-public .sv-workshop-card-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--public-muted);
+  font-size: .56rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.sv-public .sv-workshop-panel-topline span:first-child,
+.sv-public .sv-workshop-card-topline span:first-child { color: var(--workshop-accent); }
+.sv-public .sv-workshop-panel-intro {
+  display: grid;
+  gap: .65rem;
+  max-width: 25rem;
+  margin-top: 3.5rem;
+}
+.sv-public .sv-workshop-panel-intro span {
+  color: var(--public-muted);
+  font-size: .57rem;
+  letter-spacing: .16em;
+}
+.sv-public .sv-workshop-panel-intro strong {
+  color: var(--public-text);
+  font-size: clamp(1.45rem, 3vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+}
+.sv-public .sv-workshop-panel-stages {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0;
+  margin: 2.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--public-border);
+}
+.sv-public .sv-workshop-panel-stages li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: .85rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--public-border);
+}
+.sv-public .sv-workshop-panel-stages li > span,
+.sv-public .sv-workshop-layer-number,
+.sv-public .sv-workshop-review-grid article > span {
+  color: var(--workshop-accent);
+  font-size: .58rem;
+  letter-spacing: .14em;
+}
+.sv-public .sv-workshop-panel-stages strong {
+  display: block;
+  color: var(--public-text);
+  font-size: .82rem;
+  font-weight: 550;
+  line-height: 1.35;
+}
+.sv-public .sv-workshop-panel-stages small {
+  display: block;
+  margin-top: .3rem;
+  color: var(--public-muted);
+  font-size: .69rem;
+  line-height: 1.45;
+}
+.sv-public .sv-workshop-panel-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.1rem;
+  color: var(--public-muted);
+  font-size: .54rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.sv-public .sv-workshop-hero-panel figcaption { margin-top: .85rem; color: var(--public-muted); font-size: .68rem; }
+.sv-public .sv-workshop-context-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--public-border);
+  background: var(--public-border);
+}
+.sv-public .sv-workshop-context-card { min-width: 0; padding: clamp(1.25rem, 2.5vw, 2rem); border: 0; border-radius: 0; box-shadow: none; }
+.sv-public .sv-workshop-context-card + .sv-workshop-context-card { background: color-mix(in srgb, var(--public-surface) 68%, var(--public-bg)); }
+.sv-public .sv-workshop-context-card h3 { max-width: 17ch; margin-top: 2.3rem; font-size: clamp(1.2rem, 2.3vw, 1.8rem); }
+.sv-public .sv-workshop-context-card p { max-width: 34rem; margin-top: 1rem; font-size: .87rem; line-height: 1.7; }
+.sv-public .sv-workshop-context-card ul { display: grid; gap: .65rem; margin: 1.6rem 0 0; padding: 1rem 0 0; list-style: none; border-top: 1px solid var(--public-border); }
+.sv-public .sv-workshop-context-card li { display: flex; align-items: flex-start; gap: .55rem; color: var(--public-muted); font-size: .75rem; line-height: 1.45; }
+.sv-public .sv-workshop-context-card li > span { flex: none; width: .35rem; height: .35rem; margin-top: .32rem; border-radius: 50%; background: var(--workshop-line); }
+.sv-public .sv-workshop-clean-dual { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr); align-items: center; gap: clamp(2rem, 7vw, 8rem); }
+.sv-public .sv-workshop-clean-dual-reverse .sv-workshop-story-copy { order: 2; }
+.sv-public .sv-workshop-clean-dual-reverse > :last-child { order: 1; }
+.sv-public .sv-workshop-inline-points { display: grid; gap: .8rem; margin: 1.5rem 0 0; padding: 1.1rem 0 0; list-style: none; border-top: 1px solid var(--public-border); }
+.sv-public .sv-workshop-inline-points li { display: grid; grid-template-columns: 1rem minmax(0, 1fr); gap: .65rem; color: var(--public-muted); font-size: .8rem; line-height: 1.55; }
+.sv-public .sv-workshop-inline-points svg { margin-top: .2rem; color: var(--workshop-accent); }
+.sv-public .sv-workshop-evidence,
+.sv-public .sv-workshop-layer-visual,
+.sv-public .sv-workshop-review-visual { padding: 1.15rem 1.25rem 1.25rem; }
+.sv-public .sv-workshop-evidence-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 2rem; }
+.sv-public .sv-workshop-evidence-heading > div { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.sv-public .sv-workshop-evidence-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.45rem; height: 2.45rem; flex: none; border: 1px solid var(--workshop-line); border-radius: .7rem; color: var(--workshop-accent); background: var(--workshop-accent-soft); }
+.sv-public .sv-workshop-evidence-heading small { display: block; color: var(--public-muted); font-size: .55rem; letter-spacing: .14em; }
+.sv-public .sv-workshop-evidence-heading strong { display: block; margin-top: .25rem; color: var(--public-text); font-size: 1rem; font-weight: 550; }
+.sv-public .sv-workshop-evidence-status { display: inline-flex; align-items: center; gap: .35rem; flex: none; color: var(--workshop-accent); font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; }
+.sv-public .sv-workshop-evidence-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin-top: 1.7rem; border: 1px solid var(--public-border); background: var(--public-border); }
+.sv-public .sv-workshop-evidence-fields > div { min-width: 0; min-height: 5.5rem; padding: .9rem; background: var(--public-bg-soft); }
+.sv-public .sv-workshop-evidence-fields span { color: var(--workshop-accent); font-size: .56rem; letter-spacing: .12em; }
+.sv-public .sv-workshop-evidence-fields strong { display: block; margin-top: .8rem; color: var(--public-text); font-size: .76rem; font-weight: 550; line-height: 1.35; }
+.sv-public .sv-workshop-evidence-fields small { display: block; margin-top: .28rem; color: var(--public-muted); font-size: .61rem; }
+.sv-public .sv-workshop-evidence-footer { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; color: var(--public-muted); font-size: .7rem; line-height: 1.45; }
+.sv-public .sv-workshop-evidence-footer svg { flex: none; color: var(--workshop-accent); }
+.sv-public .sv-workshop-layer-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin-top: 1.7rem; border: 1px solid var(--public-border); background: var(--public-border); }
+.sv-public .sv-workshop-layer-column { min-width: 0; min-height: 18rem; padding: 1.1rem; background: var(--public-bg-soft); }
+.sv-public .sv-workshop-layer-column-technical { background: color-mix(in srgb, var(--public-surface) 70%, var(--public-bg)); }
+.sv-public .sv-workshop-layer-column h3 { margin-top: 2.3rem; font-size: 1rem; }
+.sv-public .sv-workshop-layer-column p { margin-top: .65rem; font-size: .76rem; line-height: 1.55; }
+.sv-public .sv-workshop-layer-column ul { display: grid; gap: .7rem; margin: 1.5rem 0 0; padding: 1rem 0 0; list-style: none; border-top: 1px solid var(--public-border); }
+.sv-public .sv-workshop-layer-column li { display: flex; align-items: flex-start; gap: .5rem; color: var(--public-muted); font-size: .7rem; line-height: 1.4; }
+.sv-public .sv-workshop-layer-column li svg { flex: none; margin-top: .1rem; color: var(--workshop-accent); }
+.sv-public .sv-workshop-layer-separator { display: flex; justify-content: center; margin-top: 1rem; }
+.sv-public .sv-workshop-layer-separator span { padding: .35rem .7rem; border: 1px solid var(--workshop-line); border-radius: 999px; color: var(--workshop-accent); font-size: .55rem; letter-spacing: .14em; text-transform: uppercase; }
+.sv-public .sv-workshop-validation-clean-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(16rem, .88fr); align-items: start; gap: clamp(1.5rem, 5vw, 5rem); }
+.sv-public .sv-workshop-validation-visual-clean { padding: 1.15rem 1.25rem; }
+.sv-public .sv-workshop-validation-visual-clean ol { display: grid; gap: 0; margin: 1.8rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--public-border); }
+.sv-public .sv-workshop-validation-visual-clean li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: center; gap: .7rem; padding: 1rem 0; border-bottom: 1px solid var(--public-border); }
+.sv-public .sv-workshop-validation-visual-clean li > span { color: var(--workshop-accent); font-size: .58rem; letter-spacing: .14em; }
+.sv-public .sv-workshop-validation-visual-clean li strong { color: var(--public-text); font-size: .78rem; font-weight: 500; line-height: 1.4; }
+.sv-public .sv-workshop-validation-visual-clean li small { color: var(--public-muted); font-size: .6rem; white-space: nowrap; }
+.sv-public .sv-workshop-validation-list-clean { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--public-border); }
+.sv-public .sv-workshop-validation-list-clean li { padding: 1rem 0 1rem 1rem; border-bottom: 1px solid var(--public-border); color: var(--public-muted); font-size: .8rem; line-height: 1.58; }
+.sv-public .sv-workshop-validation-list-clean li::before { content: ""; display: inline-block; width: .32rem; height: .32rem; margin: 0 .7rem .12rem 0; border-radius: 50%; background: var(--workshop-accent); }
+.sv-public .sv-workshop-review-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 1.7rem; border: 1px solid var(--public-border); background: var(--public-border); }
+.sv-public .sv-workshop-review-grid article { min-height: 9rem; padding: 1.15rem; background: var(--public-bg-soft); }
+.sv-public .sv-workshop-review-grid article:nth-child(2) { background: color-mix(in srgb, var(--public-surface) 70%, var(--public-bg)); }
+.sv-public .sv-workshop-review-grid h3 { margin-top: 1.6rem; font-size: .94rem; }
+.sv-public .sv-workshop-review-grid p { margin-top: .55rem; font-size: .76rem; line-height: 1.55; }
+.sv-public .sv-workshop-review-note,
+.sv-public .sv-workshop-progress-note { max-width: 44rem; margin-top: 1rem; font-size: .8rem; line-height: 1.65; }
+.sv-public .sv-workshop-progress-note { padding-top: 1rem; border-top: 1px solid var(--public-border); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sv-public .sv-workshop-hero-panel,
+  .sv-public .sv-workshop-context-card,
+  .sv-public .sv-workshop-evidence,
+  .sv-public .sv-workshop-layer-visual,
+  .sv-public .sv-workshop-validation-visual-clean,
+  .sv-public .sv-workshop-review-visual { transition: transform .45s cubic-bezier(.2, .7, .2, 1), border-color .35s ease, box-shadow .45s ease; }
+  .sv-public .sv-workshop-hero-panel:hover,
+  .sv-public .sv-workshop-context-card:hover,
+  .sv-public .sv-workshop-evidence:hover,
+  .sv-public .sv-workshop-layer-visual:hover,
+  .sv-public .sv-workshop-validation-visual-clean:hover,
+  .sv-public .sv-workshop-review-visual:hover { transform: translateY(-3px); border-color: var(--workshop-line); box-shadow: 0 1.8rem 4rem color-mix(in srgb, var(--public-text) 11%, transparent); }
+}
+
+@media (max-width: 1023px) {
+  .sv-public .sv-workshop-clean-dual { grid-template-columns: minmax(0, 1fr); gap: 3rem; }
+  .sv-public .sv-workshop-clean-dual-reverse .sv-workshop-story-copy,
+  .sv-public .sv-workshop-clean-dual-reverse > :last-child { order: initial; }
+  .sv-public .sv-workshop-validation-clean-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .sv-public .sv-workshop-story-hero-note { grid-template-columns: minmax(0, 1fr); gap: .45rem; }
+  .sv-public .sv-workshop-hero-panel { width: 100%; padding: 1rem; }
+  .sv-public .sv-workshop-panel-intro { margin-top: 2.5rem; }
+  .sv-public .sv-workshop-panel-stages { margin-top: 2rem; }
+  .sv-public .sv-workshop-context-cards,
+  .sv-public .sv-workshop-layer-columns,
+  .sv-public .sv-workshop-review-grid { grid-template-columns: minmax(0, 1fr); }
+  .sv-public .sv-workshop-context-card + .sv-workshop-context-card { border-top: 1px solid var(--public-border); }
+  .sv-public .sv-workshop-layer-column { min-height: 0; }
+  .sv-public .sv-workshop-layer-separator { justify-content: flex-start; }
+  .sv-public .sv-workshop-evidence-fields { grid-template-columns: minmax(0, 1fr); }
+  .sv-public .sv-workshop-validation-visual-clean li { grid-template-columns: 1.8rem minmax(0, 1fr); }
+  .sv-public .sv-workshop-validation-visual-clean li small { grid-column: 2; }
+}

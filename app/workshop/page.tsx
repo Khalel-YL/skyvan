@@ -1,7 +1,7 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { getDbOrThrow } from "@/db/db";
-import { categories, models, products } from "@/db/schema";
+import { categories, models, productDocuments, productSpecs, products } from "@/db/schema";
 import ConfiguratorClient from "@/app/workshop/ConfiguratorClient";
 import { getLayerFromCategory } from "@/app/workshop/focusTargets";
 import {
@@ -49,6 +49,11 @@ export default async function DesignPage() {
       meshKey: products.meshKey,
       materialKey: products.materialKey,
       technicalSpecs: products.technicalSpecs,
+      shortDescription: products.shortDescription,
+      description: products.description,
+      powerDrawWatts: products.powerDrawWatts,
+      powerSupplyWatts: products.powerSupplyWatts,
+      datasheetUrl: products.datasheetUrl,
       categoryId: products.categoryId,
       categorySlug: categories.slug,
       categoryName: categories.name,
@@ -61,8 +66,56 @@ export default async function DesignPage() {
         ne(products.workshopVisibility, "ai_package_only"),
       ),
     );
+  const productIds = dbProductRows.map((product) => product.id);
+  const documentRows = productIds.length
+    ? await db
+        .select({
+          productId: productDocuments.productId,
+          type: productDocuments.type,
+          title: productDocuments.title,
+          url: productDocuments.url,
+          note: productDocuments.note,
+          sortOrder: productDocuments.sortOrder,
+          status: productDocuments.status,
+        })
+        .from(productDocuments)
+        .where(
+          and(
+            inArray(productDocuments.productId, productIds),
+            eq(productDocuments.status, "active"),
+          ),
+        )
+    : [];
+  const specRows = productIds.length
+    ? await db
+        .select({
+          productId: productSpecs.productId,
+          specKey: productSpecs.specKey,
+          specValue: productSpecs.specValue,
+          unit: productSpecs.unit,
+        })
+        .from(productSpecs)
+        .where(inArray(productSpecs.productId, productIds))
+    : [];
+  const documentsByProductId = new Map<string, typeof documentRows>();
+  const specsByProductId = new Map<string, typeof specRows>();
+
+  documentRows.forEach((document) => {
+    const current = documentsByProductId.get(document.productId) ?? [];
+    current.push(document);
+    documentsByProductId.set(document.productId, current);
+  });
+
+  specRows.forEach((spec) => {
+    const current = specsByProductId.get(spec.productId) ?? [];
+    current.push(spec);
+    specsByProductId.set(spec.productId, current);
+  });
+
   const dbProducts = dbProductRows.map((product) => ({
     ...product,
+    productDocuments: documentsByProductId.get(product.id) ?? [],
+    productSpecs: specsByProductId.get(product.id) ?? [],
     targetLayer: product.targetLayer ?? getLayerFromCategory(product.categorySlug),
   }));
 
