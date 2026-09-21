@@ -131,7 +131,7 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
             <Link className="sv-text-link" href={getLocalizedPath(page.locale, "karavan-deneyimi")}>{ui.livingCta}<ArrowUpRight size={17} aria-hidden="true" /></Link>
           </div>
           <figure className={styles.livingMedia}>
-            <PublicConceptMedia name="lounge-day" alt={publicLaunchAssets["lounge-day"].alt[page.locale]} sizes="(max-width: 900px) 100vw, 58vw" />
+            <PublicConceptMedia name="lounge-table" alt={publicLaunchAssets["lounge-table"].alt[page.locale]} sizes="(max-width: 900px) 100vw, 58vw" />
             <figcaption><span>{ui.livingCaption}</span><span>01 / 03</span></figcaption>
           </figure>
         </section>
