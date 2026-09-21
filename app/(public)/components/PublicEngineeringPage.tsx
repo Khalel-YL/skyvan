@@ -116,6 +116,26 @@ function ConceptCaption({ text }: { text: string }) {
   return <figcaption className={styles.conceptCaption}>{text}</figcaption>;
 }
 
+function EngineeringStatus({ locale }: { locale: PublicPageContent["locale"] }) {
+  const content = locale === "tr"
+    ? {
+      label: "Konsept / proje verisiyle doğrulanır",
+      title: "Şemalar yaklaşımı açıklar; ölçülü yerleşim değildir.",
+      body: "Araç modeli, gerçek ürün datasheet’i, kütle, enerji ve servis ölçüleri seçilmeden uygunluk sonucu üretilmez.",
+    }
+    : {
+      label: "Concept / verified with project data",
+      title: "The studies explain the approach; they are not scaled layouts.",
+      body: "No compatibility result is produced before the vehicle, real product datasheets, mass, energy and service dimensions are selected.",
+    };
+
+  return <aside className="sv-editorial-technical-status" role="note">
+    <span>{content.label}</span>
+    <strong>{content.title}</strong>
+    <p>{content.body}</p>
+  </aside>;
+}
+
 export function PublicEngineeringPage({ page }: { page: PublicPageContent }): React.JSX.Element {
   const locale = page.locale;
   const text = copy[locale];
@@ -139,6 +159,7 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
             <p className="sv-eyebrow">{text.eyebrow}</p>
             <h1 id="engineering-title">{title}</h1>
             <p>{body}</p>
+            <EngineeringStatus locale={locale} />
           </div>
           <div className={styles.heroMeta}>
             <span>01 / 05</span>
@@ -263,8 +284,3 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
             </Link>
           </div>
         </div>
-        <p className={`sv-container ${styles.disclaimer}`}>{conceptNote}</p>
-      </section>
-    </main>
-  );
-}
