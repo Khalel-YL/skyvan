@@ -284,3 +284,8 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
             </Link>
           </div>
         </div>
+        <p className={`sv-container ${styles.disclaimer}`}>{conceptNote}</p>
+      </section>
+    </main>
+  );
+}
