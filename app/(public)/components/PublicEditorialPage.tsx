@@ -34,6 +34,7 @@ import { PublicProjectAction } from "./PublicProjectAction";
 import { PublicTechnicalDiagram, type PublicTechnicalDiagramKind } from "./PublicTechnicalDiagram";
 import { PublicEngineeringVisualRail, type EngineeringVisualCard } from "./PublicEngineeringVisual";
 import { PublicMotion } from "./PublicMotion";
+import { PublicWorkshopStory } from "./PublicWorkshopStory";
 
 type Visual = { asset: PublicLaunchAssetId; className?: string };
 
@@ -64,19 +65,6 @@ const sectionVisuals: Partial<Record<CuratedPublicSlug, Record<string, Visual>>>
     "water-service": { asset: "water-clean-service" },
     controls: { asset: "electrical-cabinet" },
   },
-  workshop: {
-    // Workshop is a visual journey as well as a written explanation. Keep
-    // each stage tied to one specific concept asset so a single isolated
-    // image does not make the remaining stages feel unfinished.
-    "vehicle-selection": { asset: "exterior-dark" },
-    "project-foundation": { asset: "interior-first-view" },
-    "category-choices": { asset: "kitchen-transition" },
-    "visible-preview": { asset: "lounge-table" },
-    "preview-boundary": { asset: "alcove-layers", className: "sv-image-contain" },
-    "technical-validation": { asset: "roof-equipment", className: "sv-image-contain" },
-    "project-sealing": { asset: "electrical-rear-service", className: "sv-image-contain" },
-    "progress-visibility": { asset: "control-centre", className: "sv-image-contain" },
-  },
   "nasil-calisir": {
     layout: { asset: "ufuk-day", className: "sv-image-contain" },
   },
@@ -92,11 +80,6 @@ const technicalDiagramBySection: Partial<Record<CuratedPublicSlug, Record<string
     "electrical-service": "solar-electrical",
     "water-service": "water-service",
     controls: "service-access",
-  },
-  workshop: {
-    "category-choices": "load-aero",
-    "technical-validation": "solar-electrical",
-    "project-sealing": "service-access",
   },
 };
 
@@ -195,7 +178,6 @@ const heroAssets: Partial<Record<CuratedPublicSlug, PublicLaunchAssetId>> = {
   hakkimizda: "lounge",
   "karavan-deneyimi": "lounge",
   muhendislik: "electrical-rear-service",
-  workshop: "exterior-landscape",
   "nasil-calisir": "interior-first-view",
   "uretim-sureci": "engineering-insulation-service",
   sss: "control-centre",
@@ -207,7 +189,6 @@ const heroRoles: Partial<Record<CuratedPublicSlug, PublicLaunchMediaRole>> = {
   hakkimizda: "editorial.about.hero",
   "karavan-deneyimi": "editorial.living.hero",
   muhendislik: "editorial.engineering.hero",
-  workshop: "editorial.workshop.hero",
   "nasil-calisir": "editorial.process.hero",
   "uretim-sureci": "editorial.production.hero",
 };
@@ -361,21 +342,6 @@ function EditorialChapterNav({ copy, slug, locale }: { copy: (typeof publicEdito
   </nav>;
 }
 
-function WorkshopDecisionArchitecture({ copy, status }: {
-  copy: NonNullable<(typeof publicEditorialContent)["tr"]["workshop"]["decisionArchitecture"]>;
-  status: string | undefined;
-}) {
-  return <section id="workshop-decision-architecture" className="sv-container sv-section" aria-labelledby="workshop-decision-title">
-    <div className="sv-workshop-architecture">
-      <div className="sv-workshop-architecture-geometry" aria-hidden="true"><span /><span /><span /></div>
-      <header><div><p className="sv-eyebrow">{copy.eyebrow}</p><h2 id="workshop-decision-title">{copy.heading}</h2></div><div><p>{copy.body}</p>{status ? <span className="sv-status">{status}</span> : null}</div></header>
-      <ol>{copy.stages.map((stage, index) => <li data-sv-reveal key={stage.title}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><h3>{stage.title}</h3><p>{stage.body}</p></li>)}</ol>
-      <div className="sv-workshop-authority">{copy.authority.map((item) => <article data-sv-reveal key={item.title}><h3>{item.title}</h3><p>{item.body}</p></article>)}</div>
-      <p className="sv-workshop-architecture-note">{copy.note}</p>
-    </div>
-  </section>;
-}
-
 function EditorialReferences({ references, locale }: { references: NonNullable<(typeof publicEditorialContent)["tr"][CuratedPublicSlug]["references"]>; locale: "tr" | "en" }) {
   if (references.length === 0) return null;
   return <section className="sv-container sv-editorial-references" aria-labelledby="editorial-references-title">
@@ -407,6 +373,11 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
   const slug = page.slug;
   const baselineCopy = publicEditorialContent[page.locale][slug];
   const copy = getResolvedEditorialCopy(page, slug, baselineCopy);
+
+  if (slug === "workshop") {
+    return <PublicWorkshopStory page={page} copy={copy}>{children}</PublicWorkshopStory>;
+  }
+
   const launchCopy = publicLaunchContent[page.locale];
   const launchHero = getLaunchHero(page);
   const cmsHero = page.source === "admin" ? launchHero.copy : undefined;
@@ -445,8 +416,6 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
     </section>
 
     <div className="sv-container"><EditorialChapterNav copy={copy} slug={slug} locale={page.locale} /></div>
-
-    {slug === "workshop" && copy.decisionArchitecture ? <PublicMotion className="sv-workshop-architecture-motion"><WorkshopDecisionArchitecture copy={copy.decisionArchitecture} status={copy.status} /></PublicMotion> : null}
 
     {slug === "karavan-deneyimi" ? <section id="living" className="sv-container sv-section sv-editorial-gallery" aria-labelledby="living-gallery-title">
       <p className="sv-eyebrow">{launchCopy.product.eyebrow}</p>
