@@ -3224,3 +3224,287 @@
     align-items: start;
   }
 }
+
+/* Engineering study plates: a restrained instrument language for diagrams that
+   explain a decision without pretending to be a vehicle-specific drawing. */
+.sv-public .sv-editorial-muhendislik .sv-technical-plate {
+  --plate-bg: #101416;
+  --plate-raised: #171c1e;
+  --plate-text: #f4f1e9;
+  --plate-muted: #a4aaa8;
+  --plate-line: rgba(244, 241, 233, .25);
+  --plate-soft-line: rgba(244, 241, 233, .11);
+  --plate-accent: #d3b887;
+  --plate-accent-soft: rgba(211, 184, 135, .16);
+  width: min(100%, 56rem);
+  margin-inline: auto;
+  border-color: rgba(244, 241, 233, .2);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(211, 184, 135, .14), transparent 27rem),
+    linear-gradient(145deg, #151a1c 0%, #0e1112 100%);
+  box-shadow: 0 1.6rem 4rem rgba(0, 0, 0, .2), inset 0 1px rgba(255, 255, 255, .07);
+}
+
+.sv-public .sv-editorial-muhendislik .sv-technical-plate::before {
+  border-color: rgba(244, 241, 233, .08);
+}
+
+.sv-public .sv-editorial-muhendislik .sv-technical-plate figcaption {
+  border-top-color: rgba(244, 241, 233, .11);
+}
+
+.sv-public .sv-editorial-muhendislik .sv-technical-plate figcaption span {
+  color: #b7bbb9;
+}
+
+.sv-public .sv-editorial-muhendislik .sv-technical-plate figcaption small {
+  color: #8e9592;
+}
+
+.sv-public .sv-plate-stage-surface {
+  fill: rgba(8, 11, 12, .34);
+  stroke: rgba(244, 241, 233, .13);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-stage-rule {
+  fill: none;
+  stroke: rgba(244, 241, 233, .1);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-stage-label,
+.sv-public .sv-plate-stage-subtitle,
+.sv-public .sv-plate-stage-muted,
+.sv-public .sv-plate-branch-label {
+  fill: #929a97;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .16em;
+}
+
+.sv-public .sv-plate-stage-subtitle,
+.sv-public .sv-plate-branch-label {
+  fill: var(--plate-accent);
+}
+
+.sv-public .sv-plate-stage-muted {
+  fill: #6f7875;
+  font-size: 9px;
+}
+
+.sv-public .sv-plate-flow-block-surface {
+  fill: #171d1f;
+  stroke: rgba(244, 241, 233, .19);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-flow-block-gold .sv-plate-flow-block-surface {
+  fill: #1f1f1a;
+  stroke: rgba(211, 184, 135, .52);
+}
+
+.sv-public .sv-plate-flow-block-water .sv-plate-flow-block-surface {
+  fill: #152022;
+  stroke: rgba(137, 185, 178, .5);
+}
+
+.sv-public .sv-plate-flow-block-neutral .sv-plate-flow-block-surface {
+  fill: #151a1c;
+  stroke: rgba(244, 241, 233, .28);
+}
+
+.sv-public .sv-plate-flow-block-index,
+.sv-public .sv-plate-flow-block-optional {
+  fill: var(--plate-accent);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .14em;
+}
+
+.sv-public .sv-plate-flow-block-optional {
+  fill: #9bc1b9;
+  font-size: 8px;
+}
+
+.sv-public .sv-plate-flow-block-title {
+  fill: var(--plate-text);
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: -.015em;
+}
+
+.sv-public .sv-plate-flow-block-detail {
+  fill: #8f9895;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .12em;
+}
+
+.sv-public .sv-plate-flow-block-water .sv-plate-flow-block-index {
+  fill: #9bc1b9;
+}
+
+.sv-public .sv-plate-flow-path,
+.sv-public .sv-plate-secondary-flow {
+  fill: none;
+  stroke: var(--plate-accent);
+  stroke-linecap: round;
+  stroke-width: 2;
+  stroke-dasharray: 2 9;
+}
+
+.sv-public .sv-plate-flow-water .sv-plate-flow-path {
+  stroke: #9bc1b9;
+}
+
+.sv-public .sv-plate-flow-neutral .sv-plate-flow-path,
+.sv-public .sv-plate-secondary-flow {
+  stroke: rgba(244, 241, 233, .4);
+}
+
+.sv-public .sv-plate-flow-dot {
+  fill: var(--plate-accent);
+}
+
+.sv-public .sv-plate-flow-water .sv-plate-flow-dot {
+  fill: #9bc1b9;
+}
+
+.sv-public .sv-plate-flow-neutral .sv-plate-flow-dot {
+  fill: #d7d3c8;
+}
+
+.sv-public .sv-plate-state {
+  fill: rgba(211, 184, 135, .06);
+  stroke: rgba(211, 184, 135, .34);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-state-label,
+.sv-public .sv-plate-service-stack-label {
+  fill: var(--plate-accent);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .16em;
+}
+
+.sv-public .sv-plate-state-title,
+.sv-public .sv-plate-service-stack-title {
+  fill: var(--plate-text);
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: .01em;
+}
+
+.sv-public .sv-plate-state-detail {
+  fill: #a4aaa8;
+  font-size: 9px;
+  letter-spacing: .06em;
+}
+
+.sv-public .sv-plate-data-chip rect {
+  fill: rgba(211, 184, 135, .08);
+  stroke: rgba(211, 184, 135, .42);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-data-chip text {
+  fill: #d8c399;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .12em;
+}
+
+.sv-public .sv-plate-service-stack {
+  fill: rgba(244, 241, 233, .035);
+  stroke: rgba(244, 241, 233, .2);
+  stroke-width: 1;
+}
+
+.sv-public .sv-plate-service-stack-copy {
+  fill: #d0d0ca;
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+.sv-public .sv-plate-service-stack-foot {
+  fill: #9bc1b9;
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: .09em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sv-public .sv-plate-flow-path {
+    animation: sv-plate-flow-travel 3.8s linear infinite;
+  }
+
+  .sv-public .sv-plate-flow-block-surface {
+    transition: stroke .35s ease, fill .35s ease;
+  }
+
+  .sv-public .sv-technical-plate:hover .sv-plate-flow-block-gold .sv-plate-flow-block-surface {
+    stroke: rgba(211, 184, 135, .78);
+  }
+}
+
+@keyframes sv-plate-flow-travel {
+  to { stroke-dashoffset: -44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-public .sv-plate-flow-dot { display: none; }
+}
+
+.sv-public .sv-editorial-technical-status {
+  display: grid;
+  gap: .45rem;
+  max-width: 38rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem 1.05rem;
+  border: 1px solid var(--public-border);
+  border-left: 2px solid #c6a873;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--public-surface) 72%, transparent);
+}
+
+.sv-public .sv-editorial-technical-status > span {
+  color: #aa8b54;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-editorial-technical-status strong {
+  color: var(--public-text);
+  font-size: .92rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sv-public .sv-editorial-technical-status p {
+  margin: 0;
+  color: var(--public-muted);
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 860px) {
+  .sv-public .sv-editorial-muhendislik .sv-technical-plate {
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sv-public .sv-editorial-muhendislik .sv-technical-plate {
+    border-radius: 18px;
+  }
+
+  .sv-public .sv-editorial-technical-status {
+    margin-top: 1.15rem;
+    padding: .9rem;
+  }
+}

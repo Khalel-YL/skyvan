@@ -5,7 +5,7 @@ type DiagramCopy = {
   title: string;
   note: string;
   route: string;
-  nodes: readonly [string, string, string, string];
+  nodes: readonly string[];
   ariaLabel: string;
 };
 
@@ -13,314 +13,288 @@ const copy: Record<"tr" | "en", Record<PublicTechnicalDiagramKind, DiagramCopy>>
   tr: {
     "load-aero": {
       label: "YÜK VE DENGE",
-      title: "Kütle, yerleşimle birlikte okunur.",
-      note: "Açıklama görselidir; ölçü, taşıma kapasitesi veya montaj sonucu değildir.",
-      route: "Araç planı / denge çalışması",
-      nodes: ["Temiz su", "Kuru yük", "Yaşam alanı", "Gri su"],
-      ariaLabel: "Skyvan yük ve denge teknik açıklama görseli",
+      title: "Sonuç, araç verisiyle birlikte okunur.",
+      note: "Bu akış; araç, kütle ve aks verisi seçildikten sonra oluşacak inceleme mantığını gösterir. Ölçülü yerleşim değildir.",
+      route: "Araç verisi → yük kalemleri → aks kontrolü → insan onayı",
+      nodes: ["Araç referansı", "Yük kalemleri", "Aks sınırları", "Karar kaydı"],
+      ariaLabel: "Skyvan araç kütlesi ve denge değerlendirme akışı",
     },
     "solar-electrical": {
       label: "DC ENERJİ",
-      title: "Güneşten akü barasına kontrollü yol.",
-      note: "Dizi gerilimi, akım, kablo yolu ve üretici limitleri proje özelinde doğrulanır.",
-      route: "Kaynak → koruma → dönüşüm → depolama",
-      nodes: ["PV dizisi", "Combiner / ayırıcı", "MPPT", "Akü + DC barası"],
-      ariaLabel: "Skyvan DC enerji sistemi teknik akış görseli",
+      title: "Kaynak, koruma ve depolama ayrı doğrulanır.",
+      note: "Şema, ürün seçimi değildir. Dizi koruması ve combiner yalnızca gerçek panel bağlantısı ile üretici ve uygulama şartları gerektiriyorsa kullanılır.",
+      route: "PV dizileri → koruma → MPPT → akü/BMS → DC bara",
+      nodes: ["PV dizileri", "Dizi koruması", "PV ayırıcı", "MPPT", "Akü + BMS", "DC bara + shunt"],
+      ariaLabel: "Skyvan DC enerji mimarisi ve doğrulama akışı",
     },
     "water-service": {
       label: "SU SERVİSİ",
-      title: "Depodan armatüre erişilebilir dağıtım.",
-      note: "İçme suyu borusu, filtre, pompa ve sızdırmazlık seçimi ürün ve uygulama şartlarına bağlıdır.",
-      route: "Depo → şartlandırma → basınç → dağıtım",
-      nodes: ["Temiz su deposu", "Süzgeç + filtre", "Pompa / akümülatör", "Manifold + armatür"],
-      ariaLabel: "Skyvan temiz su ve servis sistemi teknik akış görseli",
+      title: "Temiz ve gri su, ayrı servis yolları olarak okunur.",
+      note: "Temiz su, sıcak su ve gri su akışları ürün, araç ve uygulama şartlarıyla doğrulanır; şema ölçülü tesisat veya montaj onayı değildir.",
+      route: "Temiz su → basınç → dağıtım → kullanım → gri su / tahliye",
+      nodes: ["Temiz su deposu", "Havalandırma + seviye", "Giriş süzgeci", "Pompa + akümülatör", "Manifold / boiler", "Gri su hattı", "Gri su deposu"],
+      ariaLabel: "Skyvan temiz su, sıcak su ve gri su servis akışı",
     },
     "service-access": {
       label: "SERVİS ERİŞİMİ",
-      title: "Kullanım, izleme ve bakım aynı düzlemde.",
-      note: "Erişim kapakları ve ayırma noktaları araç, ürün ve yerel kurallarla doğrulanır.",
-      route: "Koruma → ölçüm → erişim → doğrulama",
-      nodes: ["Sigorta / ayırıcı", "Shunt / izleme", "Servis kapağı", "Test ve kayıt"],
-      ariaLabel: "Skyvan servis erişimi teknik açıklama görseli",
+      title: "Koruma, ölçüm ve ayırma aynı servis mantığında buluşur.",
+      note: "Servis paneli; gerçek ürünler, kablo kesitleri, koruma değerleri ve araç içindeki erişim ölçüleriyle proje özelinde doğrulanır.",
+      route: "Akü/BMS → koruma → bara → yükler; eksi dönüş → shunt",
+      nodes: ["Akü + BMS", "Ana sigorta / ayırıcı", "DC bara", "Shunt / eksi dönüş"],
+      ariaLabel: "Skyvan servis paneli ve DC koruma erişim akışı",
     },
   },
   en: {
     "load-aero": {
       label: "LOAD AND BALANCE",
-      title: "Mass is read together with the layout.",
-      note: "Explanatory visual only; not a dimension, payload or installation result.",
-      route: "Vehicle plan / balance study",
-      nodes: ["Fresh water", "Dry load", "Living space", "Grey water"],
-      ariaLabel: "Skyvan load and balance technical visual",
+      title: "The result is read with the vehicle data.",
+      note: "This flow shows the review logic after vehicle, mass and axle data are selected. It is not a scaled layout.",
+      route: "Vehicle data → load items → axle check → human approval",
+      nodes: ["Vehicle reference", "Load items", "Axle limits", "Decision record"],
+      ariaLabel: "Skyvan vehicle mass and balance review flow",
     },
     "solar-electrical": {
       label: "DC ENERGY",
-      title: "A controlled path from sun to the battery bus.",
-      note: "Array voltage, current, cable route and manufacturer limits are verified per project.",
-      route: "Source → protection → conversion → storage",
-      nodes: ["PV array", "Combiner / isolator", "MPPT", "Battery + DC bus"],
-      ariaLabel: "Skyvan DC energy system technical flow visual",
+      title: "Source, protection and storage are verified separately.",
+      note: "This is not a product selection. Array protection and a combiner are used only when the actual array and manufacturer/application requirements call for them.",
+      route: "PV arrays → protection → MPPT → battery/BMS → DC bus",
+      nodes: ["PV arrays", "Array protection", "PV isolator", "MPPT", "Battery + BMS", "DC bus + shunt"],
+      ariaLabel: "Skyvan DC energy architecture and verification flow",
     },
     "water-service": {
       label: "WATER SERVICE",
-      title: "An accessible distribution path from tank to fixture.",
-      note: "Potable tubing, filtration, pump and sealing depend on the product and installation conditions.",
-      route: "Tank → conditioning → pressure → distribution",
-      nodes: ["Fresh tank", "Strainer + filter", "Pump / accumulator", "Manifold + fixtures"],
-      ariaLabel: "Skyvan fresh water and service system technical flow visual",
+      title: "Fresh and grey water follow separate service paths.",
+      note: "Fresh water, hot water and grey water are verified against the product, vehicle and installation conditions; this is not a scaled plumbing or installation approval.",
+      route: "Fresh water → pressure → distribution → use → grey water / drain",
+      nodes: ["Fresh tank", "Vent + level", "Inlet strainer", "Pump + accumulator", "Manifold / boiler", "Grey-water line", "Grey tank"],
+      ariaLabel: "Skyvan fresh water, hot water and grey water service flow",
     },
     "service-access": {
       label: "SERVICE ACCESS",
-      title: "Use, monitoring and maintenance share one plane.",
-      note: "Access panels and isolation points are verified against the vehicle, product and local rules.",
-      route: "Protection → measurement → access → verification",
-      nodes: ["Fuse / isolator", "Shunt / monitor", "Service panel", "Test and record"],
-      ariaLabel: "Skyvan service access technical visual",
+      title: "Protection, measurement and isolation share one service logic.",
+      note: "The service panel is verified against real products, cable sizes, protection values and vehicle-specific access dimensions.",
+      route: "Battery/BMS → protection → bus → loads; negative return → shunt",
+      nodes: ["Battery + BMS", "Main fuse / isolator", "DC bus", "Shunt / negative return"],
+      ariaLabel: "Skyvan service panel and DC protection access flow",
     },
   },
 };
 
-type PlateNodeTone = "solar" | "water" | "access" | "load";
+type FlowTone = "gold" | "water" | "neutral";
 
-function PlateNode({
+function FlowBlock({
   x,
   y,
+  width = 148,
   index,
   label,
   detail,
-  tone,
+  tone = "gold",
+  optional = false,
 }: {
   x: number;
   y: number;
-  index: number;
+  width?: number;
+  index: string;
   label: string;
   detail: string;
-  tone: PlateNodeTone;
+  tone?: FlowTone;
+  optional?: boolean;
 }) {
+  const lines = label.split("\n");
+
   return (
-    <g className={`sv-plate-node sv-plate-node-${tone}`} transform={`translate(${x} ${y})`}>
-      <circle r="21" className="sv-plate-node-halo" />
-      <circle r="15" className="sv-plate-node-ring" />
-      <circle r="4" className="sv-plate-node-core" />
-      <text y="-31" textAnchor="middle" className="sv-plate-node-index">{String(index).padStart(2, "0")}</text>
-      <text y="47" textAnchor="middle" className="sv-plate-node-label">{label}</text>
-      <text y="63" textAnchor="middle" className="sv-plate-node-detail">{detail}</text>
+    <g className={`sv-plate-flow-block sv-plate-flow-block-${tone}${optional ? " is-optional" : ""}`} transform={`translate(${x} ${y})`}>
+      <rect width={width} height="108" rx="16" className="sv-plate-flow-block-surface" />
+      <text x="17" y="23" className="sv-plate-flow-block-index">{index}</text>
+      {optional ? <text x={width - 16} y="23" textAnchor="end" className="sv-plate-flow-block-optional">OPS.</text> : null}
+      {lines.map((line, lineIndex) => (
+        <text key={`${line}-${lineIndex}`} x="17" y={52 + lineIndex * 17} className="sv-plate-flow-block-title">{line}</text>
+      ))}
+      <text x="17" y={lines.length > 1 ? 92 : 76} className="sv-plate-flow-block-detail">{detail}</text>
     </g>
   );
 }
 
-function PlateCallout({
-  x,
-  y,
-  anchorX,
-  anchorY,
-  index,
-  label,
-  detail,
-  align = "start",
-}: {
-  x: number;
-  y: number;
-  anchorX: number;
-  anchorY: number;
-  index: number;
-  label: string;
-  detail: string;
-  align?: "start" | "end";
-}) {
-  const lineStart = align === "end" ? x - 18 : x + 18;
+function FlowPath({ d, tone = "gold" }: { d: string; tone?: FlowTone }) {
   return (
-    <g className="sv-plate-callout">
-      <path d={`M ${lineStart} ${y - 5} H ${anchorX} L ${anchorX} ${anchorY}`} className="sv-plate-callout-line" />
-      <circle cx={anchorX} cy={anchorY} r="3.5" className="sv-plate-callout-point" />
-      <text x={x} y={y - 7} textAnchor={align} className="sv-plate-callout-index">{String(index).padStart(2, "0")}</text>
-      <text x={x} y={y + 12} textAnchor={align} className="sv-plate-callout-label">{label}</text>
-      <text x={x} y={y + 29} textAnchor={align} className="sv-plate-callout-detail">{detail}</text>
+    <g className={`sv-plate-flow sv-plate-flow-${tone}`}>
+      <path d={d} className="sv-plate-flow-path" />
+      <circle r="4" className="sv-plate-flow-dot">
+        <animateMotion dur="3.8s" repeatCount="indefinite" path={d} />
+      </circle>
     </g>
   );
 }
 
-function SolarPlate({ nodes, ariaLabel, route }: { nodes: DiagramCopy["nodes"]; ariaLabel: string; route: string }) {
+function PlateStage({ children }: { children: React.ReactNode }) {
+  return (
+    <g className="sv-plate-stage">
+      <rect x="52" y="92" width="976" height="416" rx="26" className="sv-plate-stage-surface" />
+      <path d="M78 151 H1002" className="sv-plate-stage-rule" />
+      {children}
+    </g>
+  );
+}
+
+function StageHeader({ left, right }: { left: string; right: string }) {
+  return (
+    <>
+      <text x="82" y="127" className="sv-plate-stage-label">{left}</text>
+      <text x="998" y="127" textAnchor="end" className="sv-plate-stage-label">{right}</text>
+    </>
+  );
+}
+
+function DataChip({ x, label }: { x: number; label: string }) {
+  return (
+    <g className="sv-plate-data-chip" transform={`translate(${x} 164)`}>
+      <rect width="92" height="27" rx="13.5" />
+      <text x="46" y="17" textAnchor="middle">{label}</text>
+    </g>
+  );
+}
+
+function LoadBalancePlate({ nodes, ariaLabel, route }: { nodes: readonly string[]; ariaLabel: string; route: string }) {
   return (
     <svg viewBox="0 0 1080 560" role="img" aria-label={ariaLabel} className="sv-plate-svg">
       <title>{ariaLabel}</title>
       <desc>{route}</desc>
-      <g className="sv-plate-grid" aria-hidden="true">
-        <path d="M70 104 H1010 M70 184 H1010 M70 264 H1010 M70 344 H1010 M70 424 H1010" />
-        <path d="M150 64 V480 M310 64 V480 M470 64 V480 M630 64 V480 M790 64 V480 M950 64 V480" />
-      </g>
-      <text x="84" y="80" className="sv-plate-overline">ROOF / PV ARRAY</text>
-      <text x="996" y="80" textAnchor="end" className="sv-plate-overline">DC SYSTEM / 01</text>
-
-      <g className="sv-plate-solar-roof">
-        <path d="M113 182 L296 122 L424 178 L238 246 Z" className="sv-plate-solar-roof-shell" />
-        <path d="M138 181 L296 131 L397 177 L238 236 Z" className="sv-plate-solar-panel" />
-        <path d="M191 164 L241 184 M244 147 L294 168 M297 131 L347 152 M163 171 L212 191 M216 154 L267 175 M269 138 L320 159" className="sv-plate-solar-panel-line" />
-        <path d="M151 201 L238 236 M201 185 L289 221 M250 167 L338 203 M299 151 L387 187" className="sv-plate-solar-panel-line" />
-        <path d="M238 246 L238 282 M424 178 L424 214" className="sv-plate-solar-support" />
-      </g>
-
-      <path d="M326 224 C373 267 408 305 475 342 S709 365 946 365" className="sv-plate-route sv-plate-route-solar" />
-      <circle cx="338" cy="236" r="5" className="sv-plate-route-orb sv-plate-route-orb-solar" />
-      <circle cx="338" cy="236" r="14" className="sv-plate-route-aura sv-plate-route-aura-solar" />
-      <path d="M475 342 H946" className="sv-plate-route-guide" />
-
-      <PlateNode x={475} y={342} index={1} label={nodes[0]} detail="SOURCE" tone="solar" />
-      <PlateNode x={630} y={365} index={2} label={nodes[1]} detail="PROTECTION" tone="solar" />
-      <PlateNode x={785} y={365} index={3} label={nodes[2]} detail="CONVERSION" tone="solar" />
-      <PlateNode x={940} y={365} index={4} label={nodes[3]} detail="STORAGE" tone="solar" />
-
-      <PlateCallout x={164} y={335} anchorX={238} anchorY={246} index={0} label="ROOF ARRAY" detail="panel / cable entry" />
-      <text x="996" y="480" textAnchor="end" className="sv-plate-footnote">CONCEPT STUDY</text>
+      <StageHeader left="PROJEYE ÖZEL İNCELEME" right="MODEL / AKS / PAYLOAD" />
+      <PlateStage>
+        <text x="82" y="184" className="sv-plate-stage-subtitle">KÜTLE KARAR AKIŞI</text>
+        <text x="998" y="184" textAnchor="end" className="sv-plate-stage-muted">SCALE NOT APPLICABLE</text>
+        <FlowBlock x={84} y={226} index="01" label={nodes[0]} detail="MODEL / VARYANT" />
+        <FlowBlock x={320} y={226} index="02" label={nodes[1]} detail="EMPTY / FULL MASS" />
+        <FlowBlock x={556} y={226} index="03" label={nodes[2]} detail="AXLE / PAYLOAD" />
+        <FlowBlock x={792} y={226} index="04" label={nodes[3]} detail="HUMAN REVIEW" tone="neutral" />
+        <FlowPath d="M232 280 H320" />
+        <FlowPath d="M468 280 H556" />
+        <FlowPath d="M704 280 H792" />
+        <rect x="84" y="382" width="916" height="82" rx="18" className="sv-plate-state" />
+        <text x="108" y="412" className="sv-plate-state-label">SONUÇ DURUMU / REVIEW STATE</text>
+        <text x="108" y="441" className="sv-plate-state-title">VERİ SEÇİLMEDEN DENGE SONUCU ÜRETİLMEZ</text>
+        <text x="974" y="441" textAnchor="end" className="sv-plate-state-detail">Araç ve gerçek ürün verisi bekleniyor</text>
+      </PlateStage>
     </svg>
   );
 }
 
-function WaterPlate({ nodes, ariaLabel, route }: { nodes: DiagramCopy["nodes"]; ariaLabel: string; route: string }) {
+function SolarPlate({ nodes, ariaLabel, route }: { nodes: readonly string[]; ariaLabel: string; route: string }) {
+  const x = [76, 232, 388, 544, 700, 856];
+
   return (
     <svg viewBox="0 0 1080 560" role="img" aria-label={ariaLabel} className="sv-plate-svg">
       <title>{ariaLabel}</title>
       <desc>{route}</desc>
-      <g className="sv-plate-grid" aria-hidden="true">
-        <path d="M70 104 H1010 M70 184 H1010 M70 264 H1010 M70 344 H1010 M70 424 H1010" />
-        <path d="M150 64 V480 M310 64 V480 M470 64 V480 M630 64 V480 M790 64 V480 M950 64 V480" />
-      </g>
-      <text x="84" y="80" className="sv-plate-overline">POTABLE WATER / SERVICE PATH</text>
-      <text x="996" y="80" textAnchor="end" className="sv-plate-overline">WATER SYSTEM / 01</text>
-
-      <g className="sv-plate-water-tank">
-        <rect x="112" y="178" width="170" height="170" rx="26" className="sv-plate-water-tank-shell" />
-        <path d="M113 252 H281" className="sv-plate-water-tank-line" />
-        <path d="M146 292 C176 276 207 309 244 288" className="sv-plate-water-wave" />
-        <path d="M150 311 C180 295 210 327 245 307" className="sv-plate-water-wave" />
-        <text x="197" y="228" textAnchor="middle" className="sv-plate-object-label">TANK</text>
-        <text x="197" y="243" textAnchor="middle" className="sv-plate-object-detail">FRESH WATER</text>
-      </g>
-
-      <path d="M282 300 H356 C385 300 393 258 424 258 H476 C504 258 518 300 548 300 H918" className="sv-plate-route sv-plate-route-water" />
-      <circle cx="300" cy="300" r="5" className="sv-plate-route-orb sv-plate-route-orb-water" />
-      <circle cx="300" cy="300" r="14" className="sv-plate-route-aura sv-plate-route-aura-water" />
-
-      <g className="sv-plate-water-filter">
-        <circle cx="424" cy="258" r="35" className="sv-plate-water-filter-shell" />
-        <path d="M406 246 L442 270 M442 246 L406 270" className="sv-plate-water-filter-mark" />
-        <text x="424" y="316" textAnchor="middle" className="sv-plate-object-label">FILTER</text>
-      </g>
-      <g className="sv-plate-water-pump">
-        <circle cx="548" cy="300" r="42" className="sv-plate-water-pump-shell" />
-        <path d="M533 300 H563 M548 285 V315" className="sv-plate-water-pump-mark" />
-        <text x="548" y="367" textAnchor="middle" className="sv-plate-object-label">PUMP</text>
-      </g>
-      <g className="sv-plate-manifold">
-        <path d="M760 300 V204 M760 300 V396 M760 300 H918" className="sv-plate-manifold-line" />
-        <circle cx="760" cy="300" r="21" className="sv-plate-manifold-hub" />
-        <circle cx="760" cy="204" r="7" className="sv-plate-manifold-port" />
-        <circle cx="760" cy="396" r="7" className="sv-plate-manifold-port" />
-        <circle cx="918" cy="300" r="7" className="sv-plate-manifold-port" />
-        <text x="760" y="450" textAnchor="middle" className="sv-plate-object-label">MANIFOLD</text>
-      </g>
-      <path d="M760 204 H866 M760 396 H866" className="sv-plate-secondary-line" />
-      <text x="884" y="208" className="sv-plate-secondary-label">HOT</text>
-      <text x="884" y="400" className="sv-plate-secondary-label">COLD</text>
-
-      <PlateNode x={196} y={430} index={1} label={nodes[0]} detail="TANK" tone="water" />
-      <PlateNode x={424} y={430} index={2} label={nodes[1]} detail="CONDITIONING" tone="water" />
-      <PlateNode x={648} y={430} index={3} label={nodes[2]} detail="PRESSURE" tone="water" />
-      <PlateNode x={918} y={430} index={4} label={nodes[3]} detail="DISTRIBUTION" tone="water" />
-      <text x="996" y="505" textAnchor="end" className="sv-plate-footnote">CONCEPT STUDY</text>
+      <StageHeader left="DATASHEET → SİSTEM SINIRI" right="DC ENERGY / 02" />
+      <PlateStage>
+        <text x="82" y="184" className="sv-plate-stage-subtitle">ÖNCE VERİ, SONRA ÜRÜN UYUMU</text>
+        <text x="998" y="184" textAnchor="end" className="sv-plate-stage-muted">NO LIVE VALUES</text>
+        <DataChip x={82} label="Voc" />
+        <DataChip x={184} label="Vmp" />
+        <DataChip x={286} label="Isc" />
+        <DataChip x={388} label="Imp" />
+        <DataChip x={490} label="AKÜ V" />
+        <DataChip x={592} label="MPPT A" />
+        <FlowBlock x={x[0]} y={230} index="01" label={nodes[0]} detail="SOURCE" />
+        <FlowBlock x={x[1]} y={230} index="02" label={nodes[1]} detail="WHEN REQUIRED" optional />
+        <FlowBlock x={x[2]} y={230} index="03" label={nodes[2]} detail="ISOLATION" />
+        <FlowBlock x={x[3]} y={230} index="04" label={nodes[3]} detail="TRACKING / CHARGE" />
+        <FlowBlock x={x[4]} y={230} index="05" label={nodes[4]} detail="BATTERY SAFETY" />
+        <FlowBlock x={x[5]} y={230} index="06" label={nodes[5]} detail="DISTRIBUTION" tone="neutral" />
+        <FlowPath d="M224 284 H232" />
+        <FlowPath d="M380 284 H388" />
+        <FlowPath d="M536 284 H544" />
+        <FlowPath d="M692 284 H700" />
+        <FlowPath d="M848 284 H856" />
+        <text x="856" y="382" className="sv-plate-branch-label">AYRI DOĞRULAMA DALLARI</text>
+        <FlowBlock x={548} y={400} width={132} index="A" label="DC–DC şarj" detail="ALTERNATÖR" tone="neutral" />
+        <FlowBlock x={704} y={400} width={132} index="B" label="İnverter / AC" detail="AYRI HAT" tone="neutral" />
+        <FlowBlock x={860} y={400} width={132} index="C" label="DC yükler" detail="SİGORTALI" tone="neutral" />
+        <FlowPath d="M930 338 V370 H614 V400" tone="neutral" />
+        <FlowPath d="M930 338 V400" tone="neutral" />
+        <FlowPath d="M930 338 V370 H926 V400" tone="neutral" />
+      </PlateStage>
     </svg>
   );
 }
 
-function LoadBalancePlate({ nodes, ariaLabel, route }: { nodes: DiagramCopy["nodes"]; ariaLabel: string; route: string }) {
+function WaterPlate({ nodes, ariaLabel, route }: { nodes: readonly string[]; ariaLabel: string; route: string }) {
   return (
     <svg viewBox="0 0 1080 560" role="img" aria-label={ariaLabel} className="sv-plate-svg">
       <title>{ariaLabel}</title>
       <desc>{route}</desc>
-      <g className="sv-plate-grid" aria-hidden="true">
-        <path d="M70 104 H1010 M70 184 H1010 M70 264 H1010 M70 344 H1010 M70 424 H1010" />
-        <path d="M150 64 V480 M310 64 V480 M470 64 V480 M630 64 V480 M790 64 V480 M950 64 V480" />
-      </g>
-      <text x="84" y="80" className="sv-plate-overline">VEHICLE PLAN / BALANCE STUDY</text>
-      <text x="996" y="80" textAnchor="end" className="sv-plate-overline">REFERENCE / 01</text>
-      <text x="540" y="108" textAnchor="middle" className="sv-plate-orientation">REFERENCE FRONT</text>
-      <text x="540" y="485" textAnchor="middle" className="sv-plate-orientation">REFERENCE REAR</text>
-
-      <g className="sv-plate-vehicle-plan">
-        <path d="M454 126 H626 C681 126 718 159 724 211 L736 386 C739 423 715 449 674 454 H406 C365 449 341 423 344 386 L356 211 C362 159 399 126 454 126 Z" className="sv-plate-vehicle-shell" />
-        <path d="M398 154 Q540 116 682 154 L701 213 H379 Z" className="sv-plate-vehicle-cab" />
-        <path d="M378 248 H702 M378 402 H702 M378 248 V402 M702 248 V402" className="sv-plate-vehicle-rule" />
-        <rect x="341" y="190" width="18" height="58" rx="9" className="sv-plate-vehicle-wheel" />
-        <rect x="721" y="190" width="18" height="58" rx="9" className="sv-plate-vehicle-wheel" />
-        <rect x="341" y="349" width="18" height="58" rx="9" className="sv-plate-vehicle-wheel" />
-        <rect x="721" y="349" width="18" height="58" rx="9" className="sv-plate-vehicle-wheel" />
-        <rect x="402" y="274" width="112" height="70" rx="12" className="sv-plate-zone sv-plate-zone-water" />
-        <rect x="566" y="274" width="112" height="70" rx="12" className="sv-plate-zone sv-plate-zone-energy" />
-        <rect x="402" y="363" width="276" height="26" rx="13" className="sv-plate-zone sv-plate-zone-living" />
-        <text x="458" y="313" textAnchor="middle" className="sv-plate-zone-label">WATER</text>
-        <text x="622" y="313" textAnchor="middle" className="sv-plate-zone-label">ENERGY</text>
-        <text x="540" y="380" textAnchor="middle" className="sv-plate-zone-label">LIVING / SERVICE FIELD</text>
-        <path d="M378 352 H702" className="sv-plate-balance-axis" />
-        <circle cx="540" cy="352" r="8" className="sv-plate-balance-centre" />
-        <text x="540" y="338" textAnchor="middle" className="sv-plate-balance-label">BALANCE AXIS</text>
-      </g>
-
-      <PlateCallout x={154} y={197} anchorX={402} anchorY={308} index={1} label={nodes[0]} detail="LIQUID MASS" />
-      <PlateCallout x={926} y={197} anchorX={678} anchorY={308} index={2} label={nodes[1]} detail="FIXED LOAD" align="end" />
-      <PlateCallout x={154} y={404} anchorX={402} anchorY={376} index={3} label={nodes[2]} detail="LIVING AREA" />
-      <PlateCallout x={926} y={404} anchorX={678} anchorY={376} index={4} label={nodes[3]} detail="POST-USE" align="end" />
-      <text x="996" y="515" textAnchor="end" className="sv-plate-footnote">CONCEPT STUDY</text>
+      <StageHeader left="TEMİZ / SICAK / GRİ SU" right="WATER SERVICE / 03" />
+      <PlateStage>
+        <text x="82" y="184" className="sv-plate-stage-subtitle">BASINÇLI TEMİZ SU AKIŞI</text>
+        <text x="998" y="184" textAnchor="end" className="sv-plate-stage-muted">SEPARATE DRAIN PATH</text>
+        <FlowBlock x={78} y={218} width={154} index="01" label={nodes[0]} detail="TANK / MASS" tone="water" />
+        <FlowBlock x={248} y={218} width={154} index="02" label={nodes[1]} detail="VENT / SENSOR" tone="water" />
+        <FlowBlock x={418} y={218} width={154} index="03" label={nodes[2]} detail="PUMP INLET" tone="water" />
+        <FlowBlock x={588} y={218} width={154} index="04" label={nodes[3]} detail="PRESSURE" tone="water" optional />
+        <FlowBlock x={758} y={218} width={244} index="05" label={nodes[4]} detail="HOT / COLD DISTRIBUTION" tone="water" />
+        <FlowPath d="M232 272 H248" tone="water" />
+        <FlowPath d="M402 272 H418" tone="water" />
+        <FlowPath d="M572 272 H588" tone="water" />
+        <FlowPath d="M742 272 H758" tone="water" />
+        <path d="M880 326 V352 H178 V382" className="sv-plate-secondary-flow" />
+        <text x="82" y="371" className="sv-plate-branch-label">KULLANIMDAN SONRA / GRİ SU</text>
+        <FlowBlock x={90} y={382} width={178} index="06" label="Armatürler" detail="USE POINTS" tone="neutral" />
+        <FlowBlock x={326} y={382} width={178} index="07" label={nodes[5]} detail="DRAIN ROUTE" tone="neutral" />
+        <FlowBlock x={562} y={382} width={178} index="08" label={nodes[6]} detail="TANK / ACCESS" tone="neutral" />
+        <FlowBlock x={798} y={382} width={178} index="09" label="Tahliye + servis" detail="MAINTENANCE" tone="neutral" />
+        <FlowPath d="M268 436 H326" tone="neutral" />
+        <FlowPath d="M504 436 H562" tone="neutral" />
+        <FlowPath d="M740 436 H798" tone="neutral" />
+      </PlateStage>
     </svg>
   );
 }
 
-function ServiceAccessPlate({ nodes, ariaLabel, route }: { nodes: DiagramCopy["nodes"]; ariaLabel: string; route: string }) {
+function ServiceAccessPlate({ nodes, ariaLabel, route }: { nodes: readonly string[]; ariaLabel: string; route: string }) {
   return (
     <svg viewBox="0 0 1080 560" role="img" aria-label={ariaLabel} className="sv-plate-svg">
       <title>{ariaLabel}</title>
       <desc>{route}</desc>
-      <g className="sv-plate-grid" aria-hidden="true">
-        <path d="M70 104 H1010 M70 184 H1010 M70 264 H1010 M70 344 H1010 M70 424 H1010" />
-        <path d="M150 64 V480 M310 64 V480 M470 64 V480 M630 64 V480 M790 64 V480 M950 64 V480" />
-      </g>
-      <text x="84" y="80" className="sv-plate-overline">REAR SERVICE BAY / ACCESS STUDY</text>
-      <text x="996" y="80" textAnchor="end" className="sv-plate-overline">MAINTENANCE / 01</text>
-
-      <g className="sv-plate-service-bay">
-        <rect x="326" y="126" width="428" height="292" rx="24" className="sv-plate-service-shell" />
-        <path d="M354 151 H726 V393 H354 Z" className="sv-plate-service-opening" />
-        <path d="M354 151 Q540 102 726 151" className="sv-plate-service-lid" />
-        <path d="M386 194 H694 M386 352 H694" className="sv-plate-service-rail" />
-        <rect x="407" y="224" width="84" height="84" rx="12" className="sv-plate-service-module" />
-        <rect x="516" y="224" width="84" height="84" rx="12" className="sv-plate-service-module" />
-        <rect x="625" y="224" width="42" height="84" rx="10" className="sv-plate-service-module sv-plate-service-module-slim" />
-        <circle cx="449" cy="266" r="17" className="sv-plate-service-core" />
-        <path d="M430 266 H468 M449 247 V285" className="sv-plate-service-cross" />
-        <path d="M535 248 H581 M535 266 H581 M535 284 H581" className="sv-plate-service-lines" />
-        <path d="M641 245 V287" className="sv-plate-service-lines" />
-        <circle cx="646" cy="238" r="4" className="sv-plate-service-status" />
-        <text x="449" y="330" textAnchor="middle" className="sv-plate-object-label">PROTECTION</text>
-        <text x="558" y="330" textAnchor="middle" className="sv-plate-object-label">MONITOR</text>
-        <text x="646" y="330" textAnchor="middle" className="sv-plate-object-label">TEST</text>
-      </g>
-      <PlateCallout x={150} y={222} anchorX={407} anchorY={266} index={1} label={nodes[0]} detail="PROTECTION" />
-      <PlateCallout x={930} y={222} anchorX={600} anchorY={266} index={2} label={nodes[1]} detail="MONITORING" align="end" />
-      <PlateCallout x={150} y={382} anchorX={354} anchorY={352} index={3} label={nodes[2]} detail="ACCESS" />
-      <PlateCallout x={930} y={382} anchorX={646} anchorY={307} index={4} label={nodes[3]} detail="RECORD" align="end" />
-      <text x="996" y="505" textAnchor="end" className="sv-plate-footnote">CONCEPT STUDY</text>
+      <StageHeader left="BATARYA KORUMASI / ÖLÇÜM" right="SERVICE ACCESS / 04" />
+      <PlateStage>
+        <text x="82" y="184" className="sv-plate-stage-subtitle">POZİTİF HAT</text>
+        <text x="82" y="372" className="sv-plate-stage-subtitle">NEGATİF DÖNÜŞ</text>
+        <FlowBlock x={84} y={208} width={190} index="01" label={nodes[0]} detail="SOURCE / BMS" />
+        <FlowBlock x={322} y={208} width={190} index="02" label={nodes[1]} detail="SHORT-CIRCUIT PROTECTION" />
+        <FlowBlock x={560} y={208} width={190} index="03" label={nodes[2]} detail="POSITIVE DISTRIBUTION" tone="neutral" />
+        <FlowBlock x={84} y={396} width={190} index="01N" label="Akü eksi" detail="RETURN SOURCE" tone="neutral" />
+        <FlowBlock x={322} y={396} width={190} index="04" label={nodes[3]} detail="ALL MEASURED RETURN" tone="water" />
+        <FlowBlock x={560} y={396} width={190} index="03N" label="Eksi DC bara" detail="NEGATIVE DISTRIBUTION" tone="neutral" />
+        <FlowPath d="M274 262 H322" />
+        <FlowPath d="M512 262 H560" />
+        <FlowPath d="M274 450 H322" tone="neutral" />
+        <FlowPath d="M512 450 H560" tone="neutral" />
+        <rect x="806" y="208" width="192" height="296" rx="20" className="sv-plate-service-stack" />
+        <text x="830" y="240" className="sv-plate-service-stack-label">SERVİS PANELİ</text>
+        <text x="830" y="272" className="sv-plate-service-stack-title">AYRI HATLAR</text>
+        <text x="830" y="314" className="sv-plate-service-stack-copy">MPPT</text>
+        <text x="830" y="344" className="sv-plate-service-stack-copy">DC–DC ŞARJ</text>
+        <text x="830" y="374" className="sv-plate-service-stack-copy">İNVERTER / AC</text>
+        <text x="830" y="404" className="sv-plate-service-stack-copy">DC YÜKLER</text>
+        <path d="M750 262 H806" className="sv-plate-secondary-flow" />
+        <path d="M750 450 H806" className="sv-plate-secondary-flow" />
+        <text x="830" y="464" className="sv-plate-service-stack-foot">AC / DC GÜZERGÂHLARI AYRI</text>
+      </PlateStage>
     </svg>
   );
 }
 
-function MobilePlateRail({ nodes, route, ariaLabel }: { nodes: DiagramCopy["nodes"]; route: string; ariaLabel: string }) {
+function MobilePlateRail({ nodes, route, ariaLabel }: { nodes: readonly string[]; route: string; ariaLabel: string }) {
   return (
     <div className="sv-plate-mobile" role="img" aria-label={ariaLabel}>
       <span className="sv-plate-mobile-route">{route}</span>
       <div className="sv-plate-mobile-flow">
         {nodes.map((node, index) => (
-          <div className="sv-plate-mobile-step" key={node}>
+          <div className="sv-plate-mobile-step" key={`${node}-${index}`}>
             <span className="sv-plate-mobile-marker" aria-hidden="true"><b>{String(index + 1).padStart(2, "0")}</b></span>
-            <span className="sv-plate-mobile-copy"><strong>{node}</strong><small>{index === 0 ? "SOURCE" : index === nodes.length - 1 ? "NEXT LAYER" : "INTERMEDIATE"}</small></span>
+            <span className="sv-plate-mobile-copy"><strong>{node}</strong><small>{index === 0 ? "BAŞLANGIÇ" : index === nodes.length - 1 ? "SONRAKİ KATMAN" : "DOĞRULAMA"}</small></span>
           </div>
         ))}
       </div>
@@ -330,30 +304,32 @@ function MobilePlateRail({ nodes, route, ariaLabel }: { nodes: DiagramCopy["node
 
 export function PublicTechnicalDiagram({ kind, locale }: { kind: PublicTechnicalDiagramKind; locale: "tr" | "en" }): React.JSX.Element {
   const item = copy[locale][kind];
+  const renderPlate = kind === "solar-electrical"
+    ? <SolarPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} />
+    : kind === "water-service"
+      ? <WaterPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} />
+      : kind === "load-aero"
+        ? <LoadBalancePlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} />
+        : <ServiceAccessPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} />;
 
   return (
-    <figure className="sv-technical-plate" data-diagram-kind={kind}>
+    <figure className={`sv-technical-plate sv-technical-plate-${kind}`} data-diagram-kind={kind}>
       <div className="sv-plate-meta">
-        <span>SKYVAN / ENGINEERING</span>
-        <span>CONCEPT STUDY / {String(kind === "load-aero" ? 1 : kind === "solar-electrical" ? 2 : kind === "water-service" ? 3 : 4).padStart(2, "0")}</span>
+        <span>{locale === "tr" ? "SKYVAN / MÜHENDİSLİK" : "SKYVAN / ENGINEERING"}</span>
+        <span>{locale === "tr" ? "KONSEPT AKIŞ / " : "CONCEPT FLOW / "}{String(kind === "load-aero" ? 1 : kind === "solar-electrical" ? 2 : kind === "water-service" ? 3 : 4).padStart(2, "0")}</span>
       </div>
       <div className="sv-plate-heading">
         <div>
           <span>{item.label}</span>
           <strong>{item.title}</strong>
         </div>
-        <span>ENGINEERING PLATE</span>
+        <span>{locale === "tr" ? "PROJEYE ÖZEL DOĞRULAMA" : "PROJECT-SPECIFIC REVIEW"}</span>
       </div>
-      <div className="sv-plate-canvas">
-        {kind === "solar-electrical" ? <SolarPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} /> : null}
-        {kind === "water-service" ? <WaterPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} /> : null}
-        {kind === "load-aero" ? <LoadBalancePlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} /> : null}
-        {kind === "service-access" ? <ServiceAccessPlate nodes={item.nodes} ariaLabel={item.ariaLabel} route={item.route} /> : null}
-      </div>
+      <div className="sv-plate-canvas">{renderPlate}</div>
       <MobilePlateRail nodes={item.nodes} route={item.route} ariaLabel={item.ariaLabel} />
       <figcaption>
         <span>{item.note}</span>
-        <small>Konsept tasarım / Design concept</small>
+        <small>{locale === "tr" ? "Konsept akış / Design concept" : "Concept flow / Design concept"}</small>
       </figcaption>
     </figure>
   );

@@ -289,6 +289,26 @@ function RoofEvaluation({ locale }: { locale: PublicPageContent["locale"] }): Re
   </figure>;
 }
 
+function EngineeringStatus({ locale }: { locale: PublicPageContent["locale"] }): React.JSX.Element {
+  const copy = locale === "tr"
+    ? {
+      label: "Konsept / proje verisiyle doğrulanır",
+      title: "Şemalar yaklaşımı açıklar; ölçülü yerleşim değildir.",
+      body: "Araç modeli, gerçek ürün datasheet’i, kütle, enerji ve servis ölçüleri seçilmeden uygunluk sonucu üretilmez.",
+    }
+    : {
+      label: "Concept / verified with project data",
+      title: "The studies explain the approach; they are not scaled layouts.",
+      body: "No compatibility result is produced before the vehicle, real product datasheets, mass, energy and service dimensions are selected.",
+    };
+
+  return <aside className="sv-editorial-technical-status" role="note">
+    <span>{copy.label}</span>
+    <strong>{copy.title}</strong>
+    <p>{copy.body}</p>
+  </aside>;
+}
+
 function SectionBody({ section, index, slug, page }: { section: EditorialSection; index: number; slug: CuratedPublicSlug; page: PublicPageContent }) {
   const locale = page.locale;
   const visual = sectionVisuals[slug]?.[section.id];
@@ -395,6 +415,7 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
           <h1 id="editorial-title">{page.editorialPage?.title ? copy.heading : cmsHero?.heading || copy.heading}</h1>
           <p>{page.editorialPage?.introduction ? copy.body : cmsHero?.subtext || copy.body}</p>
           {page.editorialPage?.introduction ? null : cmsHero?.body ? <p>{cmsHero.body}</p> : null}
+          {slug === "muhendislik" ? <EngineeringStatus locale={page.locale} /> : null}
         </div>
         {heroAsset ? <figure className="sv-editorial-hero-figure">
           <div className="sv-editorial-hero-media">
