@@ -21,6 +21,171 @@
   color: var(--public-text);
   color-scheme: light;
 }
+
+/* Engineering plates: one object, one route, one controlled accent. */
+.sv-public .sv-technical-plate {
+  --plate-bg: color-mix(in srgb, var(--public-surface) 86%, var(--public-bg));
+  --plate-raised: color-mix(in srgb, var(--public-surface-strong) 72%, var(--public-bg));
+  --plate-text: var(--public-text);
+  --plate-muted: var(--public-muted);
+  --plate-line: color-mix(in srgb, var(--public-text) 28%, transparent);
+  --plate-soft-line: color-mix(in srgb, var(--public-text) 12%, transparent);
+  --plate-accent: #c6a873;
+  --plate-accent-soft: color-mix(in srgb, var(--plate-accent) 18%, transparent);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  width: 100%;
+  border: 1px solid var(--public-border);
+  border-radius: clamp(20px, 2vw, 30px);
+  background:
+    radial-gradient(circle at 86% 4%, color-mix(in srgb, var(--plate-accent) 12%, transparent), transparent 25rem),
+    linear-gradient(145deg, color-mix(in srgb, var(--plate-bg) 92%, var(--public-bg)), var(--public-bg));
+  box-shadow: 0 1.8rem 4rem color-mix(in srgb, var(--public-text) 9%, transparent), inset 0 1px color-mix(in srgb, var(--public-text) 7%, transparent);
+  color: var(--plate-text);
+}
+
+.sv-public .sv-technical-plate::before {
+  position: absolute;
+  inset: .75rem;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--public-text) 7%, transparent);
+  border-radius: calc(clamp(20px, 2vw, 30px) - .55rem);
+  content: "";
+  pointer-events: none;
+}
+
+.sv-public .sv-plate-meta,
+.sv-public .sv-plate-heading,
+.sv-public .sv-plate-canvas,
+.sv-public .sv-plate-mobile,
+.sv-public .sv-technical-plate figcaption { position: relative; z-index: 1; }
+
+.sv-public .sv-plate-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem clamp(1rem, 3vw, 1.8rem) .85rem;
+  border-bottom: 1px solid var(--plate-soft-line);
+  color: var(--plate-muted);
+  font-size: .59rem;
+  font-weight: 650;
+  letter-spacing: .18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.sv-public .sv-plate-meta span:first-child { color: var(--plate-accent); }
+.sv-public .sv-plate-meta span:last-child { text-align: right; }
+
+.sv-public .sv-plate-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.2rem clamp(1rem, 3vw, 1.8rem) .75rem;
+}
+
+.sv-public .sv-plate-heading > div { display: grid; gap: .55rem; min-width: 0; }
+.sv-public .sv-plate-heading > div > span { color: var(--plate-accent); font-size: .68rem; font-weight: 650; letter-spacing: .2em; }
+.sv-public .sv-plate-heading > div > strong { max-width: 38rem; color: var(--plate-text); font-size: clamp(1.15rem, 2vw, 1.72rem); font-weight: 520; letter-spacing: -.03em; line-height: 1.15; }
+.sv-public .sv-plate-heading > span { padding-top: .15rem; color: var(--plate-muted); font-size: .56rem; letter-spacing: .18em; line-height: 1.4; text-align: right; white-space: nowrap; }
+.sv-public .sv-plate-canvas { width: min(100%, 75rem); margin-inline: auto; padding: .25rem clamp(.65rem, 2.5vw, 1.55rem) 0; }
+.sv-public .sv-plate-svg { display: block; width: 100%; height: auto; aspect-ratio: 1080 / 560; overflow: visible; }
+.sv-public .sv-plate-svg text { font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif; }
+.sv-public .sv-plate-grid path { fill: none; stroke: var(--plate-soft-line); stroke-dasharray: 1 11; stroke-width: 1; }
+.sv-public .sv-plate-overline { fill: var(--plate-muted); font-size: 10px; letter-spacing: .18em; }
+.sv-public .sv-plate-orientation { fill: var(--plate-muted); font-size: 9px; letter-spacing: .15em; }
+.sv-public .sv-plate-footnote { fill: var(--plate-muted); font-size: 10px; letter-spacing: .06em; }
+.sv-public .sv-plate-route { fill: none; stroke: var(--plate-accent); stroke-linecap: round; stroke-dasharray: 2 16; stroke-width: 3; }
+.sv-public .sv-plate-route-guide { fill: none; stroke: var(--plate-line); stroke-dasharray: 1 9; stroke-width: 1; }
+.sv-public .sv-plate-route-orb { fill: var(--plate-accent); }
+.sv-public .sv-plate-route-aura { fill: var(--plate-accent-soft); }
+.sv-public .sv-plate-node-halo { fill: var(--plate-accent-soft); stroke: none; }
+.sv-public .sv-plate-node-ring { fill: var(--plate-bg); stroke: var(--plate-accent); stroke-width: 1.3; }
+.sv-public .sv-plate-node-core { fill: var(--plate-accent); }
+.sv-public .sv-plate-node-index, .sv-public .sv-plate-callout-index { fill: var(--plate-accent); font-size: 9px; letter-spacing: .15em; }
+.sv-public .sv-plate-node-label, .sv-public .sv-plate-callout-label { fill: var(--plate-text); font-size: 13px; font-weight: 520; letter-spacing: -.01em; }
+.sv-public .sv-plate-node-detail, .sv-public .sv-plate-callout-detail { fill: var(--plate-muted); font-size: 9px; letter-spacing: .13em; }
+.sv-public .sv-plate-callout-line { fill: none; stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-callout-point { fill: var(--plate-accent); }
+.sv-public .sv-plate-solar-roof-shell { fill: color-mix(in srgb, var(--plate-raised) 78%, transparent); stroke: var(--plate-line); stroke-width: 1.5; }
+.sv-public .sv-plate-solar-panel { fill: color-mix(in srgb, var(--plate-accent) 13%, var(--plate-bg)); stroke: var(--plate-accent); stroke-width: 1.2; }
+.sv-public .sv-plate-solar-panel-line { fill: none; stroke: color-mix(in srgb, var(--plate-accent) 58%, transparent); stroke-width: 1; }
+.sv-public .sv-plate-solar-support { fill: none; stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-object-label { fill: var(--plate-text); font-size: 9px; letter-spacing: .13em; }
+.sv-public .sv-plate-object-detail { fill: var(--plate-muted); font-size: 8px; letter-spacing: .15em; }
+.sv-public .sv-plate-water-tank-shell { fill: color-mix(in srgb, var(--plate-raised) 82%, transparent); stroke: var(--plate-line); stroke-width: 1.4; }
+.sv-public .sv-plate-water-tank-line, .sv-public .sv-plate-water-wave { fill: none; stroke: var(--plate-accent); stroke-width: 1.2; }
+.sv-public .sv-plate-water-filter-shell, .sv-public .sv-plate-water-pump-shell { fill: color-mix(in srgb, var(--plate-accent) 9%, var(--plate-bg)); stroke: var(--plate-accent); stroke-width: 1.4; }
+.sv-public .sv-plate-water-filter-mark, .sv-public .sv-plate-water-pump-mark { fill: none; stroke: var(--plate-accent); stroke-linecap: round; stroke-width: 1.2; }
+.sv-public .sv-plate-manifold-line { fill: none; stroke: var(--plate-accent); stroke-width: 2; }
+.sv-public .sv-plate-manifold-hub { fill: var(--plate-bg); stroke: var(--plate-accent); stroke-width: 1.4; }
+.sv-public .sv-plate-manifold-port { fill: var(--plate-accent); }
+.sv-public .sv-plate-secondary-line { fill: none; stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-secondary-label { fill: var(--plate-muted); font-size: 9px; letter-spacing: .16em; }
+.sv-public .sv-plate-vehicle-shell { fill: color-mix(in srgb, var(--plate-raised) 78%, transparent); stroke: var(--plate-line); stroke-width: 1.8; }
+.sv-public .sv-plate-vehicle-cab { fill: color-mix(in srgb, var(--plate-text) 9%, transparent); stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-vehicle-rule { fill: none; stroke: var(--plate-soft-line); stroke-width: 1; }
+.sv-public .sv-plate-vehicle-wheel { fill: var(--plate-bg); stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-zone { stroke-width: 1; }
+.sv-public .sv-plate-zone-water, .sv-public .sv-plate-zone-energy { fill: color-mix(in srgb, var(--plate-accent) 11%, transparent); stroke: color-mix(in srgb, var(--plate-accent) 48%, transparent); }
+.sv-public .sv-plate-zone-living { fill: color-mix(in srgb, var(--plate-text) 6%, transparent); stroke: var(--plate-line); }
+.sv-public .sv-plate-zone-label, .sv-public .sv-plate-balance-label { fill: var(--plate-muted); font-size: 9px; letter-spacing: .14em; }
+.sv-public .sv-plate-balance-axis { fill: none; stroke: var(--plate-accent); stroke-dasharray: 5 7; stroke-width: 1; }
+.sv-public .sv-plate-balance-centre { fill: var(--plate-accent); }
+.sv-public .sv-plate-service-shell { fill: color-mix(in srgb, var(--plate-raised) 78%, transparent); stroke: var(--plate-line); stroke-width: 1.6; }
+.sv-public .sv-plate-service-opening { fill: var(--plate-bg); stroke: var(--plate-line); stroke-width: 1; }
+.sv-public .sv-plate-service-lid { fill: none; stroke: var(--plate-accent); stroke-width: 1.5; }
+.sv-public .sv-plate-service-rail { fill: none; stroke: var(--plate-soft-line); stroke-width: 1; }
+.sv-public .sv-plate-service-module { fill: color-mix(in srgb, var(--plate-accent) 10%, var(--plate-bg)); stroke: color-mix(in srgb, var(--plate-accent) 48%, transparent); stroke-width: 1; }
+.sv-public .sv-plate-service-core { fill: var(--plate-bg); stroke: var(--plate-accent); stroke-width: 1.3; }
+.sv-public .sv-plate-service-cross, .sv-public .sv-plate-service-lines { fill: none; stroke: var(--plate-accent); stroke-linecap: round; stroke-width: 1.2; }
+.sv-public .sv-plate-service-status { fill: var(--plate-accent); }
+.sv-public .sv-technical-plate figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 1.5rem; min-height: 4rem; padding: 1rem clamp(1rem, 3vw, 1.8rem) 1.25rem; border-top: 1px solid var(--plate-soft-line); }
+.sv-public .sv-technical-plate figcaption span { max-width: 62rem; color: var(--plate-muted); font-size: .78rem; line-height: 1.65; }
+.sv-public .sv-technical-plate figcaption small { flex: none; color: var(--plate-muted); font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; }
+.sv-public .sv-plate-mobile { display: none; }
+
+@keyframes sv-plate-route-flow { to { stroke-dashoffset: -72px; } }
+@keyframes sv-plate-aura-breathe { 50% { opacity: .34; transform: scale(1.28); transform-origin: center; } }
+@keyframes sv-plate-water-flow { 50% { opacity: .42; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sv-public .sv-plate-route { animation: sv-plate-route-flow 4.2s linear infinite; }
+  .sv-public .sv-plate-route-aura { animation: sv-plate-aura-breathe 2.8s ease-in-out infinite; }
+  .sv-public .sv-plate-water-wave { animation: sv-plate-water-flow 2.4s ease-in-out infinite; }
+  .sv-public .sv-plate-water-wave:nth-of-type(2) { animation-delay: .45s; }
+}
+
+@media (max-width: 860px) {
+  .sv-public .sv-plate-canvas { display: none; }
+  .sv-public .sv-plate-mobile { display: block; padding: .75rem clamp(1rem, 5vw, 1.6rem) 1.5rem; }
+  .sv-public .sv-plate-mobile-route { display: block; max-width: 30rem; color: var(--plate-muted); font-size: .68rem; letter-spacing: .12em; line-height: 1.5; text-transform: uppercase; }
+  .sv-public .sv-plate-mobile-flow { position: relative; display: grid; gap: 0; margin-top: 1.35rem; padding-left: .4rem; }
+  .sv-public .sv-plate-mobile-flow::before { position: absolute; top: 1.4rem; bottom: 1.4rem; left: 1.02rem; width: 1px; background: linear-gradient(var(--plate-accent), var(--plate-line), var(--plate-accent)); content: ""; opacity: .7; }
+  .sv-public .sv-plate-mobile-step { position: relative; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: .8rem; align-items: center; min-height: 4.7rem; }
+  .sv-public .sv-plate-mobile-marker { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; border: 1px solid var(--plate-accent); border-radius: 50%; background: var(--plate-bg); box-shadow: 0 0 0 .38rem var(--plate-bg); }
+  .sv-public .sv-plate-mobile-marker b { color: var(--plate-accent); font-size: .48rem; font-weight: 650; letter-spacing: .08em; }
+  .sv-public .sv-plate-mobile-copy { display: grid; gap: .28rem; min-width: 0; padding-block: .65rem; border-bottom: 1px solid var(--plate-soft-line); }
+  .sv-public .sv-plate-mobile-step:last-child .sv-plate-mobile-copy { border-bottom: 0; }
+  .sv-public .sv-plate-mobile-copy strong { color: var(--plate-text); font-size: .94rem; font-weight: 520; line-height: 1.3; }
+  .sv-public .sv-plate-mobile-copy small { color: var(--plate-muted); font-size: .59rem; letter-spacing: .14em; text-transform: uppercase; }
+  .sv-public .sv-plate-heading { gap: .8rem; }
+  .sv-public .sv-plate-heading > span { max-width: 7rem; white-space: normal; }
+}
+
+@media (max-width: 520px) {
+  .sv-public .sv-technical-plate { border-radius: 20px; }
+  .sv-public .sv-technical-plate::before { inset: .55rem; border-radius: 15px; }
+  .sv-public .sv-plate-meta { padding: 1rem .95rem .7rem; font-size: .51rem; letter-spacing: .13em; }
+  .sv-public .sv-plate-heading { padding: 1rem .95rem .45rem; }
+  .sv-public .sv-plate-heading > div > span { font-size: .59rem; letter-spacing: .16em; }
+  .sv-public .sv-plate-heading > div > strong { font-size: 1.12rem; }
+  .sv-public .sv-plate-heading > span { font-size: .49rem; }
+  .sv-public .sv-technical-plate figcaption { display: grid; gap: .55rem; padding: .9rem .95rem 1.1rem; }
+  .sv-public .sv-technical-plate figcaption span { font-size: .72rem; }
+}
 .public-site.sv-public[data-public-theme="dark"] {
   --public-bg: #0d0f10;
   --public-bg-soft: #17191a;

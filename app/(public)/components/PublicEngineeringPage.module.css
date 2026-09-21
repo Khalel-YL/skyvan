@@ -10,6 +10,11 @@
 .heroCopy > p:last-child { max-width: 36rem; margin-top: 1.7rem; color: rgba(255,255,255,.82); font-size: clamp(1rem, 1.3vw, 1.16rem); line-height: 1.68; }
 .heroMeta { display: flex; justify-content: space-between; gap: 1rem; color: rgba(255,255,255,.59); font-size: .62rem; letter-spacing: .17em; text-transform: uppercase; }
 .story { padding-top: clamp(3.5rem, 8vw, 9.5rem); }
+.balance { padding-bottom: clamp(5rem, 9vw, 10rem); }
+.energyPlate, .waterPlate, .controlPlate { grid-column: 1 / -1; width: min(100%, 72rem); justify-self: center; }
+.energyPlate { margin-top: clamp(1rem, 3vw, 2.5rem); }
+.waterPlate { margin-top: clamp(1.5rem, 4vw, 3.5rem); }
+.controlPlate { margin-top: clamp(2rem, 5vw, 4rem); }
 .thesis { display: grid; grid-template-columns: minmax(10rem,.52fr) minmax(0,1.48fr); gap: clamp(2rem,9vw,12rem); align-items: start; padding-bottom: clamp(5rem,10vw,12rem); }
 .thesis :global(.sv-eyebrow) { margin: .5rem 0 0; }
 .thesis h2, .energy h2, .water h2, .envelope h2, .control h2, .closing h2 { font-size: clamp(2.45rem,4.6vw,5.15rem); font-weight: 450; line-height: .98; letter-spacing: -.07em; text-wrap: balance; }

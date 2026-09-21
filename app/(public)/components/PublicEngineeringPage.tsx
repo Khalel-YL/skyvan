@@ -6,6 +6,7 @@ import { publicLaunchContent } from "../lib/public-launch-copy";
 import { getLocalizedPath } from "../lib/public-routing";
 import { PublicConceptMedia } from "./PublicConceptMedia";
 import { PublicMotion } from "./PublicMotion";
+import { PublicTechnicalDiagram } from "./PublicTechnicalDiagram";
 import styles from "./PublicEngineeringPage.module.css";
 
 type EngineeringCopy = {
@@ -155,6 +156,10 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
           </div>
         </section>
 
+        <section className={`sv-container ${styles.balance}`} data-sv-reveal aria-label={locale === "tr" ? "Yük ve denge teknik çalışması" : "Load and balance technical study"}>
+          <PublicTechnicalDiagram kind="load-aero" locale={locale} />
+        </section>
+
         <section className={`sv-container ${styles.energy}`} data-sv-reveal aria-labelledby="engineering-energy-title">
           <figure className={styles.energyMedia}>
             <PublicConceptMedia
@@ -170,6 +175,9 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
             <h2 id="engineering-energy-title">{text.energy.title}</h2>
             <p>{text.energy.body}</p>
             <ul>{text.energy.points.map((point) => <li key={point}>{point}</li>)}</ul>
+          </div>
+          <div className={styles.energyPlate}>
+            <PublicTechnicalDiagram kind="solar-electrical" locale={locale} />
           </div>
         </section>
 
@@ -198,6 +206,9 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
               />
               <ConceptCaption text={text.concept} />
             </figure>
+            <div className={styles.waterPlate}>
+              <PublicTechnicalDiagram kind="water-service" locale={locale} />
+            </div>
           </div>
         </section>
 
@@ -232,6 +243,9 @@ export function PublicEngineeringPage({ page }: { page: PublicPageContent }): Re
             <p className="sv-eyebrow">{text.control.eyebrow}</p>
             <h2 id="engineering-control-title">{text.control.title}</h2>
             <p>{text.control.body}</p>
+          </div>
+          <div className={styles.controlPlate}>
+            <PublicTechnicalDiagram kind="service-access" locale={locale} />
           </div>
         </section>
       </PublicMotion>
