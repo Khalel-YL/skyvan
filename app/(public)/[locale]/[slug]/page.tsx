@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { JsonLd } from "../../components/JsonLd";
+import { PublicAboutPage } from "../../components/PublicAboutPage";
 import { PublicEngineeringPage } from "../../components/PublicEngineeringPage";
 import { PublicExplorePage } from "../../components/PublicExplorePage";
 import { PublicPageRenderer } from "../../components/PublicPageRenderer";
@@ -64,6 +65,15 @@ export default async function PublicSlugPage({
 
   if (!page) {
     notFound();
+  }
+
+  if (page.slug === "hakkimizda") {
+    return (
+      <>
+        <JsonLd data={buildWebsiteJsonLd(page)} />
+        <PublicAboutPage page={page} />
+      </>
+    );
   }
 
   if (page.slug === "karavan-deneyimi") {
