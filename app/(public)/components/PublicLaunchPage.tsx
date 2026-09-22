@@ -27,11 +27,15 @@ const homeUi = {
     livingCta: "Karavan deneyimini keşfedin",
     livingCaption: "Skyvan yaşam alanı konsepti",
     workshopEyebrow: "Skyvan Atölye",
-    workshopTitle: "Kararları görünür, bağlantıları anlaşılır hale getiren proje akışı.",
-    workshopBody: "Atölye; araçtan yaşam düzenine, bileşenlerden teknik kontrole kadar seçimleri aynı proje bağlamında bir araya getirecek.",
-    workshopFlow: ["Araç", "Yaşam", "Bileşenler", "Teknik kontrol", "İnsan onayı"],
-    workshopNote: "Dijital sistem açıklayacak ve uyaracak. Nihai teknik ve ticari karar insan onayında kalacak.",
-    workshopCta: "Atölyeyi tanıyın",
+    workshopBadge: "Canlı Proje Sistemi",
+    workshopTitle: "Karavanınızı seçmeyin. Projenizi oluşturun.",
+    workshopBody: "Atölye bir ürün listesi ya da basit bir konfigüratör değil. Araçtan yaşam düzenine, enerji ve su sistemlerinden bileşenlere kadar verdiğiniz her karar kendi Skyvan projenize işlenir.",
+    workshopFlow: ["Aracını seç", "Yaşam alanını oluştur", "Sistemlerini belirle", "Teknik uyumluluğu gör", "Uzmanla tamamla"],
+    workshopNote: "Atölye’de yaptığınız her seçim projenizin bir parçasıdır. Sistem seçimlerin teknik etkilerini açıklar ve uyarır; nihai teknik ve ticari karar insan onayında kalır.",
+    workshopCta: "Canlı proje sistemini keşfedin",
+    projectLabel: "PROJE: SKYVAN-001",
+    projectLive: "CANLI",
+    projectMetrics: [["Araç", "Seçiliyor"], ["Yerleşim", "Canlı plan"], ["Enerji", "Hesaplanıyor"], ["Teknik kontrol", "Aktif"]],
     engineeringEyebrow: "Mühendislik",
     engineeringTitle: "Görünmeyen sistem de tasarımın bir parçasıdır.",
     engineeringBody: "İyi bir yaşam alanının arkasında; enerji, su, ısı-yalıtım ve servis erişiminin birlikte çözüldüğü bir teknik omurga bulunur.",
@@ -56,11 +60,15 @@ const homeUi = {
     livingCta: "Explore motorhome living",
     livingCaption: "Skyvan living-space concept",
     workshopEyebrow: "Skyvan Workshop",
-    workshopTitle: "A project flow that makes decisions visible and connections understandable.",
-    workshopBody: "Workshop will bring vehicle, living layout, component choices and technical checks together in one project context.",
-    workshopFlow: ["Vehicle", "Living", "Components", "Technical check", "Human approval"],
-    workshopNote: "The digital system will explain and warn. Final technical and commercial decisions remain subject to human approval.",
-    workshopCta: "Explore Workshop",
+    workshopBadge: "Live Project System",
+    workshopTitle: "Don’t choose a motorhome. Build your project.",
+    workshopBody: "Workshop is not a product list or a simple configurator. From the vehicle and living layout to energy, water and components, every decision becomes part of your own Skyvan project.",
+    workshopFlow: ["Choose vehicle", "Shape living space", "Define systems", "See technical compatibility", "Complete with an expert"],
+    workshopNote: "Every choice you make in Workshop becomes part of your project. The system explains technical effects and warns; final technical and commercial decisions remain subject to human approval.",
+    workshopCta: "Explore the live project system",
+    projectLabel: "PROJECT: SKYVAN-001",
+    projectLive: "LIVE",
+    projectMetrics: [["Vehicle", "Selecting"], ["Layout", "Live plan"], ["Energy", "Calculating"], ["Technical check", "Active"]],
     engineeringEyebrow: "Engineering",
     engineeringTitle: "The system you do not see is part of the design.",
     engineeringBody: "Behind a good living space is a technical backbone where energy, water, thermal insulation and service access are solved together.",
@@ -139,15 +147,17 @@ export function PublicLaunchPage({ page }: { page: PublicPageContent }): React.J
         <section id="workshop" className={styles.workshop} data-sv-reveal aria-labelledby="home-workshop-title">
           <div className={`sv-container ${styles.workshopFrame}`}>
             <div className={styles.workshopCopy}>
-              <div className={styles.eyebrowRow}><p className="sv-eyebrow">{ui.workshopEyebrow}</p><span className="sv-status">{copy.upcoming}</span></div>
+              <div className={styles.eyebrowRow}><p className="sv-eyebrow">{ui.workshopEyebrow}</p><span className={styles.liveBadge}><i aria-hidden="true" />{ui.workshopBadge}</span><span className="sv-status">{copy.upcoming}</span></div>
               <h2 id="home-workshop-title">{ui.workshopTitle}</h2>
               <p>{ui.workshopBody}</p>
               <p className={styles.workshopNote}>{ui.workshopNote}</p>
               <Link className="sv-text-link" href={getLocalizedPath(page.locale, "workshop")}>{ui.workshopCta}<ArrowUpRight size={17} aria-hidden="true" /></Link>
             </div>
-            <ol className={styles.flow}>
-              {ui.workshopFlow.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong></li>)}
-            </ol>
+            <div className={styles.projectPanel}>
+              <div className={styles.projectHeader}><span>{ui.projectLabel}</span><strong><i aria-hidden="true" />{ui.projectLive}</strong></div>
+              <div className={styles.projectMetrics}>{ui.projectMetrics.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+              <ol className={styles.flow}>{ui.workshopFlow.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong></li>)}</ol>
+            </div>
           </div>
         </section>
 
