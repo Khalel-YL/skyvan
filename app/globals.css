@@ -36,6 +36,41 @@
   color-scheme: dark;
 }
 
+/* Admin density: keep operational screens scannable without hiding data. */
+.admin-content .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+
+.admin-content .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem;
+}
+
+.admin-content .gap-6 {
+  gap: 1rem;
+}
+
+.admin-content .rounded-3xl {
+  border-radius: 1.25rem;
+}
+
+.admin-content .p-6 {
+  padding: 1.25rem;
+}
+
+.admin-content .p-5 {
+  padding: 1rem;
+}
+
+.admin-content .text-4xl {
+  font-size: 1.75rem;
+  line-height: 2.1rem;
+}
+
+.admin-content .text-3xl {
+  font-size: 1.5rem;
+  line-height: 1.9rem;
+}
+
 * {
   box-sizing: border-box;
 }

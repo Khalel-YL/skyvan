@@ -31,7 +31,7 @@ function AdminNavItemRow({
   const content = (
     <>
       <span
-        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border transition ${
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${
           active
             ? "border-[var(--admin-border-strong)] bg-[var(--admin-text)] text-[var(--admin-bg)] shadow-[0_0_28px_rgba(255,255,255,0.16)]"
             : "border-[var(--admin-border)] bg-[var(--admin-surface-raised)] text-[var(--admin-muted)] group-hover:text-[var(--admin-text)]"
@@ -68,30 +68,36 @@ function AdminNavItemRow({
             </span>
           ) : null}
         </span>
-
-        <span className="mt-1 block max-h-10 overflow-hidden text-[11px] leading-5 text-[var(--admin-muted)]">
-          {item.description}
-        </span>
       </span>
 
       {active ? (
-        <span className="mt-2 h-7 w-1 shrink-0 rounded-full bg-[var(--admin-text)]" aria-hidden="true" />
+        <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--admin-text)]" aria-hidden="true" />
       ) : null}
     </>
   );
 
-  const className = `group relative flex w-full min-w-0 items-start gap-3 rounded-[1.15rem] border px-3 py-3 text-left transition ${
+  const className = `group relative flex w-full min-w-0 items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition ${
     active
       ? "border-[var(--admin-border-strong)] bg-[linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.055))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_16px_48px_rgba(0,0,0,0.22)]"
       : "border-transparent bg-transparent hover:border-[var(--admin-border)] hover:bg-[var(--admin-surface)]"
   } ${isDisabled ? "cursor-not-allowed opacity-55" : ""}`;
 
   if (isDisabled) {
-    return <div className={className}>{content}</div>;
+    return (
+      <div className={className} title={`${item.title} · ${item.description}`}>
+        {content}
+      </div>
+    );
   }
 
   return (
-    <Link href={item.href} className={className} aria-current={active ? "page" : undefined} onClick={onNavigate}>
+    <Link
+      href={item.href}
+      className={className}
+      title={`${item.title} · ${item.description}`}
+      aria-current={active ? "page" : undefined}
+      onClick={onNavigate}
+    >
       {content}
     </Link>
   );
@@ -101,33 +107,29 @@ export function AdminSidebarClient({ onNavigate }: AdminSidebarClientProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-6" aria-label="Admin navigation">
+    <nav className="space-y-3" aria-label="Admin navigation">
       {adminNavGroups.map((group) => {
         const activeInGroup = group.items.some((item) => isRouteActive(pathname, item.href));
 
         return (
           <section
             key={group.id}
-            className={`rounded-[1.4rem] border p-2.5 transition ${
+            className={`rounded-2xl border p-1.5 transition ${
               activeInGroup
                 ? "border-[var(--admin-border-strong)] bg-[var(--admin-surface)]"
                 : "border-transparent bg-transparent"
             }`}
           >
-            <div className="mb-2 flex items-center justify-between gap-3 px-2">
+            <div className="mb-1 flex items-center justify-between gap-3 px-2 py-1">
               <div className="min-w-0">
                 <p
-                  className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                  className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
                     activeInGroup ? "text-[var(--admin-text)]" : "text-zinc-600"
                   }`}
                 >
                   {group.title}
                 </p>
-                <p className="mt-1 truncate text-[11px] text-[var(--admin-muted)]">{group.description}</p>
               </div>
-              {activeInGroup ? (
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--admin-text)]" aria-hidden="true" />
-              ) : null}
             </div>
 
             <div className="space-y-1">

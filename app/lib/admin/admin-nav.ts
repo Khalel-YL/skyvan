@@ -91,7 +91,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "content",
-    badge: "Yeni",
   },
   {
     title: "Araç Modelleri",
@@ -137,7 +136,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "engineering-core",
-    badge: "Yeni",
   },
   {
     title: "Build Versiyonları",
@@ -147,7 +145,7 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "engineering-core",
-    badge: "Yeni",
+    badge: "Öncelik",
   },
   {
     title: "Müşteri Adayları",
@@ -157,7 +155,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "commercial-operations",
-    badge: "CRM",
   },
   {
     title: "Teklifler",
@@ -167,7 +164,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "commercial-operations",
-    badge: "CRM",
   },
   {
     title: "Siparişler",
@@ -177,7 +173,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "commercial-operations",
-    badge: "CRM",
   },
   {
     title: "Kural Motoru",
@@ -205,7 +200,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "intelligence-governance",
-    badge: "Yeni",
   },
   {
     title: "Datasheet Merkezi",
@@ -215,7 +209,6 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "intelligence-governance",
-    badge: "Yeni",
   },
   {
     title: "Kullanıcılar",
@@ -225,40 +218,39 @@ export const adminNavItems: AdminNavItem[] = [
     enabled: true,
     section: "stable",
     group: "system",
-    badge: "Çekirdek",
   },
 ];
 
 const adminNavGroupMeta: Array<Omit<AdminNavGroup, "items">> = [
   {
     id: "overview",
-    title: "Genel Bakış",
-    description: "Operasyon çekirdeği",
+    title: "Başlangıç",
+    description: "Sistem özeti",
   },
   {
     id: "content",
     title: "İçerik",
-    description: "Yayın ve medya kontrolü",
+    description: "Yayın yönetimi",
   },
   {
     id: "engineering-core",
-    title: "Mühendislik Çekirdeği",
-    description: "Ürün ve build omurgası",
+    title: "Ürün & Build",
+    description: "Teknik omurga",
   },
   {
     id: "commercial-operations",
-    title: "Ticari Operasyonlar",
-    description: "CRM ve satış hattı",
+    title: "Satış",
+    description: "Müşteri ve sipariş",
   },
   {
     id: "intelligence-governance",
-    title: "Zeka ve Yönetişim",
-    description: "AI, kural ve denetim yüzeyi",
+    title: "Zeka & Sistem",
+    description: "AI ve kontrol",
   },
   {
     id: "system",
     title: "Sistem",
-    description: "Erişim ve kullanıcı yönetimi",
+    description: "Kullanıcı erişimi",
   },
 ];
 

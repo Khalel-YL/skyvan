@@ -26,8 +26,8 @@ export function AdminShell({
             databaseNote={databaseNote}
           />
 
-          <main className="flex-1 px-4 py-5 md:px-6 lg:px-8">
-            <div className="mx-auto w-full max-w-[1760px]">{children}</div>
+          <main className="admin-content flex-1 px-4 py-4 md:px-6 lg:px-7">
+            <div className="mx-auto w-full max-w-[1440px]">{children}</div>
           </main>
         </div>
       </div>

@@ -11,6 +11,7 @@ import {
   Package,
   Settings2,
   Truck,
+  Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import { count, eq } from "drizzle-orm";
@@ -25,6 +26,7 @@ import { db, getDatabaseHealth } from "@/db/db";
 import {
   aiDocumentChunks,
   aiKnowledgeDocuments,
+  buildVersions,
   categories,
   compatibilityRules,
   models,
@@ -43,11 +45,11 @@ type DashboardMetrics = {
   productsDraft: number;
   productsArchived: number;
   packagesTotal: number;
+  buildVersionsTotal: number;
   rulesTotal: number;
   datasheetsTotal: number;
   datasheetsPending: number;
   datasheetsProcessing: number;
-  datasheetsCompleted: number;
   datasheetsFailed: number;
   datasheetsReady: number;
   datasheetsCompletedNoChunks: number;
@@ -75,40 +77,40 @@ type RadarItem = {
 
 const quickLinks: QuickLink[] = [
   {
+    title: "Build versiyonları",
+    description: "Lead hattının gerçek ön koşulu",
+    href: "/admin/build-versions",
+    icon: Waypoints,
+  },
+  {
+    title: "Datasheet Merkezi",
+    description: "Teknik belge ve onay akışı",
+    href: "/admin/datasheets",
+    icon: FileDigit,
+  },
+  {
     title: "Araç Modelleri",
-    description: "Şasi ve temel teknik ölçü omurgasını yönet",
+    description: "Şasi ve temel ölçü omurgası",
     href: "/admin/models",
     icon: Truck,
   },
   {
-    title: "Kategoriler",
-    description: "Ürün sınıflandırma omurgasını koru",
-    href: "/admin/categories",
-    icon: Blocks,
-  },
-  {
     title: "Ürünler",
-    description: "Katalog ve mühendislik alanlarını yönet",
+    description: "Parça ve donanım havuzu",
     href: "/admin/products",
     icon: Package,
   },
   {
     title: "Paketler",
-    description: "Hazır konfigürasyon seviyelerini kontrol et",
+    description: "Hazır konfigürasyon setleri",
     href: "/admin/packages",
     icon: Boxes,
   },
   {
-    title: "Kural Motoru",
-    description: "Gerektirir / hariç tutar / önerir mantığını denetle",
-    href: "/admin/rules",
-    icon: Settings2,
-  },
-  {
-    title: "Datasheet Merkezi",
-    description: "AI ve kural motoru için belge kayıt katmanını besle",
-    href: "/admin/datasheets",
-    icon: FileDigit,
+    title: "Kategoriler",
+    description: "Ürün sınıflandırma ağacı",
+    href: "/admin/categories",
+    icon: Blocks,
   },
 ];
 
@@ -151,11 +153,11 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       productsDraft,
       productsArchived,
       packagesTotal,
+      buildVersionsTotal,
       rulesTotal,
       datasheetsTotal,
       datasheetsPending,
       datasheetsProcessing,
-      datasheetsCompleted,
       datasheetsFailed,
       knowledgePendingReview,
       knowledgeApproved,
@@ -167,47 +169,29 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       countTable(models),
       countWhere(models, models.status, "draft"),
       countWhere(models, models.status, "archived"),
-
       countTable(categories),
       countWhere(categories, categories.status, "draft"),
       countWhere(categories, categories.status, "archived"),
-
       countTable(products),
       countWhere(products, products.status, "draft"),
       countWhere(products, products.status, "archived"),
-
       countTable(packages),
+      countTable(buildVersions),
       countTable(compatibilityRules),
-
       countTable(aiKnowledgeDocuments),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.parsingStatus, "pending"),
-      countWhere(
-        aiKnowledgeDocuments,
-        aiKnowledgeDocuments.parsingStatus,
-        "processing",
-      ),
-      countWhere(
-        aiKnowledgeDocuments,
-        aiKnowledgeDocuments.parsingStatus,
-        "completed",
-      ),
+      countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.parsingStatus, "processing"),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.parsingStatus, "failed"),
-      countWhere(
-        aiKnowledgeDocuments,
-        aiKnowledgeDocuments.approvalStatus,
-        "pending_review",
-      ),
+      countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "pending_review"),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "approved"),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "rejected"),
       countWhere(aiKnowledgeDocuments, aiKnowledgeDocuments.approvalStatus, "revoked"),
-
       db
         .select({
           id: aiKnowledgeDocuments.id,
           parsingStatus: aiKnowledgeDocuments.parsingStatus,
         })
         .from(aiKnowledgeDocuments),
-
       db
         .select({
           documentId: aiDocumentChunks.documentId,
@@ -248,11 +232,11 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       productsDraft,
       productsArchived,
       packagesTotal,
+      buildVersionsTotal,
       rulesTotal,
       datasheetsTotal,
       datasheetsPending,
       datasheetsProcessing,
-      datasheetsCompleted,
       datasheetsFailed,
       datasheetsReady,
       datasheetsCompletedNoChunks,
@@ -298,118 +282,63 @@ export default async function AdminDashboardPage() {
 
   const statCards = metrics
     ? [
+        { label: "Modeller", value: metrics.modelsTotal, hint: "Araç omurgası" },
+        { label: "Kategoriler", value: metrics.categoriesTotal, hint: "Sınıflandırma ağacı" },
+        { label: "Ürünler", value: metrics.productsTotal, hint: "Donanım havuzu" },
+        { label: "Paketler", value: metrics.packagesTotal, hint: "Hazır setler" },
         {
-          label: "Modeller",
-          value: String(metrics.modelsTotal),
-          hint: "Araç platform omurgası",
+          label: "Build versiyonu",
+          value: metrics.buildVersionsTotal,
+          hint: metrics.buildVersionsTotal > 0 ? "Lead hattı için hazır" : "Lead hattı kilitli",
         },
-        {
-          label: "Kategoriler",
-          value: String(metrics.categoriesTotal),
-          hint: "Ürün sınıflandırma ağacı",
-        },
-        {
-          label: "Ürünler",
-          value: String(metrics.productsTotal),
-          hint: "Parça ve donanım havuzu",
-        },
-        {
-          label: "Paketler",
-          value: String(metrics.packagesTotal),
-          hint: "Hazır konfigürasyon setleri",
-        },
-        {
-          label: "Kurallar",
-          value: String(metrics.rulesTotal),
-          hint: "Teknik uyumluluk kayıtları",
-        },
-        {
-          label: "Datasheet",
-          value: String(metrics.datasheetsTotal),
-          hint: "AI bilgi tabanı belge kayıtları",
-        },
+        { label: "Datasheet", value: metrics.datasheetsTotal, hint: "Teknik belge" },
       ]
     : [
-        {
-          label: "Modeller",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
-        {
-          label: "Kategoriler",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
-        {
-          label: "Ürünler",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
-        {
-          label: "Paketler",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
-        {
-          label: "Kurallar",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
-        {
-          label: "Datasheet",
-          value: "-",
-          hint: "Veritabanı çevrimdışı",
-        },
+        { label: "Modeller", value: "—", hint: "DB bekleniyor" },
+        { label: "Kategoriler", value: "—", hint: "DB bekleniyor" },
+        { label: "Ürünler", value: "—", hint: "DB bekleniyor" },
+        { label: "Paketler", value: "—", hint: "DB bekleniyor" },
+        { label: "Build versiyonu", value: "—", hint: "DB bekleniyor" },
+        { label: "Datasheet", value: "—", hint: "DB bekleniyor" },
       ];
 
-  const modelActive = metrics
+  const datasheetQueue = metrics
+    ? metrics.datasheetsPending + metrics.datasheetsProcessing
+    : 0;
+  const activeModels = metrics
     ? Math.max(metrics.modelsTotal - metrics.modelsDraft - metrics.modelsArchived, 0)
     : 0;
-
-  const categoryActive = metrics
+  const activeCategories = metrics
     ? Math.max(
         metrics.categoriesTotal - metrics.categoriesDraft - metrics.categoriesArchived,
         0,
       )
     : 0;
-
-  const productActive = metrics
-    ? Math.max(
-        metrics.productsTotal - metrics.productsDraft - metrics.productsArchived,
-        0,
-      )
-    : 0;
-
-  const datasheetQueue = metrics
-    ? metrics.datasheetsPending + metrics.datasheetsProcessing
-    : 0;
-
-  const totalArchived = metrics
-    ? metrics.modelsArchived + metrics.categoriesArchived + metrics.productsArchived
+  const activeProducts = metrics
+    ? Math.max(metrics.productsTotal - metrics.productsDraft - metrics.productsArchived, 0)
     : 0;
 
   const radarItems: RadarItem[] = metrics
     ? [
-        ...(metrics.rulesTotal === 0
+        ...(metrics.buildVersionsTotal === 0
           ? [
               {
-                title: "Kural kaydı henüz yok",
-                description:
-                  "Kural motoru omurgası açık ama aktif kural kaydı henüz oluşturulmamış.",
-                href: "/admin/rules",
-                cta: "Kural motorunu aç",
-                tone: "warning" as const,
-                icon: Settings2,
+                title: "Build version hattı boş",
+                description: "Lead → teklif zinciri için önce geçerli bir build version üretmelisin.",
+                href: "/admin/build-versions",
+                cta: "Build hattını aç",
+                tone: "danger" as const,
+                icon: Waypoints,
               },
             ]
           : []),
         ...(metrics.datasheetsFailed > 0
           ? [
               {
-                title: "Hatalı belge kaydı var",
-                description: `${metrics.datasheetsFailed} adet datasheet kaydı hata durumunda bekliyor.`,
+                title: "Hatalı datasheet kaydı var",
+                description: `${metrics.datasheetsFailed} teknik belge işleme hatası bekliyor.`,
                 href: "/admin/datasheets?parsingStatus=failed",
-                cta: "Hatalı kayıtları aç",
+                cta: "Kayıtları incele",
                 tone: "danger" as const,
                 icon: FileWarning,
               },
@@ -418,10 +347,10 @@ export default async function AdminDashboardPage() {
         ...(datasheetQueue > 0
           ? [
               {
-                title: "AI belge kuyruğu çalışıyor",
-                description: `${datasheetQueue} adet kayıt bekliyor veya işleniyor.`,
+                title: "Datasheet kuyruğu çalışıyor",
+                description: `${datasheetQueue} kayıt bekliyor veya işleniyor.`,
                 href: "/admin/datasheets?audit=queue",
-                cta: "Belge kuyruğunu aç",
+                cta: "Kuyruğu aç",
                 tone: "warning" as const,
                 icon: AlertTriangle,
               },
@@ -430,8 +359,8 @@ export default async function AdminDashboardPage() {
         ...(metrics.datasheetsCompletedNoChunks > 0
           ? [
               {
-                title: "Chunk üretmeyen tamamlanmış belge var",
-                description: `${metrics.datasheetsCompletedNoChunks} belge tamamlandı görünüyor ama içerik parçası üretmemiş.`,
+                title: "Parçasız tamamlanan belge var",
+                description: `${metrics.datasheetsCompletedNoChunks} belge içerik parçası üretmemiş.`,
                 href: "/admin/datasheets?audit=completed-no-chunks",
                 cta: "Belgeleri incele",
                 tone: "danger" as const,
@@ -442,70 +371,27 @@ export default async function AdminDashboardPage() {
         ...(metrics.productsDraft > 0
           ? [
               {
-                title: "Taslak ürünler var",
-                description: `${metrics.productsDraft} ürün henüz üretim hazır seviyeye gelmemiş.`,
+                title: "Taslak ürün bulunuyor",
+                description: `${metrics.productsDraft} ürün üretim hazır seviyede değil.`,
                 href: "/admin/products",
-                cta: "Ürünleri kontrol et",
+                cta: "Ürünleri aç",
                 tone: "info" as const,
                 icon: Package,
               },
             ]
           : []),
-      ]
-    : [];
-
-  const hygieneItems = metrics
-    ? [
-        {
-          label: "Aktif modeller",
-          value: modelActive,
-          hint: `${metrics.modelsDraft} taslak / ${metrics.modelsArchived} arşiv`,
-        },
-        {
-          label: "Aktif kategoriler",
-          value: categoryActive,
-          hint: `${metrics.categoriesDraft} taslak / ${metrics.categoriesArchived} arşiv`,
-        },
-        {
-          label: "Aktif ürünler",
-          value: productActive,
-          hint: `${metrics.productsDraft} taslak / ${metrics.productsArchived} arşiv`,
-        },
-        {
-          label: "Teknik hazır datasheet",
-          value: metrics.datasheetsReady,
-          hint: `${datasheetQueue} kuyruk / ${metrics.datasheetsFailed} hatalı`,
-        },
-      ]
-    : [];
-
-  const aiReadinessItems = metrics
-    ? [
-        {
-          label: "Teknik hazır",
-          value: metrics.datasheetsReady,
-          hint: "Parça üreten tamamlanmış kayıtlar",
-        },
-        {
-          label: "Parçasız tamamlanan",
-          value: metrics.datasheetsCompletedNoChunks,
-          hint: "Kalite kontrol gerektirir",
-        },
-        {
-          label: "Kuyruk",
-          value: datasheetQueue,
-          hint: "Bekleyen + işlenen",
-        },
-        {
-          label: "Onay bekliyor",
-          value: metrics.knowledgePendingReview,
-          hint: `${metrics.knowledgeApproved} onaylı / ${metrics.knowledgeRejected + metrics.knowledgeRevoked} kapalı`,
-        },
-        {
-          label: "Kural kaydı",
-          value: metrics.rulesTotal,
-          hint: "Kural motoru veri omurgası",
-        },
+        ...(metrics.rulesTotal === 0
+          ? [
+              {
+                title: "Kural motoru kapalı",
+                description: "Teknik veri ve onay hattı tamamlanana kadar kural yazımı açılmıyor.",
+                href: "/admin/rules",
+                cta: "Durumu gör",
+                tone: "warning" as const,
+                icon: Settings2,
+              },
+            ]
+          : []),
       ]
     : [];
 
@@ -517,456 +403,232 @@ export default async function AdminDashboardPage() {
     metrics.datasheetsFailed === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Admin / Operasyon Radarı"
-        title="Yönetilebilir ve aksiyon odaklı admin özeti"
-        description="Stabil modülleri tek merkezden gör, veri hazırlık kalitesini izle ve müdahale gerektiren alanları anında fark et."
+        eyebrow="Admin / Genel Bakış"
+        title="Operasyon özeti"
+        description="Önce müdahale gerektiren alanları gör; ayrıntıyı ilgili modülde aç."
         actions={
           <Link
-            href="/admin/datasheets"
-            className="inline-flex items-center gap-2 rounded-2xl border border-sky-500/20 bg-sky-500/10 px-4 py-2.5 text-sm font-medium text-sky-200 transition hover:border-sky-500/30 hover:bg-sky-500/15"
+            href="/admin/build-versions"
+            className="inline-flex items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-200 transition hover:border-sky-500/30 hover:bg-sky-500/15"
           >
-            Datasheet Merkezi
+            Build hattı
             <ArrowRight className="h-4 w-4" />
           </Link>
         }
       />
 
       <section
-        className={`rounded-3xl border p-5 ${
+        className={`rounded-2xl border p-4 ${
           governanceReady
             ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
             : "border-amber-500/20 bg-amber-500/10 text-amber-200"
         }`}
       >
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-black/20 p-2">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-black/20 p-2">
               {governanceReady ? (
                 <CheckCircle2 className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
             </div>
-
             <div>
               <p className="text-sm font-semibold">
-                {governanceReady
-                  ? "Yönetim çalışma durumu doğrulandı"
-                  : "Yönetim kapanışı için henüz hazır değil"}
+                {governanceReady ? "Yönetim durumu hazır" : "Yönetim kapanışı bekliyor"}
               </p>
-              <p className="mt-1 text-xs leading-5 opacity-90">
-                İz kaydı ve yayın izi yazımı aynı aktör bağına dayanır.
-                Manuel açık durumlar korumaların gevşetildiğini gösterir.
+              <p className="mt-0.5 text-xs opacity-80">
+                {auditRuntime.reason || "Audit ve yayın izleri kontrol altında."}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
-            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                DB
-              </div>
-              <div className="mt-2 text-sm font-semibold">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-xl border border-black/10 bg-black/10 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.14em] opacity-70">DB</p>
+              <p className="mt-1 text-xs font-semibold">
                 {databaseHealth.status === "online" ? "Hazır" : "Güvenli mod"}
-              </div>
+              </p>
             </div>
-
-            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Audit aktörü
-              </div>
-              <div className="mt-2 text-sm font-semibold">
-                {auditRuntime.actorRecordStatus === "resolved"
-                  ? auditRuntime.roleAligned
-                    ? "Doğrulandı"
-                    : "Rol dikkat istiyor"
-                  : "Doğrulanmadı"}
-              </div>
+            <div className="rounded-xl border border-black/10 bg-black/10 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.14em] opacity-70">Audit</p>
+              <p className="mt-1 text-xs font-semibold">
+                {auditRuntime.actorRecordStatus === "resolved" && auditRuntime.roleAligned
+                  ? "Doğrulandı"
+                  : "Dikkat"}
+              </p>
             </div>
-
-            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                İz / yayın
-              </div>
-              <div className="mt-2 text-sm font-semibold">
-                {auditRuntime.writeActive && auditRuntime.publishWriteActive
-                  ? "Yazım aktif"
-                  : "Güvenli düşüş"}
-              </div>
+            <div className="rounded-xl border border-black/10 bg-black/10 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.14em] opacity-70">Yayın izi</p>
+              <p className="mt-1 text-xs font-semibold">
+                {auditRuntime.writeActive && auditRuntime.publishWriteActive ? "Aktif" : "Kapalı"}
+              </p>
             </div>
-
-            <div className="rounded-2xl border border-black/10 bg-black/10 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] opacity-80">
-                Manuel açık
-              </div>
-              <div className="mt-2 text-sm font-semibold">{openOverrideCount}</div>
+            <div className="rounded-xl border border-black/10 bg-black/10 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.14em] opacity-70">Override</p>
+              <p className="mt-1 text-xs font-semibold">{openOverrideCount}</p>
             </div>
           </div>
         </div>
 
-        {auditRuntime.closureState !== "ready" || openOverrideCount > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Link
-              href="/admin/audit"
-              className="rounded-2xl border border-black/10 bg-black/10 px-4 py-2 text-xs font-medium transition hover:bg-black/15"
-            >
-              Audit & Publish yüzeyini aç
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="rounded-2xl border border-black/10 bg-black/10 px-4 py-2 text-xs font-medium transition hover:bg-black/15"
-            >
-              SEO & Ayarlar yüzeyini aç
-            </Link>
-          </div>
-        ) : null}
-
         {!governanceReady ? (
-          <div className="mt-4 rounded-2xl border border-black/10 bg-black/10 p-4 text-xs leading-5 opacity-90">
-            {auditRuntime.blocker
-              ? `${auditRuntime.blocker} ${auditRuntime.reason}`
-              : auditRuntime.reason}
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-black/10 pt-3 text-xs">
+            <Link href="/admin/audit" className="rounded-lg border border-black/10 bg-black/10 px-3 py-1.5 hover:bg-black/15">
+              İz ve yayın
+            </Link>
+            <Link href="/admin/settings" className="rounded-lg border border-black/10 bg-black/10 px-3 py-1.5 hover:bg-black/15">
+              SEO ve ayarlar
+            </Link>
           </div>
         ) : null}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {statCards.map((item) => (
           <StatCard
             key={item.label}
             label={item.label}
-            value={item.value}
+            value={String(item.value)}
             hint={item.hint}
           />
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Öncelikli operasyon radarları
-                </h2>
-                <p className="mt-1 text-sm text-neutral-400">
-                  Admin tarafında dikkat gerektiren alanları hızlıca aç.
-                </p>
-              </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
+        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-white">Öncelik listesi</h2>
+              <p className="mt-1 text-xs text-neutral-500">Sadece aksiyon gerektiren kayıtlar.</p>
             </div>
+            <span className="text-xs text-neutral-500">{radarItems.length} kayıt</span>
+          </div>
 
-            {metrics ? (
-              radarItems.length > 0 ? (
-                <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  {radarItems.map((item) => {
-                    const Icon = item.icon;
+          {metrics ? (
+            radarItems.length > 0 ? (
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {radarItems.map((item) => {
+                  const Icon = item.icon;
 
-                    return (
-                      <Link
-                        key={`${item.href}-${item.title}`}
-                        href={item.href}
-                        className={`rounded-2xl border p-4 transition hover:opacity-90 ${getToneClasses(
-                          item.tone,
-                        )}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="rounded-xl bg-black/20 p-2">
-                            <Icon className="h-4 w-4" />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold">{item.title}</p>
-                            <p className="mt-1 text-xs leading-5 opacity-90">
-                              {item.description}
-                            </p>
-                            <p className="mt-3 text-xs font-medium opacity-100">
-                              {item.cta} →
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-200">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-black/20 p-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Kritik operasyon uyarısı görünmüyor
-                      </p>
-                      <p className="mt-1 text-xs leading-5 opacity-90">
-                        Şu an dashboard üzerinde doğrudan müdahale gerektiren
-                        ana birikim görünmüyor. Bu iyi seviye.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
+                  return (
+                    <Link
+                      key={`${item.href}-${item.title}`}
+                      href={item.href}
+                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition hover:opacity-90 ${getToneClasses(item.tone)}`}
+                    >
+                      <span className="rounded-lg bg-black/20 p-1.5">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{item.title}</span>
+                        <span className="mt-0.5 block truncate text-xs opacity-80">{item.description}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-medium">{item.cta} →</span>
+                    </Link>
+                  );
+                })}
+              </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-                Veritabanı çevrimdışı olduğu için operasyon radarı üretilemiyor.
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-emerald-200">
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="text-sm">Kritik operasyon uyarısı görünmüyor.</span>
               </div>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Operasyon kısayolları
-                </h2>
-                <p className="mt-1 text-sm text-neutral-400">
-                  Stabil kabul edilen admin modüllerine hızlı geçiş.
-                </p>
-              </div>
+            )
+          ) : (
+            <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+              Veritabanı çevrimdışı olduğu için radar üretilemedi.
             </div>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {quickLinks.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:border-white/15 hover:bg-white/[0.04]"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-xl bg-white/5 p-2">
-                        <Icon className="h-4 w-4 text-neutral-100" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">
-                          {item.title}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-neutral-400">
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </section>
 
-        <aside className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-sky-500/10 p-2 text-sky-300">
-                <Bot className="h-4 w-4" />
-              </div>
+        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">Hızlı erişim</h2>
+            <p className="mt-1 text-xs text-neutral-500">Ayrıntıyı ilgili modülde aç.</p>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
 
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                  AI hazırlık radarı
-                </p>
-
-                <h2 className="mt-2 text-lg font-semibold text-white">
-                  Belge ve kural girdisi kalitesi
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-neutral-400">
-                  AI ve kural motoru tarafına veri taşıyacak teknik hazırlık ve
-                  insan onayı kalitesini tek panelde özetler.
-                </p>
-              </div>
-            </div>
-
-            {metrics ? (
-              <>
-                <div
-                  className={`mt-5 rounded-2xl border p-4 ${
-                    aiReady
-                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
-                      : "border-amber-500/20 bg-amber-500/10 text-amber-200"
-                  }`}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.05]"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-black/20 p-2">
-                      {aiReady ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4" />
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold">
-                        {aiReady
-                          ? "AI kullanım sinyali dengeli görünüyor"
-                          : "AI hazırlık tarafında dikkat isteyen sinyaller var"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 opacity-90">
-                        Teknik hazır belge, insan onayı, kuyruk ve parça üretimi
-                        birlikte izleniyor.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {aiReadinessItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-2xl border border-white/8 bg-black/20 p-4"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-white">
-                          {item.label}
-                        </p>
-                        <p className="text-lg font-semibold text-white">
-                          {item.value}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-neutral-400">
-                        {item.hint}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <Link
-                    href="/admin/datasheets?parsingStatus=completed"
-                    className="rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:border-white/15 hover:bg-white/[0.04]"
-                  >
-                    <p className="text-sm font-medium text-white">
-                      Teknik hazır belgeleri aç
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Tamamlandı ve onay sürecine yakın kayıtları incele.
-                    </p>
-                  </Link>
-
-                  <Link
-                    href="/admin/rules"
-                    className="rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:border-white/15 hover:bg-white/[0.04]"
-                  >
-                    <p className="text-sm font-medium text-white">
-                      Kural motorunu aç
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Kural motoru omurgasını belge kalitesiyle birlikte ilerlet.
-                    </p>
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-                Veritabanı çevrimdışı olduğu için AI hazırlık özeti üretilemedi.
-              </div>
-            )}
+                  <span className="rounded-lg bg-white/5 p-1.5 text-neutral-200">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-white">{item.title}</span>
+                    <span className="mt-0.5 block truncate text-xs text-neutral-500">{item.description}</span>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
+        </section>
+      </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-              Veri hijyeni
-            </p>
-
-            <h2 className="mt-2 text-lg font-semibold text-white">
-              Hazırlık dengesi
-            </h2>
-
-            {metrics ? (
-              <div className="mt-4 space-y-3">
-                {hygieneItems.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-white/8 bg-black/20 p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-white">
-                        {item.label}
-                      </p>
-                      <p className="text-lg font-semibold text-white">
-                        {item.value}
-                      </p>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-neutral-400">
-                      {item.hint}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-                Veritabanı çevrimdışı olduğu için detay özeti üretilmedi.
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-              Kontrollü güçlendirme
-            </p>
-
-            <h2 className="mt-2 text-lg font-semibold text-white">
-              Bu batch neden doğru?
-            </h2>
-
-            <div className="mt-4 space-y-3 text-sm leading-6 text-neutral-400">
-              <p>
-                Veri modeline dokunmuyor. Sadece mevcut tablo ve parça
-                üretiminden hazırlık sinyali çıkarıyor.
-              </p>
-
-              <p>
-                Genel bakışı sadece sayı gösteren ekran olmaktan çıkarıp AI ve
-                kural motoru hazırlık seviyesini izleyen bir merkeze yaklaştırıyor.
-              </p>
-
-              <p>
-                Sonraki adımda rules tarafında kanıt kalitesi görünürlüğü
-                açılırken hangi giriş kalitesinden başladığımızı netleştiriyor.
-              </p>
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-sky-500/10 p-2 text-sky-300">
+              <Bot className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-white">AI ve veri hazırlığı</h2>
+              <p className="mt-1 text-xs text-neutral-500">AI yalnızca onaylı ve parça üreten kaynakları kullanır.</p>
             </div>
-
-            {metrics ? (
-              <div className="mt-5 space-y-3">
-                <div className="flex items-start gap-3 rounded-2xl border border-white/8 bg-black/20 p-4">
-                  <FileDigit className="mt-0.5 h-4 w-4 text-neutral-300" />
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Teknik hazır belge oranı
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Tamamlandı belgeler içinde parça üreten kayıt sayısı:{" "}
-                      <span className="font-semibold text-white">
-                        {metrics.datasheetsReady}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 rounded-2xl border border-white/8 bg-black/20 p-4">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 text-neutral-300" />
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Toplam arşiv yükü
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-400">
-                      Modeller + kategoriler + ürünler içinde toplam{" "}
-                      <span className="font-semibold text-white">
-                        {totalArchived}
-                      </span>{" "}
-                      arşiv kayıt var.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
-        </aside>
+          <span
+            className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+              aiReady
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                : "border-amber-500/20 bg-amber-500/10 text-amber-200"
+            }`}
+          >
+            {aiReady ? "Hazır" : "İnceleme gerekli"}
+          </span>
+        </div>
+
+        {metrics ? (
+          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
+            {[
+              ["Teknik hazır", metrics.datasheetsReady],
+              ["Onay bekliyor", metrics.knowledgePendingReview],
+              ["Kuyruk", datasheetQueue],
+              ["Hatalı", metrics.datasheetsFailed],
+              ["Kural", metrics.rulesTotal],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-black/15 px-3 py-2.5">
+                <p className="text-xs text-neutral-500">{label}</p>
+                <p className="mt-1 text-lg font-semibold text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+            Veritabanı çevrimdışı olduğu için hazırlık özeti üretilemedi.
+          </div>
+        )}
+
+        {metrics ? (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-neutral-500">
+            <span>Aktif model: <strong className="text-neutral-300">{activeModels}</strong></span>
+            <span>Aktif kategori: <strong className="text-neutral-300">{activeCategories}</strong></span>
+            <span>Aktif ürün: <strong className="text-neutral-300">{activeProducts}</strong></span>
+            <Link href="/admin/datasheets" className="text-sky-300 hover:text-sky-200">Datasheet detayına git →</Link>
+          </div>
+        ) : null}
+      </section>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600">
+        <span>İş sırası: Build Version → Lead → Teklif</span>
+        <span aria-hidden="true">·</span>
+        <span>Rules ve kritik AI aksiyonları onay hattı tamamlanana kadar kontrollü.</span>
       </div>
     </div>
   );
