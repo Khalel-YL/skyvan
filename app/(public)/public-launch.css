@@ -2521,30 +2521,8 @@
   gap: .8rem;
 }
 
-.sv-public .sv-brand-copy {
-  display: grid;
-  gap: .12rem;
-  min-width: 0;
-  font-family: var(--font-skyvan), Arial, sans-serif;
-  letter-spacing: .16em;
-}
-
-.sv-public .sv-brand-copy > span {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.sv-public .sv-brand-copy > small {
-  overflow: hidden;
-  color: var(--public-muted);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
-  font-size: .48rem;
-  font-weight: 500;
-  letter-spacing: .2em;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.sv-public .sv-brand-wordmark {
+  width: 8.25rem;
 }
 
 .sv-public .sv-desktop-nav a {
@@ -2722,13 +2700,8 @@
     gap: .55rem;
   }
 
-  .sv-public .sv-brand-copy > span {
-    font-size: .76rem;
-    letter-spacing: .15em;
-  }
-
-  .sv-public .sv-brand-copy > small {
-    display: none;
+  .sv-public .sv-brand-wordmark {
+    width: 7.35rem;
   }
 
   .sv-public .sv-editorial-hero-media-mark {

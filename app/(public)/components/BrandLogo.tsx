@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
-type BrandLogoVariant = "emblem" | "logo";
+type BrandLogoVariant = "emblem" | "logo" | "wordmark";
 type BrandLogoTone = "dark" | "light" | "auto";
 type BrandLogoSize = "sm" | "md" | "lg" | "hero" | "headerEmblem" | "footer";
 
@@ -26,6 +26,7 @@ const sizeMap: Record<
   sm: {
     emblem: { width: 32, height: 32, className: "h-8 w-8" },
     logo: { width: 128, height: 28, className: "h-7 w-32" },
+    wordmark: { width: 1196, height: 95, className: "h-auto w-32" },
   },
 
   headerEmblem: {
@@ -39,21 +40,29 @@ const sizeMap: Record<
       height: 38,
       className: "h-8 w-[8.25rem] md:h-9 md:w-[10rem]",
     },
+    wordmark: {
+      width: 1196,
+      height: 95,
+      className: "h-auto w-[8.25rem] md:w-[10rem]",
+    },
   },
 
   md: {
     emblem: { width: 40, height: 40, className: "h-10 w-10" },
     logo: { width: 176, height: 40, className: "h-10 w-44" },
+    wordmark: { width: 1196, height: 95, className: "h-auto w-44" },
   },
 
   lg: {
     emblem: { width: 56, height: 56, className: "h-14 w-14" },
     logo: { width: 240, height: 54, className: "h-14 w-60" },
+    wordmark: { width: 1196, height: 95, className: "h-auto w-60" },
   },
 
   hero: {
     emblem: { width: 96, height: 96, className: "h-24 w-24" },
     logo: { width: 448, height: 96, className: "h-24 w-full max-w-md" },
+    wordmark: { width: 1196, height: 95, className: "h-auto w-full max-w-md" },
   },
 
   footer: {
@@ -67,6 +76,11 @@ const sizeMap: Record<
       height: 260,
       className: "h-28 w-full max-w-[22rem] md:h-32 md:w-[24rem] md:max-w-none",
     },
+    wordmark: {
+      width: 1196,
+      height: 95,
+      className: "h-auto w-full max-w-[22rem] md:w-[24rem] md:max-w-none",
+    },
   },
 };
 
@@ -75,6 +89,10 @@ function getAssetPath(
   tone: Exclude<BrandLogoTone, "auto">,
   size: BrandLogoSize,
 ) {
+  if (variant === "wordmark") {
+    return `/brand/web/wordmark-${tone}.png`;
+  }
+
   if (size === "headerEmblem" && variant === "emblem") {
     return `/brand/web/header-emblem-${tone}.png`;
   }

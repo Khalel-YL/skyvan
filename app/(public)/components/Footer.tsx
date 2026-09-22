@@ -27,7 +27,7 @@ export function Footer(): React.JSX.Element {
     <div className="sv-container">
       <div className="sv-footer-top">
         <div className="sv-footer-brand">
-          <Link href={home} className="sv-brand" aria-label="Skyvan"><BrandLogo variant="emblem" tone="auto" size="headerEmblem" /><span>SKYVAN</span></Link>
+          <Link href={home} className="sv-brand" aria-label="Skyvan"><BrandLogo variant="emblem" tone="auto" size="headerEmblem" /><BrandLogo variant="wordmark" tone="auto" size="headerEmblem" className="sv-brand-wordmark" /></Link>
           <p>{copy.footer}</p>
         </div>
         <nav aria-label={locale === "tr" ? "Alt menü" : "Footer navigation"}>

@@ -31,10 +31,7 @@ export function Header(): React.JSX.Element {
       <div className="sv-container sv-header-row">
         <Link href={home} className="sv-brand" aria-label={locale === "tr" ? "Skyvan ana sayfa" : "Skyvan home"} title={locale === "tr" ? "Ana sayfa" : "Home"} onClick={() => setMenuOpen(false)}>
           <BrandLogo variant="emblem" tone="auto" size="headerEmblem" priority />
-          <span className="sv-brand-copy">
-            <span>SKYVAN</span>
-            <small>{locale === "tr" ? "MOTOKARAVAN SİSTEMİ" : "MOTORHOME SYSTEM"}</small>
-          </span>
+          <BrandLogo variant="wordmark" tone="auto" size="headerEmblem" priority className="sv-brand-wordmark" />
         </Link>
         <nav className="sv-desktop-nav" aria-label={locale === "tr" ? "Ana menü" : "Main navigation"}>{items.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}</nav>
         <div className="sv-header-tools">
