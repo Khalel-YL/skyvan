@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono, Orbitron } from "next/font/google";
 
 import "./globals.css";
@@ -33,13 +34,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const language = requestHeaders.get("x-skyvan-locale") === "en" ? "en" : "tr";
+
   return (
-    <html lang="tr" className={`${geistSans.variable} ${geistMono.variable} ${skyvanFont.variable}`}>
+    <html lang={language} className={`${geistSans.variable} ${geistMono.variable} ${skyvanFont.variable}`}>
       <body
         className="min-h-screen antialiased"
       >

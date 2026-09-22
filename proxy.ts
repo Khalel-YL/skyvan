@@ -10,6 +10,27 @@ import { users } from "@/db/schema";
 
 const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+function getPublicLocale(pathname: string) {
+  const firstSegment = pathname.split("/").filter(Boolean)[0];
+
+  return firstSegment === "tr" || firstSegment === "en" ? firstSegment : null;
+}
+
+function continueRequest(request: NextRequest, locale: "tr" | "en" | null) {
+  if (!locale) {
+    return NextResponse.next();
+  }
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-skyvan-locale", locale);
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
+
 function buildDeniedResponse(status: number, code: string, message: string) {
   return NextResponse.json(
     {
@@ -22,8 +43,15 @@ function buildDeniedResponse(status: number, code: string, message: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  const locale = getPublicLocale(request.nextUrl.pathname);
+  const nextResponse = continueRequest(request, locale);
+
+  if (!request.nextUrl.pathname.startsWith("/admin")) {
+    return nextResponse;
+  }
+
   if (READ_ONLY_METHODS.has(request.method)) {
-    return NextResponse.next();
+    return nextResponse;
   }
 
   const session = await verifySkyvanSessionToken(
@@ -87,5 +115,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/tr", "/tr/:path*", "/en", "/en/:path*"],
 };

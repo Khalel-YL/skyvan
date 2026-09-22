@@ -2,7 +2,7 @@
 
 **Status:** Active  
 **Version:** 1.0  
-**Last Updated:** 2026-09-15
+**Last Updated:** 2026-09-22
 
 ---
 
@@ -156,6 +156,8 @@ Medium
 The public editorial foundation contains ten page families: the localized home page plus nine shared-slug pages (`hakkimizda`, `karavan-deneyimi`, `muhendislik`, `workshop`, `nasil-calisir`, `uretim-sureci`, `sss`, `iletisim`, `proje-baslat`). With Turkish and English variants this is twenty localized routes. The legacy `sistem` path canonicalizes to `workshop`.
 
 Engineering and Workshop remain explanatory surfaces. They do not claim a live configurator, product recommendation, price, telemetry or project record. Technical values are checked against the vehicle, product datasheet, installation manual and applicable local requirements before any project decision.
+
+Public launch hardening now includes locale-aware document language (`lang="tr"` / `lang="en"`) through the request proxy, branded localized public 404 handling, and a shared 1200×630 Open Graph image for public page previews. The Contact and Project Start surfaces remain intentionally non-submitting until an approved contact channel and the governed `Build Version -> Lead -> Offer` dependency are ready.
 
 ---
 
