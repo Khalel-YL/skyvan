@@ -28,6 +28,7 @@ import {
 } from "@/app/lib/public-editorial-cms";
 import { getLocalizedPath } from "../lib/public-routing";
 import { PublicConceptMedia } from "./PublicConceptMedia";
+import { PublicContactChannel } from "./PublicContactChannel";
 import { PublicLivingConceptStudies, PublicLivingGallery } from "./PublicLivingGallery";
 import { PublicMediaSurface } from "./PublicMediaSurface";
 import { PublicProjectAction } from "./PublicProjectAction";
@@ -437,6 +438,7 @@ export function PublicEditorialPage({ page, children }: { page: PublicPageConten
     </section>
 
     <div className="sv-container"><EditorialChapterNav copy={copy} slug={slug} locale={page.locale} /></div>
+    {slug === "iletisim" ? <div className="sv-container"><PublicContactChannel locale={page.locale} /></div> : null}
 
     {slug === "karavan-deneyimi" ? <section id="living" className="sv-container sv-section sv-editorial-gallery" aria-labelledby="living-gallery-title">
       <p className="sv-eyebrow">{launchCopy.product.eyebrow}</p>

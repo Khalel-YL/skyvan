@@ -184,7 +184,7 @@ const tr: Record<CuratedPublicSlug, PublicEditorialCopy> = {
     heading: "Yolculuğunuzu anlatmak için iyi bir başlangıç.", body: "Araç fikriniz ve yaşam öncelikleriniz, bir karavan projesinin ilk çerçevesini oluşturur. Görüşme öncesinde her teknik ayrıntıyı çözmeniz gerekmez; sizin için önemli ihtiyaçları belirlemek yeterli bir başlangıçtır.",
     sections: [
       { id: "prepare", heading: "Paylaşmaya hazırlanabileceğiniz bilgiler.", body: "Görüşme için kesinleşmiş bir teknik dosya gerekmez.", bullets: ["Aklınızdaki araç veya mevcut aracın marka, model ve varyant bilgileri.", "Nasıl yolculuk etmek ve alanı kimlerle paylaşmak istediğiniz.", "Oturum, uyku, mutfak, kişisel alan ve depolamadaki öncelikleriniz.", "Açıklığa kavuşturmak istediğiniz teknik sorular."] },
-      { id: "pending-channel", heading: "İletişim kanalı hazırlanıyor.", body: "Yeni proje görüşmeleri için iletişim kanalımızı hazırlıyoruz. Bu sırada araç fikrinizi, yolculuk biçiminizi ve yaşam önceliklerinizi netleştirebilirsiniz." },
+      { id: "pending-channel", heading: "İlk görüşme için bize ulaşın.", body: "Gökyüzü Teknik Otomotiv olarak yeni proje görüşmelerini telefon ve WhatsApp üzerinden karşılıyoruz. Araç fikrinizi, yolculuk biçiminizi ve yaşam önceliklerinizi paylaşmanız yeterli." },
       { id: "current-status", heading: "Proje başlatma deneyimi yakında.", body: "Hazırlanan deneyim ihtiyaçlarınızı araç ve yerleşim bağlamıyla birlikte ele almayı hedefliyor. Bugün tasarım çalışmalarını keşfedebilir ve başlangıç sorularınızı netleştirebilirsiniz." },
     ],
     actions: [{ label: "Başlangıç Sorularını Keşfet", slug: "nasil-calisir" }, { label: "Yaşam Alanlarını İncele", slug: "karavan-deneyimi" }],
@@ -328,7 +328,7 @@ const en: Record<CuratedPublicSlug, PublicEditorialCopy> = {
     heading: "A good place to begin the conversation.", body: "Your vehicle idea and living priorities provide the first outline of a motorhome project. You do not need to resolve every technical detail beforehand; identifying the needs that matter to you is a useful beginning.",
     sections: [
       { id: "prepare", heading: "Useful information to have in mind.", body: "A complete technical file is not required before a conversation.", bullets: ["The vehicle you are considering, or the make, model and variant of your existing vehicle.", "How you want to travel and who will share the space.", "Your priorities for lounging, sleeping, cooking, personal space and storage.", "The technical questions you would like to understand better."] },
-      { id: "pending-channel", heading: "The contact channel is being prepared.", body: "We are preparing the contact channel for new project conversations. In the meantime, you can clarify your vehicle idea, travel plans, and living priorities." },
+      { id: "pending-channel", heading: "Begin with a direct conversation.", body: "Gökyüzü Teknik Otomotiv is available for new project conversations by phone and WhatsApp. Share your vehicle idea, travel style and living priorities to begin." },
       { id: "current-status", heading: "The project-start experience is coming soon.", body: "The experience in development aims to bring your needs together with vehicle and layout context. Today, you can explore the design studies and identify your starting questions." },
     ], actions: [{ label: "Explore the Starting Questions", slug: "nasil-calisir" }, { label: "Explore the Living Spaces", slug: "karavan-deneyimi" }],
   },
