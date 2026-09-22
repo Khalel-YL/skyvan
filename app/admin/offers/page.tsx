@@ -195,7 +195,8 @@ export default async function Page({
   }
 
   const params = await searchParams;
-  const isDrawerOpen = params.new === "true" || typeof params.edit === "string";
+  const isCreateDrawerOpen = params.new === "true";
+  const isEditDrawerOpen = typeof params.edit === "string";
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const selectedStatus =
     typeof params.status === "string" ? params.status.trim() : "all";
@@ -308,6 +309,10 @@ export default async function Page({
         status: editItem.status as OfferStatus,
       }
     : null;
+
+  const canRenderDrawer = isEditDrawerOpen
+    ? Boolean(initialData)
+    : isCreateDrawerOpen && leadOptions.length > 0;
 
   const statusTabs: Array<{ key: "all" | OfferStatus; label: string }> = [
     { key: "all", label: "Tümü" },
@@ -546,7 +551,7 @@ export default async function Page({
         </div>
       )}
 
-      {isDrawerOpen ? (
+      {canRenderDrawer ? (
         <AddOfferDrawer leadOptions={leadOptions} initialData={initialData} />
       ) : null}
     </div>

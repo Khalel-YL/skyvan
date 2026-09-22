@@ -127,7 +127,6 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const editId = (params.edit ?? "").trim();
   const isCreateDrawerOpen = params.new === "true";
   const isEditDrawerOpen = editId.length > 0;
-  const isDrawerOpen = isCreateDrawerOpen || isEditDrawerOpen;
   const notice = (params.notice ?? "").trim();
   const noticeTone = (params.noticeTone ?? "").trim();
 
@@ -317,6 +316,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   );
 
   const createEnabled = buildVersionOptions.length > 0;
+  const canRenderDrawer = isEditDrawerOpen
+    ? Boolean(selectedLead)
+    : isCreateDrawerOpen && createEnabled;
 
   return (
     <section className="space-y-4">
@@ -564,7 +566,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         )}
       </div>
 
-      {isDrawerOpen ? (
+      {canRenderDrawer ? (
         <AddLeadDrawer
           key={selectedLead?.id ?? "new-lead"}
           buildVersionOptions={buildVersionOptions}

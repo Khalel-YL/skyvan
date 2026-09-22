@@ -29,7 +29,9 @@ import {
   buildVersions,
   categories,
   compatibilityRules,
+  leads,
   models,
+  offers,
   packages,
   products,
 } from "@/db/schema";
@@ -45,6 +47,8 @@ type DashboardMetrics = {
   productsDraft: number;
   productsArchived: number;
   packagesTotal: number;
+  leadsTotal: number;
+  offersTotal: number;
   buildVersionsTotal: number;
   rulesTotal: number;
   datasheetsTotal: number;
@@ -153,6 +157,8 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       productsDraft,
       productsArchived,
       packagesTotal,
+      leadsTotal,
+      offersTotal,
       buildVersionsTotal,
       rulesTotal,
       datasheetsTotal,
@@ -176,6 +182,8 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       countWhere(products, products.status, "draft"),
       countWhere(products, products.status, "archived"),
       countTable(packages),
+      countTable(leads),
+      countTable(offers),
       countTable(buildVersions),
       countTable(compatibilityRules),
       countTable(aiKnowledgeDocuments),
@@ -232,6 +240,8 @@ async function getDashboardMetrics(): Promise<DashboardMetrics | null> {
       productsDraft,
       productsArchived,
       packagesTotal,
+      leadsTotal,
+      offersTotal,
       buildVersionsTotal,
       rulesTotal,
       datasheetsTotal,
@@ -301,6 +311,55 @@ export default async function AdminDashboardPage() {
         { label: "Build versiyonu", value: "—", hint: "DB bekleniyor" },
         { label: "Datasheet", value: "—", hint: "DB bekleniyor" },
       ];
+
+  const chainItems = metrics
+    ? [
+        {
+          label: "Build Version",
+          value: metrics.buildVersionsTotal,
+          href: "/admin/build-versions",
+          hint:
+            metrics.buildVersionsTotal > 0
+              ? "Lead hattı açılabilir"
+              : "Lead hattı kilitli",
+          tone: metrics.buildVersionsTotal > 0 ? "ready" : "blocked",
+        },
+        {
+          label: "Lead",
+          value: metrics.leadsTotal,
+          href: "/admin/leads",
+          hint:
+            metrics.buildVersionsTotal === 0
+              ? "Önce Build Version gerekli"
+              : metrics.leadsTotal > 0
+                ? "Teklif hattına aktarılabilir"
+                : "Kayıt bekliyor",
+          tone:
+            metrics.buildVersionsTotal === 0
+              ? "blocked"
+              : metrics.leadsTotal > 0
+                ? "ready"
+                : "waiting",
+        },
+        {
+          label: "Teklif",
+          value: metrics.offersTotal,
+          href: "/admin/offers",
+          hint:
+            metrics.leadsTotal === 0
+              ? "Önce Lead gerekli"
+              : metrics.offersTotal > 0
+                ? "Satış hattı aktif"
+                : "Kayıt bekliyor",
+          tone:
+            metrics.leadsTotal === 0
+              ? "blocked"
+              : metrics.offersTotal > 0
+                ? "ready"
+                : "waiting",
+        },
+      ]
+    : [];
 
   const datasheetQueue = metrics
     ? metrics.datasheetsPending + metrics.datasheetsProcessing
@@ -495,6 +554,49 @@ export default async function AdminDashboardPage() {
           />
         ))}
       </div>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-white">Operasyon zinciri</h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Gerçek bağımlılık sırası: Build Version → Lead → Teklif.
+            </p>
+          </div>
+          <span className="text-xs text-neutral-500">Kayıt bazlı durum</span>
+        </div>
+
+        {metrics ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {chainItems.map((item) => {
+              const toneClasses =
+                item.tone === "ready"
+                  ? "border-emerald-500/20 bg-emerald-500/10"
+                  : item.tone === "blocked"
+                    ? "border-rose-500/20 bg-rose-500/10"
+                    : "border-amber-500/20 bg-amber-500/10";
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`rounded-xl border px-3 py-3 transition hover:border-white/20 ${toneClasses}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-white">{item.label}</span>
+                    <span className="text-lg font-semibold text-white">{item.value}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-300/80">{item.hint}</p>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+            Veritabanı çevrimdışı olduğu için operasyon zinciri okunamadı.
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">

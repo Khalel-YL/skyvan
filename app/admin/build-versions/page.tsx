@@ -245,6 +245,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
   }));
 
   const hasModels = modelRows.length > 0;
+  const canRenderDrawer = isDrawerOpen && hasModels;
 
   return (
     <div className="space-y-6">
@@ -563,7 +564,7 @@ export default async function BuildVersionsPage({ searchParams }: PageProps) {
         </div>
       )}
 
-      {isDrawerOpen ? (
+      {canRenderDrawer ? (
         <AddBuildVersionDrawer
           buildOptions={buildOptions}
           modelOptions={modelOptions}
