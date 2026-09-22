@@ -105,7 +105,7 @@ export function PublicExplorePage({
           <div className={styles.heroCopy}>
             <div className={styles.heroTopline}>
               <span>{ui.heroKicker}</span>
-              <span>01 / 06</span>
+              <span>01 / 07</span>
             </div>
             <p className="sv-eyebrow">{ui.heroMeta}</p>
             <h1 id="explore-title">{title}</h1>
